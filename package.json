@@ -1,0 +1,30 @@
+{
+  "name": "pi-rex-agents",
+  "version": "0.1.0-p1",
+  "private": true,
+  "type": "module",
+  "description": "Rex adapter for pi-herdr-agents: asynchronous Pi subagents in Rex blocks",
+  "scripts": {
+    "p0": "node --experimental-strip-types src/p0.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run p0"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "pi-herdr-agents": "^3.7.2"
+  },
+  "pi": {
+    "extensions": [
+      "./src/extension.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  }
+}
