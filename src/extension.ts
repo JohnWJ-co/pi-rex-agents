@@ -11,6 +11,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import subagentsExtension from "pi-herdr-agents/pi-extension/subagents/index.ts";
 import { createWorktreeCleanupOperations } from "pi-herdr-agents/maestro/runtime/worktree-operations.ts";
 import { createRexInfrastructure } from "./infrastructure.ts";
+import { rewriteRexHostText } from "./host-message.ts";
 import { RexSurfaceProvider } from "./rex-surface-provider.ts";
 import { rexWorktreeRoot } from "./worktree.ts";
 
@@ -31,7 +32,15 @@ export default function piRexAgentsExtension(pi: ExtensionAPI): void {
     anchorBlockId: blockId,
   });
 
-  subagentsExtension(pi, {
+  // pi-herdr-agents renders one host-specific operator command in worktree
+  // handoff messages. Keep the upstream orchestration intact, but rewrite that
+  // line to a valid Rex command before delivery.
+  const originalSendMessage = pi.sendMessage.bind(pi);
+  const hostApi = Object.create(pi) as ExtensionAPI;
+  hostApi.sendMessage = ((message, options) =>
+    originalSendMessage(rewriteRexHostText(message), options)) as ExtensionAPI["sendMessage"];
+
+  subagentsExtension(hostApi, {
     infrastructure: createRexInfrastructure(provider),
     // Herdr's cleanup scans ~/.herdr/worktrees. Rex-managed worktrees live
     // under the pi-rex-agents root instead, so provide the matching cleanup

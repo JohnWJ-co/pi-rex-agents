@@ -116,11 +116,22 @@ const supervision = new SupervisionCoordinator(
 
 必须完成：
 
-- 完整 `SurfaceProvider` 21 个方法（worktree 可先返回明确错误）
+- 完整 `SurfaceProvider` 21 个方法
 - `RexCli` 的 split/window/send/capture/process/program-status/close/list/focus
 - `runScript`、`waitForShellReady`、`waitForSurfaceAbsence`
+- worktree：`git worktree` 创建/移除 + Rex window + 上游清理适配器
 - 包装 `subagentsExtension` 的 extension 入口
 - 真实 Rex 中跑通：spawn、两轮 send、结果读取、stop、父会话存活
+
+## Worktree
+
+Rex 没有 `herdr worktree` 原语，因此 provider 使用：
+
+1. `git worktree add -b <branch> <path> <base>`
+2. `rex window new --focus=false -c <path> -- <command>`
+3. `git worktree remove <path>` + `rex window close`
+
+`createWorktreeCleanupOperations(provider, { managedRoot })` 复用上游的脏工作区、未跟踪文件、冲突和进程占用检查，只把 `herdr` 的清理命令替换为 Rex provider 的 `removeWorktreeSurface`。
 
 P1 暂不承诺：
 

@@ -35,12 +35,14 @@ const parentSessionDir = dirname(parentSessionFile);
 const repoRoot = process.cwd();
 const cwd = process.env.P1_CWD ?? repoRoot;
 const useWorktree = process.argv.includes("--worktree");
+const usePersistent = process.argv.includes("--persistent");
 const worktreeBranch = `p1-wt-${Date.now()}`;
 
+const modelOverride = process.env.P1_MODEL?.split("/");
 const model = {
-  provider: "CBAPI",
-  id: "cn:deepseek-v4.1-flash",
-  name: "Deepseek-V4.1-Flash",
+  provider: modelOverride?.[0] || "CBAPI",
+  id: modelOverride?.slice(1).join("/") || "cn:deepseek-v4.1-flash",
+  name: modelOverride?.slice(1).join("/") || "Deepseek-V4.1-Flash",
   api: "openai-completions",
   baseUrl: "",
   reasoning: true,
@@ -176,6 +178,7 @@ const started = await subagentTool.execute(
     model: `${model.provider}/${model.id}`,
     thinking: "medium",
     ...(useWorktree ? { worktree: { branch: worktreeBranch } } : {}),
+    ...(usePersistent ? { persistent: true } : {}),
   },
   undefined,
   () => {},
@@ -200,7 +203,11 @@ while (Date.now() < deadline) {
       message?.customType === "subagent_result" ||
       message?.type === "subagent_result",
   );
-  if (completion) break;
+  // Persistent children are only idle after the completion turn has settled.
+  // Sending while the child is still finalizing races the inbox poller and can
+  // be acknowledged as a task without producing a second turn.
+  const idle = listText.includes("| idle |");
+  if (completion && (!usePersistent || idle)) break;
   await new Promise((resolve) => setTimeout(resolve, 1000));
 }
 
@@ -228,6 +235,42 @@ if (useWorktree) {
   console.log(JSON.stringify({ event: "worktree_cleanup", worktreeResult }, null, 2));
 }
 
+let persistentResult: unknown;
+if (usePersistent) {
+  // The child appends its task-done event during agent_settled. Give that turn
+  // a moment to finish before injecting the next user message.
+  await new Promise((resolve) => setTimeout(resolve, 2_000));
+  const sendTool = tools.get("subagent_send");
+  const stopTool = tools.get("subagent_stop");
+  if (!sendTool || !stopTool) throw new Error("persistent control tools were not registered");
+  const beforeSecond = messages.length;
+  const sent = await sendTool.execute(
+    "p1-send",
+    { name: "p1-child", message: "Reply with exactly P1_SECOND_OK and nothing else." },
+    undefined,
+    () => {},
+    ctx,
+  );
+  const secondDeadline = Date.now() + 120_000;
+  let second: any;
+  while (Date.now() < secondDeadline) {
+    second = messages
+      .slice(beforeSecond)
+      .find((message) => JSON.stringify(message).includes("P1_SECOND_OK"));
+    if (second) break;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  const stopped = await stopTool.execute(
+    "p1-stop",
+    { name: "p1-child" },
+    undefined,
+    () => {},
+    ctx,
+  );
+  persistentResult = { sent, second: second ?? null, stopped };
+  console.log(JSON.stringify({ event: "persistent", persistentResult }, null, 2));
+}
+
 const sessionCheck = await new RexCli().inspectSession(rexSession);
 const parentSurvived = flattenBlocks(sessionCheck).some(
   ({ block }) => block.block_id === rexBlock,
@@ -241,6 +284,7 @@ console.log(
       parentSurvived,
       completion: completion ?? null,
       worktree: worktreeResult ?? null,
+      persistent: persistentResult ?? null,
       notifications,
       messageCount: messages.length,
     },
@@ -251,6 +295,6 @@ console.log(
 
 await emit("session_shutdown", { type: "session_shutdown", reason: "quit" });
 
-if (!completion || !parentSurvived) {
+if (!completion || !parentSurvived || (usePersistent && !persistentResult)) {
   process.exitCode = 1;
 }
