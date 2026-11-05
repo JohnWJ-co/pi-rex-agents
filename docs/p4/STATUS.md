@@ -10,7 +10,7 @@
 | 任务 | 状态 | 提交 | 备注 |
 |---|---|---|---|
 | T0 | 已完成，门禁通过 | `41af43a2c17ae86ec7c5e57b3c1989c6b71147a8` | 完整复制范围已修正；test-gate 最终通过，1452 个测试已加载 |
-| T1 | 已完成，门禁通过 | 待提交 | Rex lab、集成 harness、验证技能和 AGENTS.md 已完成；test-gate 与真实 Rex smoke 通过 |
+| T1 | 已完成，门禁通过 | `15cdafc` | Rex lab、集成 harness、验证技能和 AGENTS.md 已完成；test-gate 与真实 Rex smoke 通过 |
 | T2 | 待开始 | | |
 | T3 | 待开始 | | |
 | T4 | 待开始 | | |
