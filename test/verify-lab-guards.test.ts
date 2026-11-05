@@ -18,7 +18,7 @@ import {
 	realHost,
 	type GuardHost,
 	type GuardStat,
-} from "../.pi/skills/verify-pi-herdr-agents/scripts/path-guards.ts";
+} from "../.pi/skills/verify-pi-rex-agents/scripts/path-guards.ts";
 
 const dirStat = (overrides: Partial<GuardStat> = {}): GuardStat => ({
 	isDirectory: () => true,
@@ -121,7 +121,7 @@ describe("assertPrivateDir", () => {
 });
 
 describe("assertRemovableLabRoot", () => {
-	const root = "/tmp/piha-herdr-lab-Ab12Cd";
+	const root = "/tmp/pira-lab-Ab12Cd";
 	const ok = fakeHost({ [root]: dirStat() });
 
 	it("accepts a recorded, owned lab root directly below the temp dir", () => {
@@ -129,7 +129,7 @@ describe("assertRemovableLabRoot", () => {
 	});
 
 	it("refuses the traversal that passes a string-prefix check", () => {
-		const evil = "/tmp/piha-herdr-lab-x/../../home/g/Projects/victim";
+		const evil = "/tmp/pira-lab-x/../../home/g/Projects/victim";
 		const host = fakeHost({
 			[evil]: dirStat(),
 			"/home/g/Projects/victim": dirStat(),
@@ -141,10 +141,10 @@ describe("assertRemovableLabRoot", () => {
 		for (const bad of [
 			"/home/g/Projects/victim",
 			"/tmp/victim",
-			"/tmp/piha-herdr-lab-",
-			"/tmp/piha-herdr-lab-Ab12Cd/sub",
-			"/tmp/piha-herdr-lab-Ab12Cd2",
-			"/home/g/piha-herdr-lab-Ab12Cd",
+			"/tmp/pira-lab-",
+			"/tmp/pira-lab-Ab12Cd/sub",
+			"/tmp/pira-lab-Ab12Cd2",
+			"/home/g/pira-lab-Ab12Cd",
 		])
 			assert.throws(
 				() => assertRemovableLabRoot(bad, bad, fakeHost({ [bad]: dirStat() })),
@@ -155,7 +155,7 @@ describe("assertRemovableLabRoot", () => {
 
 	it("refuses a root that is not the one recorded in the state", () => {
 		assert.throws(
-			() => assertRemovableLabRoot(root, "/tmp/piha-herdr-lab-Zz99Zz", ok),
+			() => assertRemovableLabRoot(root, "/tmp/pira-lab-Zz99Zz", ok),
 			/recorded/,
 		);
 	});
@@ -183,7 +183,7 @@ describe("assertRemovableLabRoot", () => {
 	});
 
 	it("refuses when the parent is a symlink that leaves the temp dir", () => {
-		const viaLink = "/tmp/link/piha-herdr-lab-Ab12Cd";
+		const viaLink = "/tmp/link/pira-lab-Ab12Cd";
 		const host = fakeHost({ [viaLink]: dirStat() }, { "/tmp/link": "/home/g" });
 		assert.throws(
 			() => assertRemovableLabRoot(viaLink, viaLink, host),
@@ -198,7 +198,7 @@ describe("assertRemovableLabRoot", () => {
 			mkdirSync(victim);
 			const link = join(
 				tmpdir(),
-				`piha-herdr-lab-${Math.random().toString(36).slice(2, 8).padEnd(6, "x")}`,
+				`pira-lab-${Math.random().toString(36).slice(2, 8).padEnd(6, "x")}`,
 			);
 			symlinkSync(victim, link);
 			try {
@@ -264,11 +264,11 @@ describe("defaultEvidenceRoot", () => {
 	it("uses an absolute XDG_STATE_HOME and ignores a relative one", () => {
 		assert.equal(
 			defaultEvidenceRoot({ XDG_STATE_HOME: "/x/state" }),
-			"/x/state/pi-herdr-agents/verify",
+			"/x/state/pi-rex-agents/verify",
 		);
 		assert.match(
 			defaultEvidenceRoot({ XDG_STATE_HOME: "rel" }),
-			/\.local\/state\/pi-herdr-agents\/verify$/,
+			/\.local\/state\/pi-rex-agents\/verify$/,
 		);
 		assert.ok(!defaultEvidenceRoot({}).startsWith("/tmp/"));
 	});

@@ -1,113 +1,70 @@
 # Repository instructions for agents
 
-These instructions apply to humans and coding agents changing `pi-herdr-agents`.
+These instructions apply to changes in `pi-rex-agents-p4`.
 
 ## What this package is
 
-`pi-herdr-agents` (Pi Herdr Agents) is a Pi extension that launches asynchronous Pi child agents exclusively in Herdr. Ordinary runs group child panes in extension-owned `Agents` tabs by default. Writing tasks may opt into one isolated Herdr-managed Git worktree per branch. Legacy role definitions that request an external CLI fail before Herdr creates resources.
+`pi-rex-agents` is the Rex host adapter for the Pi subagent extension. It is a hard fork of the upstream execution kernel: parent Pi runs inside a Rex block, ordinary children run in Rex blocks or windows, and completion returns to the parent automatically. Rex is accessed through its documented CLI with explicit argv; no private socket protocol is part of this package.
 
-The package is a pack-neutral execution host: it ships no agent roles and no planning or review workflows. Its only skill is `pi-herdr-agents`, a general operating guide for the host; do not add methodology or workflow skills here. Roles come from project or global definitions and separately installed role packs. Do not add bundled roles, a privileged default pack, or name-keyed workflow behavior; see [ADR-0013](docs/adr/0013-pack-neutral-execution-host.md).
-
-The extension is fire-and-forget: `subagent` returns an acknowledgement, and completion is delivered to the parent automatically. Never add polling guidance that tells callers to sleep, tail sessions, or repeatedly check status.
+This tree is the P4 migration worktree. Keep changes scoped to the current checkout. Do not modify the sibling `pi-rex-agents` checkout or the upstream `pi-herdr-agents` checkout. Do not commit or push unless the parent agent explicitly owns that action.
 
 ## Read these first
 
-- [`README.md`](./README.md) — canonical installation and everyday-use guide
-- [`docs/tools.md`](docs/tools.md), [`docs/configuration.md`](docs/configuration.md), and [`docs/roles.md`](docs/roles.md) — canonical API and lifecycle, configuration, and agent-authoring references
-- [`docs/README.md`](docs/README.md) — map of shipped contracts, active design, ADRs, and background research
-- [`CONTEXT.md`](CONTEXT.md) — workflow-domain glossary; read it before changing orchestration design
-- [`docs/adr/0003-installable-role-packs.md`](docs/adr/0003-installable-role-packs.md) — installable role-pack discovery, precedence, and collision contract
-- [`docs/adr/0013-pack-neutral-execution-host.md`](docs/adr/0013-pack-neutral-execution-host.md) — role-free host ownership, removed commands, and `roles.bundled` deprecation
-- [`docs/worktree-subagents.md`](docs/worktree-subagents.md) — canonical worktree operating, review, recovery, and cleanup guide
-- [`RELEASING.md`](RELEASING.md) — release checks and publishing procedure
-
-Former bundled roles, `/plan`, its plan skill, and `/skill:orchestrate` now belong to the separately maintained `pi-herdr-roles` and `pi-herdr-pstack` packs. `/iterate`, `/btw`, and `/btw-close` were removed. Do not reintroduce them here.
+- [`README.md`](./README.md) — installation and everyday use
+- [`docs/p4/plan.md`](docs/p4/plan.md) and the relevant task card under [`docs/p4/tasks/`](docs/p4/tasks/) — migration scope
+- [`docs/p4/rex-facts.md`](docs/p4/rex-facts.md) — measured Rex behavior, especially socket isolation and OSC lifecycle
+- [`src/rex-cli.ts`](src/rex-cli.ts) — the only Rex CLI wrapper and argv boundary
+- [`src/rex-surface-provider.ts`](src/rex-surface-provider.ts) — Rex surface lifecycle
+- [`src/extension.ts`](src/extension.ts) — Pi composition root
+- [`test/integration/rex-harness.ts`](test/integration/rex-harness.ts) and [`test/integration/fake-provider.ts`](test/integration/fake-provider.ts) — deterministic Rex integration fixtures
+- [`.pi/skills/verify-pi-rex-agents/SKILL.md`](.pi/skills/verify-pi-rex-agents/SKILL.md) — verification map and isolated lab
+- [`.pi/skills/run-integration-tests/SKILL.md`](.pi/skills/run-integration-tests/SKILL.md) — integration preflight and cleanup
 
 ## Code map
 
-- `pi-extension/subagents/index.ts` — Pi composition root: loads config, adopts the reload-surviving runtime, builds the per-load controllers, and registers session handlers, tools, commands, and renderers in order; also the `__test__` surface
-- `pi-extension/subagents/state.ts`, `catalog.ts`, `presentation.ts` — run-state types and reload slots; role catalog, `subagent` parameters, and launch policy; the parent message model, its one serializer, and the child-report envelope
-- `pi-extension/subagents/tool-boundary.ts` — the one registration boundary that encodes errors thrown by any host tool or command
-- `pi-extension/subagents/observation.ts`, `widgets.ts`, `controls.ts`, `persistent.ts`, `delivery.ts`, `launch.ts` — per-load controllers (`create*`) for activity observation, the widget and status refresh, interrupt/cancel, persistent specialists, parent delivery, and launch plans
-- `pi-extension/subagents/launch-tools.ts`, `control-tools.ts`, `worktree-tools.ts`, `task-models.ts`, `renderers.ts` — `register*` functions for the public tools, commands, and message renderers
-- `pi-extension/subagents/model-registry.ts`, `config-path.ts` — permanent host-local SDK capability glue and configuration-path conventions
-- `maestro/core/` — seam interfaces and types; activity/lifecycle/status projection, routing, wake-ups, and supervision; `undelivered-children.ts` names the process-local registry slot and tells the child protocol whether launched children still owe a delivery
-- `plugins/sidebar/` — optional standalone Node companion Herdr plugin; it imports nothing from the extension
-- `maestro/core/roles/discovery.ts`, `maestro/core/config/` — role parsing/discovery, injected-directory config loaders, and task-model init prompt construction
-- `maestro/core/worktree.ts`, `worktree-cleanup.ts` — manifest schema/state, handoff types, and cleanup eligibility/formatting
-- `maestro/core/realpath-without-opening.ts` — lstat/stat/readlink realpath used by cleanup and Herdr checkout comparisons so Bun never `open()`s a path that can freeze Pi
-- `maestro/core/git-environment.ts` owns repository-local environment isolation for host-managed Git commands while preserving user configuration, identity, and hooks.
-- `maestro/core/deadline.ts` owns finite monotonic budgets for asynchronous launch, readiness, and handoff effects. Herdr subprocesses stay in `surfaces/herdr/herdr-cli.ts`; Git handoff subprocesses stay in `runtime/worktree-operations.ts`.
-- `maestro/core/host-text.ts` — the one encoding for variable values in parent-facing host lines, lossless command-argument serializers, and display normalization for child text
-- `maestro/adapters/pi/` — `PiHarnessAdapter`, launch transactions, completion evidence, session I/O, activity files, SDK model glue, and task-model registry projection; `launch.ts` is the fresh launch transaction, `launch-resume.ts` the resumed one, `launch-command.ts` the child command-line pieces both share, and `launch-operations.ts` the `PiLaunchOperations` seam with its surface-backed readiness and process-identity capture
-- `maestro/core/declared-skills.ts`, `maestro/adapters/pi/child/declared-skills.ts` — declared skill names (validated by the parent, passed in `PI_SUBAGENT_SKILLS`) and the child's first-run injection of the skills its own Pi loaded, with bounded reads
-- `maestro/adapters/pi/child/subagent-done.ts` — child protocol: `caller_ping`, `subagent_done`, and activity recording
-- `maestro/core/accept.ts`, `maestro/adapters/pi/accept-runner.ts`, `maestro/adapters/pi/accept-groups.ts`, `maestro/adapters/pi/child/accept-check.ts`, `maestro/runtime/accept-recheck.ts` — the accept check ([ADR-0017](docs/adr/0017-accept-check.md)): spec validation, the closed verdict set and the outcome-ledger line; the `sh -c` runner with timeout and process-group kill; the process-wide registry of running check groups that owners terminate at shutdown, with its `exit` hook; the child's `agent_before_settle` retry loop; and the parent re-check that `finalize` runs and the outcome-ledger append
-- `maestro/core/script-launch.ts`, `maestro/adapters/pi/script-shell.ts` — the Windows launch line: the pure builder spells an absolute bash call for the pane's shell (PowerShell, cmd, Git Bash; unknown shells keep the bare `bash` line), and the only SDK-importing resolver finds that bash from Pi's `shellPath` for the launching session's cwd and project trust (`PiLaunchSnapshot.scriptShell`); `surfaces/herdr/terminal.ts` reads the pane shell from `pane process-info`
-- `maestro/surfaces/herdr/` — `HerdrSurfaceProvider`, Herdr CLI driver (`herdr-cli.ts` exec, `herdr-pane.ts` pane inspection and readiness, `herdr.ts` placement, worktrees and pane commands), and terminal scripts, plus `herdr-socket.ts` for socket pane metadata
-- `maestro/runtime/` — `RunSession`, Pi composition, run ownership, controls/retries, observation, delivery-gated cleanup, worktree operations/handoff, and task-model init composition, plus `delegated-marker.ts` for delegated-child sidebar markers; `pi-run-session.ts` composes the Pi run session, `pi-run-session-types.ts` holds its public contract types, and `pi-persistent-io.ts` its persistent-specialist inbox and ledger I/O
-- `maestro/adapters/fake/`, `maestro/surfaces/fake/`, `test/maestro/` — conformance fakes, seam tests, and the dependency-rule test
-- `CONTEXT.md` — orchestration-domain glossary
-- `docs/adr/` — hard-to-reverse architectural decisions; [ADR-0012](docs/adr/0012-adopt-maestro-seams-in-repo.md) records the maestro seams decision
-- `docs/research/` — evidence and alternatives, never the shipped contract
-- `scripts/update-tool-docs.ts`, `scripts/tool-docs.ts` — regenerate `docs/tools.md` blocks and the tool-schema snapshot (`npm run docs:tools`); `test/maestro/tool-schema.test.ts` fails on a breaking change against `test/fixtures/tool-schema/released.json`
-- `test/test.ts` — unit tests for public subagent extension seams
-- `test/package-manifest.test.js` — package manifest and pack-neutral package-content contract test
-- `test/integration/` — real Herdr and Pi lifecycle tests using the deterministic provider by default; `test/integration/agents/` holds test-only role fixtures, including the multi-wave `test-coordinator`
-- `test/bench/supervision-bench.mjs` — manual isolated-Herdr supervision transport benchmark; raw samples stay in `/tmp/issue29-bench/`
+- `src/extension.ts` — Rex-only Pi composition root; loads the kernel with Rex infrastructure and host notices
+- `src/rex-cli.ts` — dependency-free explicit-argv Rex CLI wrapper; every call uses `--autostart=false` and propagates `REX_SERVER`
+- `src/rex-surface-provider.ts` — block/window creation, Pi command execution, OSC/program status observation, process inspection and cleanup
+- `src/rex-host-api.ts`, `src/rex-wording.ts`, `src/placement.ts` — Rex host API proxy, user-facing host text and placement policy
+- `src/infrastructure.ts`, `src/worktree.ts`, `src/git.ts` — runtime seams and Rex-managed worktree paths
+- `pi-extension/subagents/` — execution kernel, delivery envelope, controls, persistent specialists and renderers
+- `maestro/core/` — host-neutral seams, lifecycle, routing, wakeups and worktree contracts retained by the fork
+- `maestro/runtime/` — Pi run sessions, delivery, cleanup, worktree operations and supervision
+- `maestro/adapters/pi/` — Pi launch transactions, child protocol, session I/O and process evidence
+- `test/integration/rex-harness.ts` — isolated Rex server, fake-provider configuration, parent launch and observable wait helpers
+- `test/integration/rex-smoke.test.ts` — real parent-to-child Rex smoke lifecycle
+- `test/integration/fake-provider.ts` — deterministic HTTP provider used by integration tests
+- `.pi/skills/verify-pi-rex-agents/scripts/lab.ts` — manual doctor/up/drive/down evidence lab
+- `.pi/skills/verify-pi-rex-agents/scripts/pin.ts` — registration behavior pin
 
-## Worktree contract
+Update this map when moving or adding a major seam.
 
-Preserve these invariants when changing worktree behavior:
+## Host invariants
 
-1. `worktree: { branch, base? }` is opt-in per `subagent` call.
-2. `cwd` selects the source repository; the child starts at the created worktree root.
-3. `base` resolves to an exact commit before creation and defaults to committed `HEAD`.
-4. Parent uncommitted/untracked files are not copied.
-5. An ownership manifest is written before Herdr resource creation.
-6. Herdr creates the workspace without stealing focus; launch targets the returned root pane explicitly.
-7. Successful, failed, and help-requesting runs retain their worktree workspace.
-8. Completion reports reviewable Git state; inspection failures are unknown, never guessed clean or conflict-free.
-9. The extension does not push, create PRs, merge, cherry-pick, switch the parent checkout, or remove worktrees automatically. Explicit parent-owned cleanup uses cwd containment and fail-closed eligibility; branches are never deleted.
-10. Ordinary non-worktree subagent behavior remains unchanged.
-
-Read [`docs/worktree-subagents.md`](docs/worktree-subagents.md) before changing any of these semantics.
-
-## Orchestration guidance
-
-- Use ordinary panes for read-only scouts and reviewers.
-- A single or sequential writer can work in the parent checkout; reserve unique worktree branches for independent parallel writing tasks.
-- Keep overlapping or dependent writing tasks sequential unless the dependency is committed and used as the next exact base.
-- Tell worktree workers whether to commit. A good default is: edit, test, commit, report the SHA, and do not push/merge/remove.
-- The parent owns review, integration, publication, and cleanup.
-- Do not use `subagent_resume` as if it reattached worktree ownership; v1 resumes into an ordinary pane.
+- Every Rex CLI call remains explicit argv and shell-free. `REX_SERVER` is passed as `-S <endpoint>` when present and `--autostart=false` is always explicit.
+- The isolated lab starts `rex server run --listen unix://<root>/s --state-dir <root>/state --restore=false` under a `mkdtemp(join(tmpdir(), "pira-lab-"))` root. Refuse socket endpoints longer than 104 bytes.
+- The first lab check runs `rex whoami --json` inside the lab block and requires the endpoint to equal the lab socket.
+- Children are launched through the real `subagent` tool. A completed delegation must provide the report envelope, the child session evidence and the child block lifecycle evidence.
+- Synchronization waits for observable files, session entries, OSC/program status or Rex block changes. Fixed sleeps are not synchronization.
+- The extension is Rex-only. A child is a leaf and must not register or invoke another delegation path.
+- The parent owns review, integration, publication and cleanup. Do not switch the parent checkout, push branches, or remove unrelated Rex sessions.
 
 ## Documentation synchronization
 
-When behavior changes, update every affected surface in the same commit:
+When behavior changes, update every affected surface in the same change:
 
-- public tool parameters or lifecycle → run `npm run docs:tools` to regenerate the marked blocks in `docs/tools.md` and `test/fixtures/tool-schema/current.json`, edit the prose by hand, plus the `README.md` summary when everyday use changes
-- report envelope, host evidence, or tool-schema compatibility → `docs/delegation-outcome-contract.md`
-- configuration keys, model routing, or task-model init events → `docs/configuration.md`, plus the `README.md` summary when everyday use changes
-- role-pack protocol or role frontmatter → `docs/roles.md`
-- troubleshooting steps → `docs/troubleshooting.md`
-- code map → this file and `docs/development.md`
-- role-pack discovery, precedence, or collision policy → `docs/adr/0003-installable-role-packs.md`
-- worktree behavior, handoff, recovery, or cleanup → `docs/worktree-subagents.md`
-- role prompts, `/plan`, and review-workflow methodology → the owning role pack, not this repository
-- the `PI_SUBAGENT_ID` child-context hint → `docs/tools.md` and `CONTEXT.md`
-- contributor/release verification → this file, `docs/development.md`, `.pi/skills/verify-pi-herdr-agents/SKILL.md`, `.pi/skills/run-integration-tests/SKILL.md`, or `RELEASING.md`
-- domain terminology → `CONTEXT.md`
-- hard-to-reverse orchestration trade-offs → the relevant ADR; do not create an ADR for every design question
-- architectural evidence and alternatives only → research docs, clearly marked when later decisions supersede them
+- public tool parameters, lifecycle or host wording → the generated tool docs and their checked snapshot, plus `README.md` when everyday use changes
+- report envelope, session evidence or host lifecycle → the delegation outcome contract and the relevant Rex facts
+- Rex configuration, model routing or launch arguments → `README.md`, configuration prose and the integration harness
+- placement, block cleanup or worktree behavior → the Rex surface documentation and worktree guide
+- verification behavior → `AGENTS.md`, the two Rex skills and the lab evidence shape
+- domain terms or migration decisions → `CONTEXT.md` or the relevant `docs/p4` record
 
-Do not copy the full worktree guide into every role prompt. Keep canonical detail in the guide and add only the role-specific rule an agent needs while running.
+Do not make the integration test weaker to accommodate a flaky or unavailable environment. A missing Rex environment is an explicit skip and is not passing evidence.
 
 ## Verification
 
-Use [`.pi/skills/verify-pi-herdr-agents/SKILL.md`](.pi/skills/verify-pi-herdr-agents/SKILL.md) for which gates each kind of change needs, a real parent-Pi drive in an isolated Herdr lab, refactor behavior pins, and how to judge an integration failure.
-
-For normal changes:
+For ordinary changes, run:
 
 ```bash
 npm test
@@ -119,32 +76,28 @@ npm pack --dry-run
 git diff --check
 ```
 
-`npm run lint` needs Node.js 22.18+ (or 22.6–22.17 with `NODE_OPTIONS=--experimental-strip-types`) because oxlint imports `oxlint.config.ts` and its `tools/oxlint/anti-slop/index.ts` plugin as TypeScript.
-
-`npm run typecheck` type-checks production sources (`pi-extension/`, `maestro/`, `scripts/`), the TypeScript tests (`test/**/*.ts`), and the verification lab scripts (`.pi/skills/**/*.ts`) under `strict`. Tests run with type stripping, so a type error never fails `npm test`; fix it for the typecheck gate. JavaScript tests (`*.js`, `*.mjs`) are not covered.
-
-For Herdr or lifecycle changes, run the deterministic suite from inside Herdr. Run only one integration suite at a time on a Herdr instance; concurrent suites compete for terminal focus and process capacity and can cause false timeouts or leaked test resources.
-
-When a test reports that a `pi-integ-*` worktree path already exists, first check whether the same test already created that worktree and the deterministic provider dispatched the tool twice after asynchronous completion. Deterministic providers must make each requested tool call one-shot after its started result appears. Remove only verified test-owned residue after confirming that no workspace or process owns it.
+For Rex lifecycle, delivery, placement or cleanup changes, also run inside Rex:
 
 ```bash
-npm run test:integration
+node --experimental-strip-types .pi/skills/verify-pi-rex-agents/scripts/lab.ts doctor
+npm run test:integration:rex
 ```
 
-Use `PI_TEST_MODEL="openai-codex/gpt-5.6-luna" PI_TEST_TIMEOUT=180000 npm run test:integration:live` only for optional provider-compatibility smoke coverage. Do not use skipped Herdr tests as passing evidence.
+For an end-to-end evidence claim, run `lab.ts up`, `drive`, and `down`, then inspect `evidence.json`. Record skipped and failed tests separately; do not report a skipped smoke test as a passing lifecycle check.
 
-Before committing:
+`npm run typecheck` covers production TypeScript, tests and `.pi/skills/**/*.ts` under strict mode. `npm run lint` requires a Node version supported by the repository's oxlint configuration.
 
-- inspect `git status` and the final diff;
-- confirm the package preview includes `CHANGELOG.md`, `README.md`, `config.json.example`, and `pi-extension/subagents/index.ts`, contains no `agents/` resources, no `skills/` resources other than the host-owned `skills/pi-herdr-agents/SKILL.md`, and no `pi-extension/subagents/plan-skill.md`, and excludes `pi-extension/subagents/workflow-worker.js`, plans, journals, sessions, prototypes, generated evidence, local config, and `openspec/`;
-- run `npm pack --dry-run` when package contents or documentation paths changed; durable configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`, never package-root `config.json` (move old files manually or re-run `/subagents-init`);
-- confirm that no generated plans, journals, sessions, provider configuration, test scripts, or review artifacts are staged; and
-- confirm that no accidental empty directory exists at the repository root:
+## Before handing off
+
+- inspect `git status --short` and the complete final diff
+- run `npm pack --dry-run` after package or documentation path changes and inspect the file list
+- confirm no temporary `pira-lab-*` root, `pi-integ-*` root, Rex server or integration process remains
+- run `rex ls --json` and confirm no test-owned session remains
+- confirm no generated evidence, local config, provider credentials or session artifacts are staged
+- confirm no accidental empty root directory exists:
 
 ```bash
 test -z "$(find . -mindepth 1 -maxdepth 1 -type d -empty -print)"
 ```
 
-## Release safety
-
-Do not bump `package.json` merely to land documentation or implementation work. A version change on `main` triggers the release workflow. Never commit npm credentials, generated review artifacts, session artifacts, or local `config.json`.
+Report changed files, unresolved issues, and the exact local gates run. Keep the task card and `docs/p4/STATUS.md` unchanged unless the parent agent asks for those updates.

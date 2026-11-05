@@ -107,6 +107,17 @@ export interface RexCliOptions {
   env?: NodeJS.ProcessEnv;
 }
 
+/** Build the complete argv passed to rex without invoking a shell. */
+export function buildRexArgv(
+  args: readonly string[],
+  env: NodeJS.ProcessEnv = process.env,
+): string[] {
+  const prefix = ["--autostart=false"];
+  const server = env.REX_SERVER;
+  if (server) prefix.unshift("-S", server);
+  return [...prefix, ...args];
+}
+
 export class RexCommandError extends Error {
   readonly args: string[];
   readonly exitCode: number | null;
@@ -155,8 +166,9 @@ export class RexCli {
   }
 
   async run(args: string[], timeoutMs = this.timeoutMs): Promise<RexRunResult> {
+    const argv = buildRexArgv(args, this.env);
     try {
-      const result = await execFileAsync(this.binary, args, {
+      const result = await execFileAsync(this.binary, argv, {
         env: this.env,
         timeout: timeoutMs,
         maxBuffer: 16 * 1024 * 1024,
@@ -180,7 +192,7 @@ export class RexCli {
       if (err.code === 0) {
         return { stdout, stderr, exitCode: 0 };
       }
-      throw new RexCommandError(args, error, stdout, stderr);
+      throw new RexCommandError(argv, error, stdout, stderr);
     }
   }
 

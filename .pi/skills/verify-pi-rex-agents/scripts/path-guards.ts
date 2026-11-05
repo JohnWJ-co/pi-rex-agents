@@ -33,20 +33,20 @@ export const realHost: GuardHost = {
 	tmpdir: tmpdir(),
 };
 
-/** Directory-name prefix `createLabRoot` uses (test/integration/herdr-lab.ts). */
-export const LAB_ROOT_PREFIX = "piha-herdr-lab-";
+/** Directory-name prefix `createRexLab` uses (test/integration/rex-harness.ts). */
+export const LAB_ROOT_PREFIX = "pira-lab-";
 /** `mkdtemp` appends six characters from [A-Za-z0-9]. */
-const LAB_ROOT_NAME = /^piha-herdr-lab-[A-Za-z0-9]{6}$/;
+const LAB_ROOT_NAME = /^pira-lab-[A-Za-z0-9]{6}$/;
 /** `<yyyymmdd>-<hhmmss>-<random>` as `lab.ts up` names run directories. */
 const RUN_ID = /^\d{8}-\d{6}-[a-z0-9]{1,8}$/;
 /** Ids typed into prompts and marker paths: shell-, path- and provider-safe. */
 const MARKER_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/;
 
-/** Default state/evidence location: `$XDG_STATE_HOME/pi-herdr-agents/verify`. */
+/** Default state/evidence location: `$XDG_STATE_HOME/pi-rex-agents/verify`. */
 export function defaultEvidenceRoot(env: NodeJS.ProcessEnv = process.env): string {
 	const xdg = env.XDG_STATE_HOME;
 	const base = xdg && isAbsolute(xdg) ? xdg : join(homedir(), ".local/state");
-	return join(base, "pi-herdr-agents/verify");
+	return join(base, "pi-rex-agents/verify");
 }
 
 /**
@@ -85,7 +85,7 @@ export function assertRunDir(runDir: string, evidenceRoot: string, host: GuardHo
 /**
  * Shape-only check on a lab root (no filesystem access beyond resolving the
  * temp parent): normalized absolute path, exactly one level below the temp
- * parent, with a `piha-herdr-lab-XXXXXX` name. `..` segments and string-prefix
+ * parent, with a `pira-lab-XXXXXX` name. `..` segments and string-prefix
  * tricks fail here.
  */
 export function assertLabRootShape(root: string, host: GuardHost = realHost): void {

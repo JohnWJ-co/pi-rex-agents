@@ -1,12 +1,9 @@
 #!/usr/bin/env -S node --experimental-strip-types
 /**
- * Refactor behavior pin: loads a checkout's extension against the recording API in
- * test/helpers/mock-extension-api.ts, once in parent scope and once in child scope
- * (PI_SUBAGENT_ID + PI_DENY_TOOLS set), and prints the registration order, tool
- * schemas, renderers, event handlers and module exports as JSON. Run it before and
- * after a refactor and diff the two files; any difference is a behavior change.
- *
- *   node --experimental-strip-types pin.ts [checkout] > pin.json
+ * Refactor behavior pin for the current pi-rex-agents tree: loads the
+ * extension's registration surface against the recording API in
+ * test/helpers/mock-extension-api.ts, once in parent scope and once in child
+ * scope (PI_SUBAGENT_ID + PI_DENY_TOOLS), then prints stable JSON.
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -14,7 +11,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const repo = resolve(process.argv[2] ?? resolve(import.meta.dirname, "../../../.."));
-const agentDir = mkdtempSync(join(tmpdir(), "piha-pin-agent-"));
+const agentDir = mkdtempSync(join(tmpdir(), "pira-pin-agent-"));
 const SCOPE_ENV = ["PI_CODING_AGENT_DIR", "PI_SUBAGENT_ID", "PI_DENY_TOOLS"] as const;
 const saved = new Map(SCOPE_ENV.map((key) => [key, process.env[key]]));
 

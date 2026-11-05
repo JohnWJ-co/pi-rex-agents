@@ -846,3 +846,14 @@ if (!address || isString(address))
 	throw new Error("Expected fake provider to bind to a TCP port");
 
 export const TEST_PROVIDER_URL = `http://127.0.0.1:${address.port}/v1`;
+
+/** Keep the deterministic provider alive while a Rex lab owns a parent Pi. */
+export function holdProvider(): () => void {
+	server.ref();
+	let released = false;
+	return () => {
+		if (released) return;
+		released = true;
+		server.unref();
+	};
+}

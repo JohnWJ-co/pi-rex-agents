@@ -1,51 +1,49 @@
 ---
 name: run-integration-tests
-description: Run the integration test suite and verify all sessions end-to-end. Use when asked to run integration or e2e tests, test before release, or check everything works.
+description: Run the Rex integration smoke suite and verify that the isolated Rex lab and all test-owned resources are cleaned up.
 ---
 
-# Run integration tests
+# Run Rex integration tests
 
-Run this workflow from inside herdr. This project supports no other terminal backend.
-
-## Preflight
+This package's lifecycle integration suite runs in Rex. Before starting, remain inside a Rex block and confirm the target environment:
 
 ```bash
-echo "HERDR_ENV=$HERDR_ENV"
-command -v herdr
+echo "REX_SESSION=$REX_SESSION"
+echo "REX_BLOCK=$REX_BLOCK"
+command -v rex
 npm test
 npm pack --dry-run
 ```
 
-Stop and ask the user to start pi inside herdr if `HERDR_ENV` is not `1` or the CLI is missing.
+If `REX_SESSION` is unset or `rex` is unavailable, stop and report that the Rex environment is missing. Do not count a skipped test as passing evidence. Run only one integration suite at a time; the suite uses an isolated Rex server but serial execution keeps provider and process resources deterministic.
 
-## Integration suite
-
-Run only one integration suite at a time on a Herdr instance. Before starting, confirm that no other checkout or agent is running `test/integration/*.test.ts`; concurrent suites compete for terminal focus and process capacity and can cause false timeouts or leaked test resources.
-
-From the repository root, run the deterministic required suite:
+Run the required deterministic smoke test:
 
 ```bash
-npm run test:integration
+npm run test:integration:rex
 ```
 
-The harness loads the extension directly from the working tree, creates isolated test agents, and routes every parent and child Pi session to a local scripted provider. It still exercises real Pi and Herdr lifecycle behavior without provider credentials, network calls, or model-output assertions.
+The test starts `test/integration/fake-provider.ts`, creates a `pira-lab-*` root with a Unix socket no longer than 104 bytes, starts `rex server run --listen ... --state-dir ... --restore=false`, verifies `rex whoami --json` inside a lab block, launches a real parent Pi with `--no-extensions -e <checkout>/src/extension.ts`, and checks report delivery, child session evidence, block creation and cleanup. Wait on session files, OSC/program status, or block state; fixed sleeps are not synchronization.
 
-Integration tests must own and tear down their Herdr workspaces, processes, temporary repositories, and worktrees, including on failure. Wait for observable journal, pane, process, file, or screen conditions. Do not use a fixed sleep to synchronize a transition; deliberate elapsed-time scenarios are the exception.
-
-Use this optional live-provider smoke test only when checking provider compatibility:
+For a manual run and evidence:
 
 ```bash
-PI_TEST_MODEL="openai-codex/gpt-5.6-luna" PI_TEST_TIMEOUT=180000 npm run test:integration:live
+L="node --experimental-strip-types .pi/skills/verify-pi-rex-agents/scripts/lab.ts"
+$L doctor
+$L up
+$L drive
+$L down
 ```
 
-Report passing, failing, and skipped tests. Do not claim full verification when Herdr-dependent tests were skipped. For package changes, explicitly inspect the dry-run contents: confirm that no `agents/` or `skills/` resources, `pi-extension/subagents/plan-skill.md`, or `pi-extension/subagents/workflow-worker.js` are present, and that plans, journals, sessions, prototypes, generated evidence, and local config are absent. Lifecycle tests use only the role fixtures in `test/integration/agents/`; a test that needs a production role from a pack belongs in that pack.
+Report pass, fail, and skip separately. A skipped Rex test is not full verification.
 
-## Postflight
+After every run, perform postflight:
 
 ```bash
+rex ls --json
+find "${TMPDIR:-/tmp}" -maxdepth 1 \( -name 'pira-lab-*' -o -name 'pi-integ-*' \) -print
+ps eww -ax | grep -E 'rex server run|test/integration' || true
 git status --short
-herdr workspace list
-find "$HOME/.herdr/worktrees" "${TMPDIR:-/tmp}" /tmp -name 'pi-integ-*' -print 2>/dev/null
 ```
 
-Confirm that no `pi-integ-*` workspace, process, temporary repository, or worktree remains. `herdr workspace list` already returns JSON. If a failed test leaves an artifact, verify that it is test-owned before removing it. Close a test-owned workspace with `herdr workspace close <workspace-id>`. Do not remove unrelated user workspaces, processes, files, or worktrees.
+Confirm `rex ls --json` contains no test-owned `pira-lab-*` or `pi-integ-*` sessions, no `pira-lab-*` temporary directory remains, and no suite or lab server remains. Remove only verified test-owned residue. Never kill by process name and never modify an unrelated Rex session.

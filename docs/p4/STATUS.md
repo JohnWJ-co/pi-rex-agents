@@ -10,7 +10,7 @@
 | 任务 | 状态 | 提交 | 备注 |
 |---|---|---|---|
 | T0 | 已完成，门禁通过 | `41af43a2c17ae86ec7c5e57b3c1989c6b71147a8` | 完整复制范围已修正；test-gate 最终通过，1452 个测试已加载 |
-| T1 | 待开始 | | |
+| T1 | 已完成，门禁通过 | 待提交 | Rex lab、集成 harness、验证技能和 AGENTS.md 已完成；test-gate 与真实 Rex smoke 通过 |
 | T2 | 待开始 | | |
 | T3 | 待开始 | | |
 | T4 | 待开始 | | |
@@ -81,3 +81,38 @@
 提交前的附加 `git diff --cached --check` 检查发现两个原样复制的上游文档存在既有行尾空格：`docs/research/pi-worktree-session-handoff.md:3` 和 `docs/research/worktree-subagent-orchestration.md:5`。T0 要求原样入库且不改文档行为，因此保留该上游内容；它不属于 T0 任务卡门禁。
 
 结论：T0 全部门禁通过，已创建提交 `41af43a2c17ae86ec7c5e57b3c1989c6b71147a8`。未在上游 checkout 安装依赖或运行测试；主 checkout 和上游 checkout 未修改。
+
+### T1：Rex lab、集成 harness、验证技能
+
+实现内容：
+
+- `src/rex-cli.ts` 新增 `buildRexArgv()`；所有 Rex CLI 调用显式加入 `--autostart=false`，并在 `REX_SERVER` 存在时显式加入 `-S <endpoint>`，保持 shell-free 和用户参数顺序。
+- 新增 `test/rex-cli.test.ts`，覆盖有/无 `REX_SERVER`、argv 顺序和用户参数不被改写。
+- 新增 `test/integration/rex-harness.ts` 与 `test/integration/rex-smoke.test.ts`，使用 deterministic fake-provider，通过真实父 Pi、`subagent` 工具、报告投递、子 session 和 block 生命周期验证 Rex 路径。
+- 新增 `.pi/skills/verify-pi-rex-agents/`（含 `lab.ts`、`path-guards.ts`、`pin.ts` 和验证说明），删除复制来的 `.pi/skills/verify-pi-herdr-agents/`；更新 `.pi/skills/run-integration-tests/SKILL.md` 为 Rex preflight/postflight。
+- `lab.ts` 遵守 F8：使用 `mkdtemp(join(tmpdir(), "pira-lab-"))`，短 Unix socket，以 `REX_SERVER=unix://<lab>/s` 启动独立 Rex server，并在 lab block 内执行 `rex whoami --json` 校验 endpoint；`down` 清理 lab server、session、block 和临时目录。
+- 重写 `AGENTS.md` 为 Rex 版本，增加代码地图、验证流程和提交检查。
+- `package.json` 增加 `test:integration:rex`（`--test-concurrency=1`），并把 Rex CLI 单测加入默认测试脚本。
+
+T1 门禁：
+
+- `docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t1-gate`：通过。第 1 次为 `1455 tests / 1424 pass / 21 fail / 10 skipped`，第 2 次为 `1455 tests / 1425 pass / 20 fail / 10 skipped`；暂定新增失败未持续，脚本输出 `OK：没有持续性新增失败`。
+- `npm run typecheck`：通过。
+- `npm run lint`：通过。
+- `npm run format:check`：通过，检查 173 个文件。
+- `npm run docs:tools:check`：通过。
+- `node --experimental-strip-types --test test/rex-cli.test.ts test/verify-lab-guards.test.ts`：22 passed、0 failed。
+- `node --experimental-strip-types .pi/skills/verify-pi-rex-agents/scripts/pin.ts`：通过，生成 `/tmp/pi-rex-agents-t1-pin.json`。
+- `npm pack --dry-run`：通过；当前仍包含 T0 基线中的 Herdr、sidebar、role-pack 和 release 文件，按计划留待 T2/T6 删除和收尾。
+- `git diff --check`：通过。
+
+真实 Rex lab 门禁：
+
+- `lab.ts doctor`：通过。Rex `0.0.1793741575-g1b6654`、Pi `1.5.0`、Node `v26.7.0`、当前 `REX_SESSION=session:01a1ad74-819e-77df-b7f6-ab986b5e5126` 和当前 block 均核验通过。
+- `lab.ts up`：通过，lab root 为 `/var/folders/7h/6mfm49q94tgctb4rr8vvn86w0000gn/T/pira-lab-2QkyM9`。
+- `lab.ts drive`：通过。whoami endpoint 为 `unix:///var/folders/7h/6mfm49q94tgctb4rr8vvn86w0000gn/T/pira-lab-2QkyM9/s`；父 Pi 收到 `<subagent_report from="RexSmoke">`，子 session 存在，子 block 从 `block:01a1add1-9c36-730d-8d57-829d40408d94` 出现后清理，父进程继续运行。
+- `lab.ts down`：通过，输出 `labRootExists=false leftoverPids=none`。
+- `npm run test:integration:rex`：通过，1 passed、0 failed、0 skipped。
+- postflight：`rex ls` 未发现 `pira-lab-*` 或 `pi-integ-*` 资源；临时目录、lab current 文件和 lab/test integration 进程均无残留。未触碰 `session:01a1ad74` 中的其他 block。
+
+结论：T1 全部门禁通过，准备创建提交。未修改主 checkout 或上游 checkout。
