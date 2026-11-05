@@ -58,10 +58,17 @@ const extensionPath = join(here, "extension.ts");
 add("extension entry", existsSync(extensionPath), extensionPath);
 
 const installed = commandOutput("pi", ["list"]) ?? "";
-const hasHerdr = /\bpi-herdr-agents\b/.test(installed);
+const herdrLine = installed
+  .split(/\r?\n/)
+  .find((line) => /^\s*npm:pi-herdr-agents\b/.test(line));
+// A filtered package stays in the settings list but loads no resources, so it
+// cannot register the kernel's tools. Only an unfiltered entry conflicts.
+const hasHerdr = herdrLine !== undefined && !/\(filtered\)\s*$/.test(herdrLine);
 const hasRex = /\bpi-rex-agents\b/.test(installed);
 add("pi package cache", true, hasRex ? "pi-rex-agents visible in pi list" : "pi-rex-agents not in pi list (use -e or pi install)");
-if (hasHerdr && hasRex) {
+if (herdrLine !== undefined && !hasHerdr) {
+  add("tool-name conflict", true, "pi-herdr-agents is installed but filtered; it registers no tools");
+} else if (hasHerdr && hasRex) {
   add(
     "tool-name conflict",
     false,

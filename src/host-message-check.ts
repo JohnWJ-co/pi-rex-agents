@@ -28,6 +28,23 @@ assert.match(
 assert.doesNotMatch(String(rewritten.details?.resultContent), /herdr worktree remove/);
 assert.equal(rewritten.details?.worktree, original.details.worktree);
 
+const retained = {
+  content: "Worktree result retained for review:\nWorkspace: window:abc\n",
+};
+const relabeled = rewriteRexHostText(retained);
+assert.match(String(relabeled.content), /^Window: window:abc$/m);
+assert.doesNotMatch(String(relabeled.content), /Workspace:/);
+
+const cancelled = {
+  content:
+    'Cancelled subagent "x": its pane was closed and Herdr confirmed it is gone.',
+};
+const rexified = rewriteRexHostText(cancelled);
+assert.equal(
+  rexified.content,
+  'Cancelled subagent "x": its block was closed and Rex confirmed it is gone.',
+);
+
 const untouched = { content: "nothing to rewrite" };
 assert.equal(rewriteRexHostText(untouched), untouched);
 

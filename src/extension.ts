@@ -10,18 +10,64 @@ import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import subagentsExtension from "pi-herdr-agents/pi-extension/subagents/index.ts";
 import { createWorktreeCleanupOperations } from "pi-herdr-agents/maestro/runtime/worktree-operations.ts";
+import { createRexHostApi } from "./rex-host-api.ts";
 import { createRexInfrastructure } from "./infrastructure.ts";
-import { rewriteRexHostText } from "./host-message.ts";
 import { RexSurfaceProvider } from "./rex-surface-provider.ts";
 import { rexWorktreeRoot } from "./worktree.ts";
+
+const REX_HOST_MARKER = "[Rex host]";
+const REX_CHILD_MARKER = "[Rex child]";
+
+function appendNotice(
+  event: { systemPromptOptions: { appendSystemPrompt?: string } },
+  marker: string,
+  notice: string,
+): void {
+  const current = event.systemPromptOptions.appendSystemPrompt ?? "";
+  if (current.includes(marker)) return;
+  event.systemPromptOptions.appendSystemPrompt = current
+    ? `${current}\n\n${notice}`
+    : notice;
+}
+
+/**
+ * Tells the model which host it runs in before every run. Rex installs no Pi
+ * session hook, and the kernel's tool text originally named another host, so
+ * without this the model can mistake Rex for that host and reach for its CLI.
+ */
+function rexHostNotice(sessionId: string, blockId: string): string {
+  return [
+    REX_HOST_MARKER,
+    `You are running inside Rex (session ${sessionId}, block ${blockId}). A Rex window is a tab; a block is a pane.`,
+    'Subagents run natively in Rex: use the subagent tool. placement "split" (default) opens a block beside you in the current tab; placement "tab" opens the child in a new Rex tab.',
+    "Never start, track, or control subagents with herdr, hc, the herdr-core skill, or the rex CLI; those are not this host. The subagent tool is the only way to delegate here.",
+    "Children are leaves: they do not get the subagent tool.",
+  ].join("\n");
+}
+
+/** A child has no subagent tool here; say so before it reaches for another host. */
+function rexChildNotice(sessionId: string, blockId: string): string {
+  return [
+    REX_CHILD_MARKER,
+    `You are a subagent running inside Rex (session ${sessionId}, block ${blockId}).`,
+    "You are a leaf: no subagent tool is registered, and you must not spawn further agents with herdr, hc, or the rex CLI.",
+    "Do your task and report the result; the parent receives it automatically.",
+  ].join("\n");
+}
 
 export default function piRexAgentsExtension(pi: ExtensionAPI): void {
   const sessionId = process.env.REX_SESSION;
   const blockId = process.env.REX_BLOCK;
 
-  // pi-rex-agents is Rex-only. Outside Rex it must not fall back to Herdr or
-  // register tools that cannot acquire a surface.
-  if (!sessionId || !blockId || process.env.PI_SUBAGENT_ID) {
+  // pi-rex-agents is Rex-only. Outside Rex it must not register tools that
+  // cannot acquire a surface.
+  if (!sessionId || !blockId) return;
+
+  // Inside a child it stays a leaf: no tools, only the host notice.
+  if (process.env.PI_SUBAGENT_ID) {
+    pi.on("before_agent_start", (event) => {
+      appendNotice(event, REX_CHILD_MARKER, rexChildNotice(sessionId, blockId));
+    });
     return;
   }
 
@@ -32,19 +78,19 @@ export default function piRexAgentsExtension(pi: ExtensionAPI): void {
     anchorBlockId: blockId,
   });
 
-  // pi-herdr-agents renders one host-specific operator command in worktree
-  // handoff messages. Keep the upstream orchestration intact, but rewrite that
-  // line to a valid Rex command before delivery.
-  const originalSendMessage = pi.sendMessage.bind(pi);
-  const hostApi = Object.create(pi) as ExtensionAPI;
-  hostApi.sendMessage = ((message, options) =>
-    originalSendMessage(rewriteRexHostText(message), options)) as ExtensionAPI["sendMessage"];
+  pi.on("before_agent_start", (event) => {
+    appendNotice(event, REX_HOST_MARKER, rexHostNotice(sessionId, blockId));
+  });
+
+  // Every tool and command the kernel registers passes through this proxy:
+  // Rex wording, the per-launch placement parameter, and message rewriting.
+  const hostApi = createRexHostApi(pi);
 
   subagentsExtension(hostApi, {
     infrastructure: createRexInfrastructure(provider),
-    // Herdr's cleanup scans ~/.herdr/worktrees. Rex-managed worktrees live
-    // under the pi-rex-agents root instead, so provide the matching cleanup
-    // adapter while keeping all dirty/live-child checks from upstream.
+    // Worktree cleanup adapter: Rex-managed worktrees live under the
+    // pi-rex-agents root rather than the kernel's default location, while the
+    // dirty-worktree and live-child checks stay upstream's.
     cleanupOperations: (ctx) =>
       createWorktreeCleanupOperations(provider as never, {
         manifestDir: join(

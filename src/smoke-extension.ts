@@ -24,8 +24,8 @@ const pi = {
   registerTool(tool: { name: string }) {
     tools.push(tool.name);
   },
-  registerCommand(command: { name: string }) {
-    commands.push(command.name);
+  registerCommand(name: string) {
+    commands.push(name);
   },
   registerMessageRenderer(name: string) {
     renderers.push(name);

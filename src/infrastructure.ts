@@ -7,12 +7,15 @@
  */
 
 import type { PaneConfig } from "pi-herdr-agents/maestro/core/config/pane-config.ts";
+import type { PiLaunchOperations } from "pi-herdr-agents/maestro/adapters/pi/launch-operations.ts";
 import { SupervisionCoordinator } from "pi-herdr-agents/maestro/core/supervision.ts";
 import { launchOperationsFromSurface } from "pi-herdr-agents/maestro/adapters/pi/launch-operations.ts";
 import { createWorktreeOperations } from "pi-herdr-agents/maestro/runtime/worktree-operations.ts";
 import type { PiRunSessionInfrastructure } from "pi-herdr-agents/maestro/runtime/index.ts";
+import { placementForLaunch } from "./placement.ts";
 import { RexSurfaceProvider } from "./rex-surface-provider.ts";
 
+/** Default: a block beside the parent in the current Rex tab. */
 export const REX_PANE_CONFIG: PaneConfig = {
   mode: "split",
   direction: "right",
@@ -24,7 +27,24 @@ export function createRexInfrastructure(
   paneConfig: PaneConfig = REX_PANE_CONFIG,
 ): PiRunSessionInfrastructure {
   const worktreeOperations = createWorktreeOperations();
-  const launchOperations = launchOperationsFromSurface(provider, paneConfig, worktreeOperations);
+  const upstreamLaunchOperations = launchOperationsFromSurface(
+    provider,
+    paneConfig,
+    worktreeOperations,
+  );
+  // A tool call may choose a new tab for its own child; everything else about
+  // the launch pipeline stays upstream's.
+  const launchOperations: PiLaunchOperations = {
+    ...upstreamLaunchOperations,
+    createPane(name, cwd, control) {
+      return provider.createSurface({
+        name,
+        cwd: cwd ?? process.cwd(),
+        placement: placementForLaunch(paneConfig),
+        signal: control?.signal,
+      });
+    },
+  };
 
   const supervision = new SupervisionCoordinator(
     async () => {

@@ -3,7 +3,7 @@
 ## 前提
 
 - 在 **Rex block 内**运行 Pi（`REX_SESSION`、`REX_BLOCK` 都存在）。
-- Pi 1.5+，`pi-herdr-agents` 3.7.2。
+- Pi 1.5+，编排内核 `pi-herdr-agents` 3.7.2（作为依赖库）。
 - 本目录已执行 `npm install`，`node_modules/pi-herdr-agents` 存在。
 
 ## 方式一：临时加载（推荐先验收）
@@ -26,19 +26,20 @@ pi install ./ -l --approve   # 写入当前项目的 .pi/settings.json
 pi install ./                # 写入个人 ~/.pi/agent/settings.json
 ```
 
-之后 `pi list` 应能看到本包。包通过 `package.json` 的 `pi.extensions` 字段声明入口：
+之后 `pi list` 应能看到本包。包通过 `package.json` 的 `pi.extensions` 声明入口，`pi.skills` 声明宿主说明：
 
 ```json
 {
   "pi": {
-    "extensions": ["./src/extension.ts"]
+    "extensions": ["./src/extension.ts"],
+    "skills": ["./skills"]
   }
 }
 ```
 
-## 必须处理工具名冲突
+## 处理工具名冲突
 
-`pi-rex-agents` 复用了上游工具名（`subagent`、`worktree_list` 等）。Pi 无法同时注册两个同名工具，因此 **不要同时加载 `pi-herdr-agents` 和 `pi-rex-agents`**。
+`pi-rex-agents` 复用了内核工具名（`subagent`、`worktree_list` 等）。Pi 无法同时注册两个同名工具，因此**不要同时加载未过滤的 `pi-herdr-agents` 和 `pi-rex-agents`**。
 
 二选一：
 
@@ -51,13 +52,11 @@ pi install ./                # 写入个人 ~/.pi/agent/settings.json
 pi list
 ```
 
-如果两个包都出现在列表里，请用 `pi config` 关闭其中一个，或用：
+被 `pi config` 禁用的包仍会出现在列表里，但带 `(filtered)` 后缀——它不加载任何资源，不会注册工具。只有不带 `(filtered)` 的 `npm:pi-herdr-agents` 才算冲突。需要彻底移除时：
 
 ```bash
-pi remove pi-herdr-agents
+pi remove npm:pi-herdr-agents
 ```
-
-（只在确定不再需要 Herdr 场景时执行。）
 
 ## 运行环境自检
 
@@ -65,7 +64,7 @@ pi remove pi-herdr-agents
 npm run doctor
 ```
 
-它会检查 Rex/Pi CLI、入口文件和 `pi list` 中是否同时存在两个包；同时存在时以非零码退出。
+它会检查 Rex/Pi CLI、入口文件和 `pi list` 中的包状态；只有未过滤的 `pi-herdr-agents` 与 `pi-rex-agents` 同时存在时才以非零码退出。
 
 ## 验证
 
@@ -78,10 +77,18 @@ npm run doctor
 
 应看到命令正常执行。`/subagent list` 为空是正常的：本仓库没有定义角色，裸 `subagent` 调用仍可使用。
 
+要验证新 tab：
+
+```text
+让子代理在新 tab 运行
+```
+
+模型应调用 `subagent` 并带 `placement: "tab"`；`rex window ls` 会多一个 window。默认（不带 placement）仍是在当前 tab 右侧 split。
+
 ## 运行测试
 
 ```bash
-npm run check       # typecheck + host message check + P0
+npm run check       # typecheck + host message check + host surface check + P0
 npm run p1          # 普通子代理
 npm run p1:worktree # worktree 隔离
 npm run p1:persistent
@@ -89,3 +96,11 @@ npm run p2          # cancel / interrupt / resume
 ```
 
 `p1`、`p2` 必须在 Rex block 内运行；`p0` 也需要 Rex 环境。
+
+不需要 Rex 的部分：
+
+```bash
+npm run typecheck
+bun src/host-message-check.ts
+bun src/wording-check.ts
+```

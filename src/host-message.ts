@@ -1,10 +1,13 @@
 /**
- * Rex-specific host text cleanup.
+ * Rex-specific host text cleanup for delivered messages.
  *
- * pi-herdr-agents owns the delivery/presentation text and is intentionally
- * host-neutral except for a Herdr operator-override line in worktree handoff
- * messages. Rewrite that one executable line so it is valid in Rex.
+ * The orchestration kernel's delivery and presentation text is host-neutral
+ * except for literals that name its original host: one executable worktree
+ * cleanup line, and a few labels. Rewrite those into Rex terms before a
+ * message reaches the model or the transcript.
  */
+import { rexifyText } from "./rex-wording.ts";
+
 export interface WorktreeMessageDetails {
   worktree?: {
     workspaceId?: string;
@@ -15,18 +18,20 @@ export interface WorktreeMessageDetails {
 }
 
 function rewriteText(content: string, workspaceId: string | undefined): string {
-  if (!workspaceId) return content;
+  const rexified = rexifyText(content);
+  if (!workspaceId) return rexified;
   const escaped = workspaceId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return content.replace(
+  return rexified.replace(
     new RegExp(`^  herdr worktree remove --workspace ${escaped}$`, "gm"),
     `  rex window close ${workspaceId}`,
   );
 }
 
-export function rewriteRexHostText<T extends { content?: unknown }>(message: T): T {
+export function rewriteRexHostText<T extends { content?: unknown }>(
+  message: T,
+): T {
   const details = (message as { details?: WorktreeMessageDetails }).details;
   const workspaceId = details?.worktree?.workspaceId;
-  if (!workspaceId) return message;
 
   let changed = false;
   let content = message.content;

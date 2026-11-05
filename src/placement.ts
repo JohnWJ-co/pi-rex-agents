@@ -1,0 +1,44 @@
+/**
+ * Per-launch surface placement for Rex subagents.
+ *
+ * The upstream tool schema has no placement field and the launch operations
+ * receive a single fixed PaneConfig. A tool call can still choose where its
+ * child goes: the tool wrapper runs the launch inside this AsyncLocalStorage
+ * scope, and createPane reads it. Async context keeps concurrent launches with
+ * different placements independent.
+ */
+import { AsyncLocalStorage } from "node:async_hooks";
+import type { PaneConfig } from "pi-herdr-agents/maestro/core/config/pane-config.ts";
+import type { RexPlacement } from "./rex-surface-provider.ts";
+
+/** The values the `placement` tool parameter accepts. */
+export type ChildPlacement = "split" | "tab";
+
+export const childPlacement = new AsyncLocalStorage<
+  ChildPlacement | undefined
+>();
+
+/** Narrow an untrusted tool argument to a placement value. */
+export function resolvePlacement(value: unknown): ChildPlacement | undefined {
+  if (value === "split" || value === "tab") return value;
+  return undefined;
+}
+
+/** Translation of the session-wide PaneConfig into a Rex placement. */
+export function placementFromPaneConfig(config: PaneConfig): RexPlacement {
+  if (config.mode === "split") {
+    return { kind: "split", direction: config.direction };
+  }
+  if (config.mode === "tab") return { kind: "tab" };
+  return { kind: "grouped" };
+}
+
+/** The placement for one launch: the tool call wins over the session config. */
+export function placementForLaunch(config: PaneConfig): RexPlacement {
+  const chosen = childPlacement.getStore();
+  if (chosen === "tab") return { kind: "tab" };
+  if (chosen === "split") {
+    return { kind: "split", direction: config.direction };
+  }
+  return placementFromPaneConfig(config);
+}
