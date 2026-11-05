@@ -192,6 +192,11 @@ export class RexSurfaceProvider {
       const created = await this.cli.newWindow(this.sessionId, options.name, options.cwd);
       const blockId = created.block_ids[0];
       if (!blockId) throw new Error("rex window new returned no block id");
+      // `rex window new` labels the window only; the block it creates is
+      // called "shell". Name it after the child so both surfaces are findable.
+      await this.cli
+        .renameBlock(this.sessionId, blockId, options.name)
+        .catch(() => undefined);
       await this.waitForShellReady(blockId);
       return blockId;
     }
@@ -291,6 +296,9 @@ export class RexSurfaceProvider {
       windowId = created.window_id;
       surfaceId = created.block_ids[0];
       if (!surfaceId) throw new Error("rex window new returned no block id");
+      await this.cli
+        .renameBlock(this.sessionId, surfaceId, opts.name)
+        .catch(() => undefined);
       await this.waitForShellReady(surfaceId);
     } catch (error) {
       if (surfaceId) await this.closeSurface(surfaceId).catch(() => undefined);

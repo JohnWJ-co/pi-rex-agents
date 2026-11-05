@@ -10,6 +10,7 @@ import piRexAgentsExtension from "./extension.ts";
 import { createRexHostApi } from "./rex-host-api.ts";
 import { createRexInfrastructure, REX_PANE_CONFIG } from "./infrastructure.ts";
 import { childPlacement } from "./placement.ts";
+import { RexSurfaceProvider } from "./rex-surface-provider.ts";
 import { rexifyText } from "./rex-wording.ts";
 
 type Handler = (...args: any[]) => unknown;
@@ -227,6 +228,46 @@ messageApi.sendMessage({
 } as any);
 assert.doesNotMatch(String(messageHost.messages[0].message.content), /Herdr/);
 assert.match(String(messageHost.messages[0].message.content), /Rex confirmed/);
+
+// ── A new tab names its block, not just the window ────────────────────────
+class LabelCli {
+  readonly renamed: Array<[string, string]> = [];
+  async newWindow() {
+    return { window_id: "window:x", block_ids: ["block:tab"], revision: 1 };
+  }
+  async split() {
+    return { anchor_id: "block:a", block_ids: ["block:split"], revision: 1 };
+  }
+  async renameBlock(sessionId: string, blockId: string, label: string) {
+    this.renamed.push([blockId, label]);
+  }
+}
+
+class LabelProvider extends RexSurfaceProvider {
+  override async waitForShellReady(): Promise<void> {}
+}
+
+const labelCli = new LabelCli();
+const labelProvider = new LabelProvider({
+  sessionId: "session:x",
+  cli: labelCli as never,
+  anchorBlockId: "block:a",
+});
+await labelProvider.createSurface({
+  name: "child-tab",
+  cwd: "/tmp",
+  placement: { kind: "tab" },
+});
+await labelProvider.createSurface({
+  name: "child-split",
+  cwd: "/tmp",
+  placement: { kind: "split", direction: "right" },
+});
+assert.deepEqual(
+  labelCli.renamed,
+  [["block:tab", "child-tab"]],
+  "the tab block is renamed to the child name",
+);
 
 // ── Phrase table covers the known host literals ───────────────────────────
 assert.equal(
