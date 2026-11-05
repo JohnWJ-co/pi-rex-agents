@@ -12,7 +12,7 @@
 9. 同步 AGENTS.md 代码地图和 CONTEXT.md（Surface provider：Rex 是唯一实现）。
 
 ## 门禁
-- typecheck、lint、format:check；`npm test` 用 `docs/p4/baseline/check-failures.sh` 判定（被删除测试对应的基线条目同步从基线文件中移除，并在 STATUS.md 说明）。
+- typecheck、lint、format:check；`npm test` 用 `docs/p4/baseline/test-gate.sh` 判定（被删除测试对应的基线条目同步从基线文件中移除，并在 STATUS.md 说明）。
 - `grep -rni herdr maestro pi-extension --include='*.ts' | grep -v '^\S*:\s*//'` 只允许剩下文案（T4 处理），在 STATUS.md 列出剩余条目数。
 - `npm run test:integration:rex` 通过；`npm run p1`、`p1:persistent`、`p2` 在 lab 或当前 Rex 会话中通过（按 T1 技能执行，测完清理）。
 

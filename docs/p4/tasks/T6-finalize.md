@@ -11,7 +11,7 @@
 8. 打包检查：`npm pack --dry-run` 的内容只包括运行时文件、README、LICENSE、`config.json.example`、`skills/pi-rex-agents`；不包括 test、docs/p4、`.pi`、lab 产物。
 
 ## 门禁（全部）
-`npm run typecheck`、`npm test`（`check-failures.sh` 输出 OK，且 `expected-identity.txt` 为空）、`npm run lint`、`npm run format:check`、`npm run docs:tools:check`、`npm run test:integration:rex`、`npm pack --dry-run`、`git diff --check`、大小规则（`find pi-extension/subagents -type f -size +32k` 为空），以及根目录不能有空目录。
+`npm run typecheck`、`npm test`（`test-gate.sh` 输出 OK，且 `expected-identity.txt` 为空）、`npm run lint`、`npm run format:check`、`npm run docs:tools:check`、`npm run test:integration:rex`、`npm pack --dry-run`、`git diff --check`、大小规则（`find pi-extension/subagents -type f -size +32k` 为空），以及根目录不能有空目录。
 
 ## 交付
 在 STATUS.md 写最终报告：每个门禁的结果、真实模型冒烟结果、遗留问题、建议的合并方式（把 `p4-kernel` 合并回 master 之前需要用户确认；**不要自行合并或推送**）。
