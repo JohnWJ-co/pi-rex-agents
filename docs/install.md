@@ -83,7 +83,7 @@ npm run doctor
 让子代理在新 tab 运行
 ```
 
-模型应调用 `subagent` 并带 `placement: "tab"`；`rex window ls` 会多一个 window。默认（不带 placement）仍是在当前 tab 右侧 split。
+模型应调用 `subagent` 并带 `placement: "tab"`；`rex window ls` 会多一个 window。默认（不带 placement）是在当前 tab 右侧 split，最多 4 个子 block；达到上限后下一次自动改用新 tab。
 
 ## 运行测试
 

@@ -39,7 +39,7 @@ function rexHostNotice(sessionId: string, blockId: string): string {
   return [
     REX_HOST_MARKER,
     `You are running inside Rex (session ${sessionId}, block ${blockId}). A Rex window is a tab; a block is a pane.`,
-    'Subagents run natively in Rex: use the subagent tool. placement "split" (default) opens a block beside you in the current tab; placement "tab" opens the child in a new Rex tab.',
+    'Subagents run natively in Rex: use the subagent tool. placement "split" (default) opens a block beside you in the current tab while it has capacity; placement "tab" opens the child in a new Rex tab.',
     "Never start, track, or control subagents with herdr, hc, the herdr-core skill, or the rex CLI; those are not this host. The subagent tool is the only way to delegate here.",
     "Children are leaves: they do not get the subagent tool.",
   ].join("\n");
@@ -51,6 +51,7 @@ function rexChildNotice(sessionId: string, blockId: string): string {
     REX_CHILD_MARKER,
     `You are a subagent running inside Rex (session ${sessionId}, block ${blockId}).`,
     "You are a leaf: no subagent tool is registered, and you must not spawn further agents with herdr, hc, or the rex CLI.",
+    "When reporting where you are, use $REX_BLOCK and block IDs: window numbers are positional and change as tabs open and close.",
     "Do your task and report the result; the parent receives it automatically.",
   ].join("\n");
 }

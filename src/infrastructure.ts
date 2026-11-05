@@ -15,7 +15,7 @@ import type { PiRunSessionInfrastructure } from "pi-herdr-agents/maestro/runtime
 import { placementForLaunch } from "./placement.ts";
 import { RexSurfaceProvider } from "./rex-surface-provider.ts";
 
-/** Default: a block beside the parent in the current Rex tab. */
+/** Default: a block beside the parent in the current Rex tab, at most four. */
 export const REX_PANE_CONFIG: PaneConfig = {
   mode: "split",
   direction: "right",
@@ -32,17 +32,68 @@ export function createRexInfrastructure(
     paneConfig,
     worktreeOperations,
   );
+
+  // Split children created by this process in the parent's tab. Upstream's
+  // maxPerTab only applies to its grouped pane factory; Rex has no grouped
+  // tab, so the cap lives here and covers every split request.
+  const splitChildren = new Set<string>();
+  let pendingSplits = 0;
+
+  async function pruneClosedSplits(): Promise<void> {
+    if (splitChildren.size === 0) return;
+    try {
+      const live = new Set(
+        (await provider.listSurfaces()).map((surface) => surface.id),
+      );
+      for (const id of [...splitChildren]) {
+        if (!live.has(id)) splitChildren.delete(id);
+      }
+    } catch {
+      // An unreachable server fails the launch itself; keep the local count.
+    }
+  }
+
   // A tool call may choose a new tab for its own child; everything else about
   // the launch pipeline stays upstream's.
   const launchOperations: PiLaunchOperations = {
     ...upstreamLaunchOperations,
-    createPane(name, cwd, control) {
-      return provider.createSurface({
-        name,
-        cwd: cwd ?? process.cwd(),
-        placement: placementForLaunch(paneConfig),
-        signal: control?.signal,
-      });
+    async createPane(name, cwd, control) {
+      let placement = placementForLaunch(paneConfig);
+      if (placement.kind === "split") {
+        if (splitChildren.size + pendingSplits >= paneConfig.maxPerTab) {
+          await pruneClosedSplits();
+        }
+        if (splitChildren.size + pendingSplits >= paneConfig.maxPerTab) {
+          placement = { kind: "tab" };
+        }
+      }
+      if (placement.kind !== "split") {
+        return provider.createSurface({
+          name,
+          cwd: cwd ?? process.cwd(),
+          placement,
+          signal: control?.signal,
+        });
+      }
+      // Reserve the slot before awaiting creation so concurrent launches see
+      // each other's pending splits instead of overshooting the cap.
+      pendingSplits += 1;
+      try {
+        const surface = await provider.createSurface({
+          name,
+          cwd: cwd ?? process.cwd(),
+          placement,
+          signal: control?.signal,
+        });
+        splitChildren.add(surface);
+        return surface;
+      } finally {
+        pendingSplits -= 1;
+      }
+    },
+    closePane(surface) {
+      splitChildren.delete(surface);
+      return upstreamLaunchOperations.closePane(surface);
     },
   };
 

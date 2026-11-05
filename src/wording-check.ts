@@ -170,6 +170,93 @@ assert.deepEqual(provider.placements, [
   { kind: "split", direction: "right" },
 ]);
 
+// ── maxPerTab caps splits and grouped maps to the same capped split ───────
+class CapProvider {
+  readonly name = "rex";
+  readonly placements: any[] = [];
+  private next = 0;
+  private readonly live = new Set<string>();
+  async createSurface(options: any) {
+    this.placements.push(options.placement);
+    const id = `block:${++this.next}`;
+    this.live.add(id);
+    return id;
+  }
+  async listSurfaces() {
+    return [...this.live].map((id) => ({ id }));
+  }
+  async closeSurface(id: string) {
+    this.live.delete(id);
+  }
+  async waitForSurfaceAbsence() {}
+  async inspectSurface() {
+    return {
+      kind: "missing",
+      present: "missing",
+      agentStatus: "unknown",
+      observedAt: Date.now(),
+    };
+  }
+}
+
+const capped = new CapProvider();
+const cappedInfrastructure = createRexInfrastructure(capped as never, {
+  mode: "split",
+  direction: "right",
+  maxPerTab: 2,
+});
+const first = await cappedInfrastructure.launchOperations.createPane("a", "/tmp");
+await cappedInfrastructure.launchOperations.createPane("b", "/tmp");
+await cappedInfrastructure.launchOperations.createPane("c", "/tmp");
+assert.deepEqual(
+  capped.placements.map((placement) => placement.kind),
+  ["split", "split", "tab"],
+  "the third split opens a new tab",
+);
+
+// A closed child frees its slot.
+await cappedInfrastructure.launchOperations.closePane(first);
+await cappedInfrastructure.launchOperations.createPane("d", "/tmp");
+assert.equal(capped.placements[3].kind, "split", "closing a child frees capacity");
+
+// Explicit "split" obeys the same cap.
+await childPlacement.run("split", () =>
+  cappedInfrastructure.launchOperations.createPane("e", "/tmp"),
+);
+assert.equal(capped.placements[4].kind, "tab", "an explicit split is capped too");
+
+// Concurrent launches reserve their slots instead of overshooting.
+const concurrent = new CapProvider();
+const concurrentInfrastructure = createRexInfrastructure(concurrent as never, {
+  mode: "split",
+  direction: "right",
+  maxPerTab: 2,
+});
+await Promise.all(
+  ["a", "b", "c", "d"].map((name) =>
+    concurrentInfrastructure.launchOperations.createPane(name, "/tmp"),
+  ),
+);
+const concurrentKinds = concurrent.placements.map((placement) => placement.kind);
+assert.equal(concurrentKinds.filter((kind) => kind === "split").length, 2);
+assert.equal(concurrentKinds.filter((kind) => kind === "tab").length, 2);
+
+// Upstream's grouped mode becomes the same capped split in Rex.
+const grouped = new CapProvider();
+const groupedInfrastructure = createRexInfrastructure(grouped as never, {
+  mode: "grouped",
+  direction: "right",
+  maxPerTab: 2,
+});
+for (const name of ["a", "b", "c"]) {
+  await groupedInfrastructure.launchOperations.createPane(name, "/tmp");
+}
+assert.deepEqual(
+  grouped.placements.map((placement) => placement.kind),
+  ["split", "split", "tab"],
+  "grouped splits up to the cap, then opens a tab",
+);
+
 // ── The tool wrapper strips placement and scopes it for the launch ─────────
 const toolHost = makeFakePi();
 const toolApi = createRexHostApi(toolHost.pi);

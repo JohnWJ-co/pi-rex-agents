@@ -24,13 +24,16 @@ export function resolvePlacement(value: unknown): ChildPlacement | undefined {
   return undefined;
 }
 
-/** Translation of the session-wide PaneConfig into a Rex placement. */
+/**
+ * Translation of the session-wide PaneConfig into a Rex placement.
+ *
+ * Rex has no "grouped agents tab": the equivalent is splitting the parent tab
+ * up to maxPerTab children, then opening new tabs. createPane applies that cap
+ * to every split request, so grouped and split share the same path here.
+ */
 export function placementFromPaneConfig(config: PaneConfig): RexPlacement {
-  if (config.mode === "split") {
-    return { kind: "split", direction: config.direction };
-  }
   if (config.mode === "tab") return { kind: "tab" };
-  return { kind: "grouped" };
+  return { kind: "split", direction: config.direction };
 }
 
 /** The placement for one launch: the tool call wins over the session config. */

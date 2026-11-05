@@ -27,7 +27,7 @@ const PLACEMENT_PROPERTY = {
   type: "string",
   enum: ["split", "tab"],
   description:
-    'Where the child runs. "split" (default) opens a Rex block beside you in the current tab; "tab" opens the child in a new Rex tab (a Rex window). Worktree children always open in a new tab.',
+    'Where the child runs. "split" (default) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. "tab" opens the child in a new Rex tab (a Rex window). Worktree children always open in a new tab.',
 } as const;
 
 function rexifyToolResult(

@@ -10,8 +10,9 @@ P2 已可用：
 
 - 10 个父工具：`subagent`、`subagent_cancel`、`subagent_interrupt`、`subagent_resume`、`subagent_send`、`subagent_stop`、`subagents_list`、`subagents_write_task_models`、`worktree_list`、`worktree_remove`
 - `subagent` / `subagent_resume` 支持 `placement`：
-  - `"split"`（默认）：在当前 tab 的父 block 右侧 `rex split`
+  - `"split"`（默认）：在当前 tab 的父 block 右侧 `rex split`，最多 `maxPerTab`（默认 4）个子 block
   - `"tab"`：`rex window new`，在新 tab 打开
+  - split 达到上限（或并发预留已满）后，下一次 split 自动改用新 tab；子 block 关闭后名额释放
 - 会话级宿主提示：每轮把 “你在 Rex 里、子代理用 subagent 工具、placement 语义” 追加到 system prompt；子代理会话则追加“你是叶子、没有 subagent 工具”的提示
 - 工具描述、参数描述、命令输出、投递消息全部使用 Rex 术语
 - Rex 版 `SurfaceProvider`：创建 / 输入 / 捕获 / 状态 / 进程身份 / 关闭 / 枚举 / worktree
@@ -99,7 +100,7 @@ bun src/wording-check.ts
 ## 已知限制
 
 1. **没有 Rex 原生侧栏标记**：Pi 自己的 widget 仍可用（P2 已验证），但不是 Rex 侧栏。
-2. **grouped 没有 Rex 等价物**：上游 `PaneConfig` 的 `grouped` 映射为独立 window；本包默认不用它。
+2. **grouped 按 capped split 实现**：Rex 没有 Herdr 那种独立 agents tab，`grouped` 现在与 split 共用同一路径——当前 tab 到 `maxPerTab` 后开新 tab；provider 被直接以 `kind: "grouped"` 调用时仍会新开 window。
 3. **进程身份是尽力校验**：Rex 提供 `program_status.owner.pid`、`foreground.pid`、cwd，但没有 pane shell 的强身份；worktree 清理保留上游的脏工作区和进程占用检查，并给出 warning。
 4. **持久化专家的第二轮有短暂 settle 窗口**：集成测试在 `subagents_list` 显示 idle 后等待 2 秒再发送；适配层暂不修改上游行为。
 5. **不是 Rex 原生插件**：本包是运行在 Rex 中 Pi 进程内的 Pi extension，不是 Rex 自己的 Lua/插件系统。
