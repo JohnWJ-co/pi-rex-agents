@@ -9,7 +9,7 @@
 
 | 任务 | 状态 | 提交 | 备注 |
 |---|---|---|---|
-| T0 | 已完成，门禁通过 | 待提交 | 完整复制范围已修正；test-gate 最终通过，1452 个测试已加载 |
+| T0 | 已完成，门禁通过 | `41af43a2c17ae86ec7c5e57b3c1989c6b71147a8` | 完整复制范围已修正；test-gate 最终通过，1452 个测试已加载 |
 | T1 | 待开始 | | |
 | T2 | 待开始 | | |
 | T3 | 待开始 | | |
@@ -78,4 +78,6 @@
 - `bun src/smoke-extension.ts`：通过，工具清单完整，`missing` 为空。
 - `grep -rn 'from "pi-herdr-agents' src`：通过，无匹配。
 
-结论：T0 全部门禁通过，准备创建提交。未在上游 checkout 安装依赖或运行测试；主 checkout 和上游 checkout 未修改。
+提交前的附加 `git diff --cached --check` 检查发现两个原样复制的上游文档存在既有行尾空格：`docs/research/pi-worktree-session-handoff.md:3` 和 `docs/research/worktree-subagent-orchestration.md:5`。T0 要求原样入库且不改文档行为，因此保留该上游内容；它不属于 T0 任务卡门禁。
+
+结论：T0 全部门禁通过，已创建提交 `41af43a2c17ae86ec7c5e57b3c1989c6b71147a8`。未在上游 checkout 安装依赖或运行测试；主 checkout 和上游 checkout 未修改。
