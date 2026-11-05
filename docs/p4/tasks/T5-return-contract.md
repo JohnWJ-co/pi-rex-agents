@@ -16,7 +16,7 @@
 8. 单测：result 写入原子性、id/taskId/generation 不匹配回退、`.exitcode` 兜底（无 `.exit` 时也能判定完成和退出码）、OSC 序列格式与长度上限、inbox 唤醒。
 
 ## 门禁
-- typecheck、`npm test`、lint、`docs:tools:check`、no-foreign-host。
+- typecheck、`npm test`（用 `docs/p4/baseline/check-failures.sh` 判定）、lint、`docs:tools:check`、no-foreign-host。
 - `npm run test:integration:rex` 通过，并新增用例：
   - 普通子代理：result.json 存在，投递内容与 finalText 一致；删除 result.json 后从 JSONL 回退。
   - 持久化子代理：运行中根记录为 `working`，完成后为 `done`；`result.<taskId>.json` 正确；第二轮不需要额外等待。

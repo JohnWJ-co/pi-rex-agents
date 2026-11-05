@@ -1,0 +1,4 @@
+# 完整套件并行运行时偶发超时（约 3s），单文件运行稳定通过。出现在失败列表中可以忽略，但必须在 STATUS.md 注明。
+all cancelled callers retire Pi auxiliary entries after owned settlement without getters
+public resume provider-error preserves late-read demand and delivery retention
+post-evidence finalization I/O failure after caller cancellation delivers Stage3 ordinary error metadata and eagerly retires

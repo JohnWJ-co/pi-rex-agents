@@ -1,0 +1,19 @@
+# 上游 e1e7d72 在本机（macOS，干净 clone + npm ci）的 npm test 失败项
+# 1452 tests / 1424 pass / 18 fail / 10 skipped（2026-11-06）
+# 其中 2 项为时序抖动，见 flaky.txt
+checks its prerequisites before it acquires anything
+host Git ignores poisoned repository while preserving linked checkout, includes and hooks
+keeps a provisioning-only source until its matching acquisition is observed
+keeps its source and repository when removal fails or leaves the worktree listed
+keeps its source and repository while its worktree cannot be verified
+launches a fallback through the replacement parent after reload in the invocation's relative tool cwd
+normalizes named identity, full spawning denial, role cwd, tools and skills before spawn
+provisions a linked checkout from its principal while preserving its base
+releases a setup that failed after its worktree was requested
+removes a checkout whose workspace closed with Git before its source
+removes its worktree, then its source workspace, then its repository
+scans and canonicalizes cleanup paths without opening protected directories
+tears down only its own repository and branch
+uses the principal checkout for linked worktree handoffs
+warns for unreadable cwd and continues scanning (holder: false)
+warns for unreadable cwd and continues scanning (holder: true)

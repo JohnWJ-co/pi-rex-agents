@@ -9,7 +9,7 @@
 6. pin 对比：用 T1 的 `pin.ts` 对 T3 结束时的提交和当前树各跑一次，diff 只能出现预期的文案变化；在 STATUS.md 摘录 diff 摘要。
 
 ## 门禁
-- typecheck、`npm test`、lint、`docs:tools:check`、no-foreign-host。
+- typecheck、`npm test`（用 `docs/p4/baseline/check-failures.sh` 判定）、lint、`docs:tools:check`、no-foreign-host。
 - `bun src/smoke-extension.ts`（或迁移后的等价测试）通过。
 - `npm run test:integration:rex` 通过。
 - 在 lab 中 `drive` 一次，确认投递消息里没有 Herdr 字样。

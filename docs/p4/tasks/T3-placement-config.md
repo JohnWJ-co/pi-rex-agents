@@ -9,7 +9,7 @@
 6. 单测：配置默认值 2、0 和 9 及非整数报错、split→split→tab、关闭一个后回到 split、并发两个 launch 不超额、模拟 reload 后计数保持。
 
 ## 门禁
-- typecheck、`npm test`、lint、`docs:tools:check`。
+- typecheck、`npm test`（用 `docs/p4/baseline/check-failures.sh` 判定）、lint、`docs:tools:check`。
 - 集成：新增 `test/integration/rex-placement.test.ts`，在 lab 中验证第 1、2 个 split 在父 window，第 3 个开新 window，关掉 1 个后下一个回到 split。
 
 ## 提交

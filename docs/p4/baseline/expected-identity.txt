@@ -1,0 +1,5 @@
+# T0 中的预期差异：package.json / README 已经是 pi-rex-agents 的身份。T2/T6 删除或改写这些测试。
+declares the public npm identity and publish metadata
+defines independent and ordinary review separately in README, guides, and CONTEXT
+release workflow uses package.json identity and trusted publishing
+ships only the extension, with no bundled roles or workflow resources
