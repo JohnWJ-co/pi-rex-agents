@@ -8,7 +8,7 @@
  * different placements independent.
  */
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { PaneConfig } from "pi-herdr-agents/maestro/core/config/pane-config.ts";
+import type { PaneConfig } from "../maestro/core/config/pane-config.ts";
 import type { RexPlacement } from "./rex-surface-provider.ts";
 
 /** The values the `placement` tool parameter accepts. */

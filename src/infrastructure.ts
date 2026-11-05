@@ -6,12 +6,12 @@
  * supplies the host-specific pieces.
  */
 
-import type { PaneConfig } from "pi-herdr-agents/maestro/core/config/pane-config.ts";
-import type { PiLaunchOperations } from "pi-herdr-agents/maestro/adapters/pi/launch-operations.ts";
-import { SupervisionCoordinator } from "pi-herdr-agents/maestro/core/supervision.ts";
-import { launchOperationsFromSurface } from "pi-herdr-agents/maestro/adapters/pi/launch-operations.ts";
-import { createWorktreeOperations } from "pi-herdr-agents/maestro/runtime/worktree-operations.ts";
-import type { PiRunSessionInfrastructure } from "pi-herdr-agents/maestro/runtime/index.ts";
+import type { PaneConfig } from "../maestro/core/config/pane-config.ts";
+import type { PiLaunchOperations } from "../maestro/adapters/pi/launch-operations.ts";
+import { SupervisionCoordinator } from "../maestro/core/supervision.ts";
+import { launchOperationsFromSurface } from "../maestro/adapters/pi/launch-operations.ts";
+import { createWorktreeOperations } from "../maestro/runtime/worktree-operations.ts";
+import type { PiRunSessionInfrastructure } from "../maestro/runtime/index.ts";
 import { placementForLaunch } from "./placement.ts";
 import { RexSurfaceProvider } from "./rex-surface-provider.ts";
 

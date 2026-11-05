@@ -8,8 +8,8 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import subagentsExtension from "pi-herdr-agents/pi-extension/subagents/index.ts";
-import { createWorktreeCleanupOperations } from "pi-herdr-agents/maestro/runtime/worktree-operations.ts";
+import subagentsExtension from "../pi-extension/subagents/index.ts";
+import { createWorktreeCleanupOperations } from "../maestro/runtime/worktree-operations.ts";
 import { createRexHostApi } from "./rex-host-api.ts";
 import { createRexInfrastructure } from "./infrastructure.ts";
 import { RexSurfaceProvider } from "./rex-surface-provider.ts";
