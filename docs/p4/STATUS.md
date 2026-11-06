@@ -14,11 +14,109 @@
 | T2 | 已完成返工，门禁通过 | `6202306` | 恢复通用测试并迁移 audit-stop 到 Rex harness；Rex provider 已入内核；Herdr/sidebar/Windows 专属路径已删除；保留 `test/verify-lab-guards.test.ts` |
 | T2b | 已完成，门禁通过 | `74be436` | 父端白名单覆盖 fresh/resume/persistent/handoff；真实 acp_status 调用及 block 清理通过 |
 | T3 | 已完成，门禁通过 | `da8f08a22a09e547d6109083a5eef32779e9fa86` | 原生 placement、split 上限 2、Rex 配置隔离；真实集成 11/11 通过 |
-| T4 | 已完成，环境隔离修正通过 | `ed85215` + 本提交 | 源头 Rex 文案与内核入口完成；补齐 fake infrastructure、显式宿主守卫测试及干净环境门禁 |
-| T5 | 待开始 | | |
+| T4 | 已验收 | `ed85215`、`b0bf830` | 监督在 Rex 外独立复核 test-gate（1186 项、无持续新增失败）、typecheck、lint 通过 |
+| T5 | 已完成，门禁通过，待审查 | `716dba02e6ee55cc3c2229d8299d3280811fef60` | 原子结果、Rex 根状态隔离、inbox 即时 follow-up、退出码与清理顺序；真实集成 14/14、DeepSeek 两种冒烟通过 |
 | T6 | 待开始 | | |
 
 ## 日志
+
+### T5 完成：最终门禁、真实证据与资源清理
+
+实现提交：`716dba02e6ee55cc3c2229d8299d3280811fef60`（`P4.T5: make subagent return contracts Rex-native`）。本节是最终验收依据；下方中断、失败与机械修正记录保留为历史，不再代表当前状态。全部实现由主会话完成，没有派实现或审查子代理，也没有自行 `/reload`。
+
+完成内容：
+
+- 普通/resume 的 `.result.json` 与 persistent 每任务的 `.result.<taskId>.json` 原子发布；父端校验版本及 subagentId/taskId/generation，身份不符、缺失或坏文件回退 JSONL。正文取最后非空 assistant 文本，保留错误来源与既有 report envelope。
+- `--name` 保持 Pi 原生根状态和显示名；扩展仅追加 `pira` 子记录，元数据 UTF-8 上限 2048 字节。Rex provider 读取根 working/blocked/done/error/idle，不让补充记录覆盖根状态。
+- persistent inbox 目录 watch 加 5 秒兜底；显式完成后可立即 follow-up，按 turn_start 更新任务身份，兼容同一低层 agent run 的后续轮次。watcher 单测保留就绪握手和投递各 2 秒截止，断言在回调外。
+- 包装 shell 原子发布 `.exitcode`，父端清理前等待独立退出证据；Pi 刚退出后仍在既有 500ms 宽限内等包装 shell 写入，避免过早关闭 block。强杀用例仅杀真正的 Pi，已确认没有 `.exit` 时由 `.exitcode=137` 完成 error 投递和 block 清理。
+- 同步终止夹具；P1 模拟宿主补齐 getAllTools，并严格验证两轮正文、任务身份、异步 stop 的实际退出码。没有延长原测试截止、弱化或删除断言。撤回额外 SupervisionCoordinator 改动；杀包装 shell 后只剩 idle zsh 的完整重探测另列后续，不扩展本轮。
+
+最终代码的门禁日志目录：`/tmp/pi-rex-agents-p4-t5.y69wLH/verified-fes_d4ga/final-stop-proof`。所有正式命令退出码均为 0：
+
+- `bash docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t5.y69wLH/verified-fes_d4ga/final-stop-proof/test-gate` 自然结束，两轮均加载 **1212** 项（MIN_TESTS=1155 未改）：第 1 轮 **1193 pass / 9 fail / 10 skipped**，第 2 轮 **1194 pass / 8 fail / 10 skipped**，结论为 `OK：没有持续性新增失败`。原始 npm test 仍含基线/间歇失败及跳过，不报告为零失败；没有修改 gate 脚本或允许集合。后台单项外层保护为 1800 秒，之前的 180 秒中断不作为门禁失败证据。
+- `npm run typecheck`、`npm run lint`、`npm run format:check`、`npm run docs:tools:check`：通过。`node --experimental-strip-types --test test/no-foreign-host.test.ts`：**3/3 通过、0 skipped**。`bun test/smoke-extension.ts`：`Rex kernel entry smoke OK`。
+- `npm pack --dry-run --json`：通过，完整检查 **159** 个文件，包含新生产模块，无本机 settings、session、证据或凭据。`git diff --check`、暂存 diff 检查和完整最终 diff 审阅通过。
+- `node --experimental-strip-types .pi/skills/verify-pi-rex-agents/scripts/lab.ts doctor` 及 `npm run test:integration:rex`：通过；集成 **14 tests / 14 pass / 0 fail / 0 skipped**，覆盖结果与投递一致、删文件后的 JSONL 回退、native working/done 与两轮即时 inbox、只强杀 Pi 后的 137/error/清理。
+- `lab.ts up`、`drive`、`down`：通过。`lab-evidence.json` 确认隔离 endpoint 一致、childSessionExists=true、结果与报告相符、exitcode=0、父会话继续；before/after 只有父 block，during 增加子 block。清理前已保存 evidence 与父/子 session；隔离 lab root 已删除。
+- `P1_MODEL=CBAPI/cn:deepseek-v4.1-flash npm run p1` 与 `P1_MODEL=CBAPI/cn:deepseek-v4.1-flash npm run p1:persistent`：均通过，且独立核对 session JSONL 的模型、结果身份、正文、`.exitcode=0` 和父进程存活。普通子代理 `3b1f1933-d937-4c30-8b3d-ba627f05647d` 返回 P1_CHILD_OK；持久化 `10761589-1822-4d20-857c-961915816c7c` 两轮分别为 P1_CHILD_OK / P1_SECOND_OK，taskId 不同、generation 相同，stop_requested 后确认实际退出。结果见 `p1-evidence.json`、`p1-persistent-evidence.json` 和 `models-state.json`；历史不完整探针不计入通过。
+
+收尾 `postflight.json` / `postflight-rex.json` / `postflight-current.json`：仍是 6 个既有 Rex session，无测试 session；两个真实 child block 均不存在，父 block 保留。没有 `pira-lab-*` / `pi-integ-*` 根、测试 server/provider/integration 进程或意外空根目录。只清理本轮自建资源，未操作其他 session 的 block。`.pi/settings.json` 保持 skip-worktree，SHA-256 仍为 `71782f9b595246d7655a555dfa7808fda04607c10dd36c6f59f9bd43fcd94a97`；未改主 checkout、上游、`released.json`、基线脚本或允许集合，任务卡也未改。
+
+验收记录提交前已在去除 `REX_SESSION` / `REX_BLOCK` / `REX_SERVER` 的干净环境复核单元基线门禁、typecheck、lint、format:check、docs:tools:check、no-foreign-host、smoke、pack 和 diff，全部退出码为 0。独立日志位于最终证据目录的 `status-gates/`：门禁两轮均加载 **1212** 项，分别为 **1190 pass / 12 fail / 10 skipped** 与 **1193 pass / 9 fail / 10 skipped**，最终没有持续性新增失败；打包 159 个路径与完整审阅的实现包文件集合一致。完成后停止等待监督审查，不开始 T6，不合并、不推送。
+
+### T5 P1 探针收尾：停止请求不等于退出确认
+
+500ms 证据宽限回归修正后，真实持久化两轮正文、task/logicalId、模型和 stop_requested 均匹配，但独立核对仍发现 session `2026-11-06T15-57-59-438Z_c0af889f-5347-49ef-a147-0ec9ffa8c7f5-d9f9ad0e-54d60704-00e3.jsonl` 缺少 `.exitcode`，这次仍不计完整通过。继续核对源码：`subagent_stop` 返回的是异步 stop_requested；P1 随即 emit session_shutdown(quit)，后者 suppress / abort 尚在等待的子任务，探针在停止流程完成前结束了父宿主。
+
+仅同步 P1 探针顺序：收到 stop_requested 后，按可观察文件等待包装 shell 的实际退出码，再结束父宿主；同时把退出码必须为 0 纳入 persistentComplete，并在报告中记录 exitCode。新等待以 120 秒为上限，超时或非零退出都令探针失败；原有两轮截止、立即发送第二轮的行为、产品 15 秒停止等待和所有测试断言均保持不变。先做定向真实复核，再重新跑完整门禁与两种正式冒烟。
+
+定向复核已确认 `.exitcode=0`、第二轮结果正确及 block 退出；独立正文校验发现该次模型在 `16:03:38.592Z` 先调用空参数 subagent_done，`16:03:40.574Z` 才输出 P1_CHILD_OK。第一轮在显式 settle 时确实没有 assistant 正文，所以 result.finalText 为空且投递为 completed without output；这次不作为完整通过，原始 session/result/log 均保留。对照此前两次真实运行，第一轮均有 P1_CHILD_OK。本次不改模型任务、完成协议或断言；仅补强 P1 第一轮也必须具有正确报告正文，否则 ok=false、退出码 1。接着以原提示执行正式门禁和真实冒烟。
+
+### T5 真实持久化收尾：保留包装脚本的退出码
+
+第二轮报告修正后，真实持久化探针两轮正文与 task/logicalId 均匹配、stop_requested 且脚本退出 0；独立核对仍发现该 session 缺少 `.exitcode`（`2026-11-06T15-47-09-965Z_f434a84b-9928-4af4-8326-c24d2e93871f-11c3b3f7-953c83f0-7f47.jsonl`）。原因已定位：`inspectProcess` 确认 Pi 退出后，`waitForDelayedSidecar` 立即返回已有的 `.exit`，父端清理 block 抢在包装 shell 写入 `.exitcode` 前。
+
+新增“Pi 已退出、语义 sidecar 已存在、包装 shell 稍后发布退出码”的回归，修复前 **1 test / 0 pass / 1 fail**，断言为退出码文件必须已经存在（actual false）。修复沿用既有 **500ms** 证据宽限：在宽限内先等包装 shell 的 `.exitcode`，宽限结束才保留语义 sidecar 回退；不延长任何测试截止或产品宽限。相关 completion/subagent-done **69/69 通过、0 fail、0 skipped**。该次缺失退出码的冒烟不记为完整通过，日志已保存，接着重跑完整门禁与真实冒烟。
+
+### T5 真实持久化冒烟：同一 agent run 中的 follow-up 身份修正
+
+首次真实持久化探针的第二轮返回值为 `null`，stop 为 `stop_pending`；旧 P1 脚本仅检查 persistent 对象存在，虽退出 0，也**不作为通过证据**。session JSONL 显示第二轮 user 消息已注入，assistant 已在 `2026-11-06T15:33:11.238Z` 返回 `P1_SECOND_OK`，但没有第二个 task-result/result 文件，故原因不是 inbox 未唤醒。显式 `subagent_done` 后，Pi 可以在同一低层 agent run 内处理 follow-up，只有新的 `turn_start` 而没有新的 `agent_start`；本轮新增的身份保护只在 agent_start 记录 startedTask，导致最终 settle 因身份不等而被忽略。
+
+保留原有“旧 explicit-done turn 不能完成新 inbox”的测试断言，增加同一 run 的 turn_start 变体；修复前 **2 tests / 1 pass / 1 fail**，失败为 expected `[first, second]`、actual `[first]`。在每个 turn_start 记录实际当前任务后，两条均通过，未修改截止时间。`src/p1.ts` 同时要求第二轮 task/logicalId、报告正文及 stop_requested 均正确，第二轮缺失时 ok=false 且退出码 1。失败探针的 session/log 已保存；对应 block 已确认不存在。接下来重跑全部门禁与两种真实冒烟。
+
+### T5 真实冒烟夹具同步：补齐 getAllTools
+
+完整单元门禁及静态检查通过后，Rex 集成 **14/14 通过、0 fail、0 skipped**；lab 的 doctor/up/drive/down 通过，结果、退出码和 session 证据已保存后清理。首次 `P1_MODEL=CBAPI/cn:deepseek-v4.1-flash npm run p1` 在子代理启动前退出码 1：`runtime.pi?.getAllTools is not a function`，堆栈指向 `pi-extension/subagents/launch.ts:211`。原因是 `src/p1.ts` 的模拟 Pi 宿主缺少 T2b 工具发现所需的 `getAllTools()`。仅补齐该夹具方法以返回已登记的工具；不修改产品逻辑或测试断言。该次没有真实模型调用或新 block，不作为模型冒烟通过证据。补齐后重跑正式门禁及普通/持久化冒烟，结果待记入本节上方。
+
+### T5 继续：机械同步夹具、watcher 就绪握手与监督范围收敛
+
+按监督指示继续，上一轮外部 180 秒保护产生的 **124 是中断记录，未完成 test-gate 判定，不作为门禁失败证据**。不修改门禁脚本，后续后台运行，单项外层保护设为 1800 秒，允许 test-gate 自然完成最多三轮判定。
+
+- `test/maestro/pi-run-session.test.ts` 的通用 `complete()` 夹具为 done/ping/error 同步写入对应 `.exitcode`；没有改断言或截止。
+- inbox 测试在 watcher 建立后写入同目录、匹配 `.task-inbox` 前缀的探针，观察回调后才写真实 inbox。就绪握手和真实投递各自最多 2 秒；握手超时报 `watcher 未就绪：2 秒内未收到探针事件`。回调只传递读取结果，消息断言移至回调外，避免被 drain 的 try/catch 吞掉。5 秒产品兜底轮询未改。定向合跑两个文件 **69 tests / 69 pass / 0 fail / 0 skipped**。
+- 第一次自然完成的后台 test-gate（`/tmp/pi-rex-agents-p4-t5.y69wLH/resumed-894_c2m7`）退出码 1，三轮均为 **1210 tests / 1191 pass / 9 fail / 10 skipped**，唯一持续新增失败为 `reload migrates live registrations and waits, retaining the owner across the gap`；inbox 测试三轮均通过。原因是本任务额外改动 SupervisionCoordinator，取消了既有 complete list 的 presence 缓存，破坏 T4 reload 测试预期。按监督此前允许的收敛方向撤回该额外改动，保留所有测试断言；`audit-reload.test.ts` 随后 **7/7 通过**。首轮 `parked wake wait observes a sidecar written after the registration reconcile` 也曾暂定新增，后两轮通过，未据此修改用例或门禁。
+- 后续：包装 shell 自身被杀后只留下 idle zsh 的状态探测优化另行处理，本任务不改变 SupervisionCoordinator 的批量 presence 缓存语义；真实强杀验证继续只杀子 Pi，并要求 `.exitcode=137`、error 投递及 block 清理。下方旧轮次记录保留供追溯，最终结论以本节后续完整门禁为准。
+
+### T5 历史中断：inbox 单次超时及退出夹具遗漏（已续修）
+
+本轮最终代码执行 `bash docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t5.y69wLH/final/test-gate`。外部验证 runner 的 180 秒进程保护到期，记录退出码 **124** 并清理其专属进程组；单元测试没有输出完整测试总数，也没有完成基线允许集合与持续新增失败判定，**不能视为 test-gate 通过**。未修改仓库的门禁脚本、`MIN_TESTS=1155` 或允许集合。
+
+日志包含新的失败：
+
+```text
+✖ atomic inbox rename wakes an idle watcher before the five-second reconciliation (2004.227917ms)
+```
+
+该用例的文件系统事件唤醒未在既有 2 秒截止前成功，原因尚未确定。没有把截止延长到 5 秒轮询之后，也没有删除、跳过或改弱断言。另确认 `test/maestro/pi-run-session.test.ts:602` 的通用 `complete()` 夹具仍只写 `.exit`，以及第 1507 行仅给 persistent 路径补 `.exitcode`；普通自动退出夹具尚未全部模拟包装 shell 的退出证据，会继续等待。本轮停止时保留这些待修复点，不把此前的 67 项定向通过冒充完整验收。
+
+根据顶部“原因不明……记录失败命令、输出摘要、判断与建议，停止等待指示”的规则，停止继续实现和重跑。建议先定位 inbox 目录事件未及时唤醒的原因，再同步剩余终止夹具的 `.exitcode`，保留现有时限与断言后重跑全部门禁。该阻塞与监督对强杀用例的方向不冲突：继续只杀真正的子 Pi，保留包装 shell，要求 `.exitcode=137`；不继续扩展强杀包装 shell 的场景。
+
+本轮最终 runner 在 test-gate 停止，后续 typecheck、lint、format:check、docs:tools:check、no-foreign-host、smoke、打包及真实 Rex 集成/模型冒烟均未继续执行；下方旧轮次通过记录只对应当时源码。T5 不能宣布完成，未提交、未合并、未推送，不开始 T6，也未自行 `/reload`。
+
+证据目录：`/tmp/pi-rex-agents-p4-t5.y69wLH/final`，包括 `test-gate/run1.log`、`gate-state.json`、`test-gate.log`、`postflight-rex.json`、`postflight.json`、`owned-unit-residue.json` 和 `owned-unit-cleanup.json`。收尾只读核查：Rex 中仅有 6 个既有 session，无测试 session；无 `pira-lab-*` / `pi-integ-*` 根或测试进程。核对目录创建时刻与 fixture 的 parent header 后，只移除本轮超时遗留的 `pi-composition-lKmxKw`，未操作其他 session 的 block。仓库根目录没有意外空目录，受保护文件没有 diff 或暂存内容；`.pi/settings.json` 保持 skip-worktree，SHA-256 仍为 `71782f9b595246d7655a555dfa7808fda04607c10dd36c6f59f9bd43fcd94a97`。
+
+### T5 收敛：只强杀子 Pi，补齐退出码证据和测试夹具
+
+按监督提示，强杀用例改为从 Rex `root.owner.pid` 的后代中定位真正的 Pi 进程，仅向该 Pi 发送 SIGKILL；包装 shell 保持存活，断言 `.exitcode=137`、父端 error 投递以及子 block 清理。停止扩展“杀包装 shell 后只剩 idle zsh”的场景。普通自动退出子代理现在等待进程退出证据再完成投递和清理，避免包装脚本尚未原子发布 `.exitcode` 时就关闭 block；文件唤醒增加 `.exitcode` / `.result.json`。现有 pane 的小范围状态重探测改动仍需最终门禁验证，不扩展监督模型。
+
+最近完整单元门禁（`/tmp/pi-rex-agents-p4-t5.y69wLH/attempt3/test-gate`）曾通过：两轮均加载 1208 项，1188 pass / 10 fail / 10 skipped，最终无持续性新增失败；typecheck、lint、format:check、docs:tools:check 也通过。但这是本次退出等待修复之前的证据，不能作为最终代码的门禁结果。该轮外部运行脚本误执行了不存在的 `npm run no-foreign-host`，报 `Missing script: "no-foreign-host"`；正式命令应为 `node --experimental-strip-types --test test/no-foreign-host.test.ts`，不为此增加或弱化仓库脚本。
+
+退出等待修复后，旧测试夹具只发布 `.exit`，没有模拟包装 shell 的 `.exitcode`，导致完整测试及定向文件等待。对 `accept-recheck`、adapter 和扩展 runtime 的终止夹具补齐相应退出码，保留所有原有断言和截止时间。定向合跑首次在 45 秒被终止，收尾读取残留 `.exit` 后确认遗漏的是 `ping` 夹具；补齐后，同一命令 `env -u REX_SESSION -u REX_BLOCK -u REX_SERVER node --experimental-strip-types --test test/maestro/accept-recheck.test.ts test/maestro/pi-harness-adapter.test.ts` 通过：**67 tests / 67 pass / 0 fail / 0 skipped**，耗时 3423.491ms。临时监督日志代码已移除。按“原因明确、修法机械”的规则继续重跑最终门禁；没有修改 MIN_TESTS、允许集合、released.json、本机 settings 或门禁超时。
+
+### T5 首轮单元门禁：启动脚本期望的机械同步
+
+首轮 `bash docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t5.y69wLH/test-gate` 失败：三次均加载 1202 项；pass/fail/skipped 分别为 1178/14/10、1179/13/10、1179/13/10。持续新增失败共 5 项：`launches an ordinary child through one transaction`、`names a fork's declared skills to the child and keeps direct task delivery`、`records worktree ownership before creation and targets its root pane`、`resumes a session through the launch transaction`、`resumes under the absolute session path Pi will report, whatever form the caller passed`。
+
+原因已明确：这些断言仍要求启动脚本从 `cd` 或环境赋值开始、使用 `pi --session`，或以旧的 `; echo` 连接任务参数。T5 新脚本先清除旧 `.exitcode` / `.exit`，使用 `pi --name ... --session ...` 并紧接原子退出码发布。仅同步这些命令位置与协议期望，继续检查原有 cwd、session 路径、任务文件和参数；未删测试、未改 MIN_TESTS 或允许集合。修复后这 5 条及新增的 6 条根状态隔离测试均通过（11/11）。完整门禁将重新执行，首轮日志保留。
+
+开发阶段另修正了已知的 fixture 身份/类型收窄问题和 lint 要求（显式校验后构造结果对象，无强制类型断言），未屏蔽规则。持久化协议补了显式 done 后旧 turn 不能完成新 inbox 的回归测试；相关 99 条定向单测通过。
+
+### T4 验收，开始 T5
+
+监督已审查 `b0bf830`，并在 Rex 外独立复核 test-gate：加载 1186 项，第 2 次运行没有持续新增失败；typecheck、lint 均通过。T4 验收完成。
+
+T5 按任务卡推进，代码修改全部由主会话完成；每个提交前执行 test-gate、typecheck、lint、format:check、docs:tools:check、no-foreign-host。集成使用 fake provider，当前 Rex 会话中的 `p1` / `p1:persistent` 真实模型冒烟仅使用 `CBAPI/cn:deepseek-v4.1-flash`，结束后清理自建 block/window。禁止使用任何 provider 的 `gpt-6-astra`，不派实现子代理；若使用只读审查子代理，限相同 deepseek 模型、小范围、20 分钟内结束。原因不明的失败、弱化断言、删测试、released.json breaking 或任务卡冲突需记录并停止。不得自行 `/reload`，完成 T5 后停下等待审查，不开始 T6。
 
 ### T4 修正：测试套件独立于 Rex 宿主环境
 
