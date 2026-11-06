@@ -1,0 +1,57 @@
+# Rex surface placement
+
+The kernel owns the native `placement` argument on `subagent` and
+`subagent_resume`. It passes the argument through the task, run session, Pi
+adapter and launch operations to `createPane`. The Rex composition supplies
+surface operations directly to the kernel.
+
+`maestro/runtime/pi-placement.ts` owns one reservation queue per parent run
+registry. For a split it reads `provider.listSurfaces()`, locates the parent
+block's current window, and counts live registered ordinary children in that
+window. It includes split creations awaiting registry admission. The default
+limit is 2; `panes.maxPerTab` accepts integers from 1 through 8. On reaching the
+limit it requests a tab instead. Explicit tabs bypass split admission, and
+worktree creation always uses a separate tab.
+
+The queue covers inventory and creation, with cancellation checked before
+mutation. Registry admission transfers a pending reservation to the registered
+child. A confirmed close releases a slot on the next inventory read. An observed
+block from an uncertain split reply also retains its reservation while live.
+When the parent window cannot be verified, admission chooses a new tab.
+
+`createDefaultRunSession(options, previous)` adopts the existing registry and
+reservation owner on `/reload`, so pending and active children keep their slots.
+Other parents' blocks and user-created blocks do not count against this
+parent's limit. Nothing adopts blocks by label.
+
+The provider translates split into `rex split --focus=false` beside its stable
+parent block and tab into `rex window new --focus=false`. Every CLI call uses
+explicit argv, `--autostart=false`, and the inherited `REX_SERVER` endpoint. See
+[configuration](configuration.md#pane-placement) and the
+[worktree guide](worktree-subagents.md#launch-contract).
+
+Verification uses `test/maestro/pi-placement.test.ts` for reservations and
+`test/maestro/pi-run-session.test.ts` for reload/resume adoption.
+`test/integration/rex-placement.test.ts` starts a fresh parent Pi with this
+checkout's extension in an isolated Rex server, checks split/split/tab window
+IDs, closes one child, and verifies the next split returns to the parent window.
+The isolated harness owns cleanup; it never operates on another Rex session.
+
+## Program status and completion
+
+Pi receives `--name <display name>` and owns the root OSC 7501 record.
+`inspectSurface` reads that root: working maps to running, blocked to blocked,
+done to done, error to error, and idle to idle. Supplementary `id=pira`
+records never override the root; the child extension uses them only for
+bounded task/generation/result metadata.
+
+The child writes an atomic result artifact; the parent checks its launch/task
+identity before reading the final text and falls back to JSONL if unavailable.
+The shell atomically publishes `<sessionFile>.exitcode` after Pi exits.
+Neither OSC nor captured terminal text commits completion. See the
+[return contract](delegation-outcome-contract.md#rex-runtime-evidence).
+
+`test/integration/rex-return-contract.test.ts` checks ordinary artifact delivery
+and JSONL fallback, persistent root working/done identity with two immediate
+inbox rounds, and error delivery after killing the owned child Pi. It uses
+only the deterministic provider and the isolated lab's blocks.

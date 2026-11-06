@@ -1,38 +1,70 @@
 {
   "name": "pi-rex-agents",
-  "version": "0.2.0-p3",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
-  "description": "Rex host adapter for Pi subagents: async children in Rex blocks and tabs",
+  "description": "Rex-native Pi subagents with asynchronous delivery, persistent specialists and managed worktrees",
+  "license": "MIT",
+  "files": [
+    "pi-extension/subagents/",
+    "maestro/core/",
+    "maestro/runtime/",
+    "maestro/adapters/pi/",
+    "maestro/surfaces/rex/",
+    "skills/pi-rex-agents/",
+    "config.json.example",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
+    "changelog": "auto-changelog",
+    "docs:tools": "node --experimental-strip-types scripts/update-tool-docs.ts",
+    "docs:tools:check": "node --experimental-strip-types scripts/update-tool-docs.ts --check",
+    "format": "biome format --write pi-extension test maestro scripts",
+    "format:check": "biome format pi-extension test maestro scripts",
+    "lint": "oxlint pi-extension test maestro scripts",
+    "typecheck": "tsc -p .",
+    "test": "node --experimental-strip-types --test test/package-manifest.test.js test/rex-cli.test.ts test/runtime-routing.test.ts test/system-prompt-mode.test.ts test/test.ts test/worktree-cleanup.test.ts test/launch.test.ts test/verify-lab-guards.test.ts test/no-foreign-host.test.ts test/maestro/*.test.ts",
+    "test:integration": "node --experimental-strip-types --test --test-concurrency=1 test/integration/*.test.ts",
+    "test:integration:live": "PI_TEST_LIVE=1 node --experimental-strip-types --test --test-concurrency=1 test/integration/*.test.ts",
+    "test:integration:rex": "node --experimental-strip-types --test --test-concurrency=1 test/integration/rex-smoke.test.ts test/integration/rex-surface-conformance.test.ts test/integration/rex-placement.test.ts test/integration/rex-return-contract.test.ts",
+    "version": "auto-changelog --package && git add CHANGELOG.md",
     "p0": "node --experimental-strip-types src/p0.ts",
     "p1": "bun src/p1.ts",
     "p1:worktree": "bun src/p1.ts --worktree",
     "p1:persistent": "bun src/p1.ts --persistent",
     "p2": "bun src/p2.ts",
     "doctor": "bun src/doctor.ts",
-    "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && bun src/host-message-check.ts && bun src/wording-check.ts && npm run p0"
+    "check": "npm run typecheck && bun test/smoke-extension.ts && npm run p0"
   },
   "engines": {
     "node": ">=22.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.11",
+    "@earendil-works/pi-ai": "^1.0.0",
+    "@earendil-works/pi-coding-agent": "^1.1.0",
+    "@earendil-works/pi-tui": "^1.0.0",
+    "@oxlint/plugins": "^1.80.0",
+    "@sinclair/typebox": "^0.34.52",
     "@types/node": "^24.0.0",
-    "typescript": "^5.9.0"
+    "auto-changelog": "^2.6.0",
+    "oxlint": "^1.80.0",
+    "typescript": "5.9.3"
   },
-  "dependencies": {
-    "pi-herdr-agents": "^3.7.2"
-  },
+  "dependencies": {},
   "pi": {
     "extensions": [
-      "./src/extension.ts"
+      "./pi-extension/subagents/index.ts"
     ],
     "skills": [
-      "./skills"
+      "./skills/pi-rex-agents"
     ]
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "@sinclair/typebox": "*"
   }
 }

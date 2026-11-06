@@ -15,8 +15,8 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { RexCli, shellQuote } from "./rex-cli.ts";
-import { RexSurfaceProvider } from "./rex-surface-provider.ts";
+import { RexCli, shellQuote } from "../maestro/surfaces/rex/rex-cli.ts";
+import { RexSurfaceProvider } from "../maestro/surfaces/rex/rex-surface-provider.ts";
 
 interface P0Options {
   keep: boolean;

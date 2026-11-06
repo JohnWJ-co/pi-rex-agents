@@ -1,0 +1,27 @@
+{
+  "status": {
+    "enabled": true
+  },
+  "models": {
+    "agents": {}
+  },
+  "persistent": {
+    "maxAgents": 3
+  },
+  "spawning": {
+    "maxDepth": 1
+  },
+  "supervision": {
+    "forcePolling": false,
+    "hangWarningMinutes": 15
+  },
+  "panes": {
+    "mode": "split",
+    "direction": "right",
+    "maxPerTab": 2
+  },
+  "guidelines": {
+    "launchRoster": true
+  },
+  "outcomeLedger": true
+}

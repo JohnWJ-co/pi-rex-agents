@@ -2,105 +2,70 @@
 
 ## 前提
 
-- 在 **Rex block 内**运行 Pi（`REX_SESSION`、`REX_BLOCK` 都存在）。
-- Pi 1.5+，编排内核 `pi-herdr-agents` 3.7.2（作为依赖库）。
-- 本目录已执行 `npm install`，`node_modules/pi-herdr-agents` 存在。
+- 在 Rex block 内运行 Pi，`REX_SESSION`、`REX_BLOCK` 都存在。
+- Node.js 22.6+，可用的 Pi 和 Rex CLI。
+- 从源码运行时先执行 `npm ci`。执行内核已 hard fork 在本仓库，不需要安装上游 npm 包。
 
-## 方式一：临时加载（推荐先验收）
+## 临时加载
 
-```bash
-cd /Users/qiangwenjun/Documents/project/pi-rex-agents
-pi --no-extensions -e "$PWD/src/extension.ts"
-```
-
-`--no-extensions` 会关闭自动发现，只加载显式 `-e` 的扩展。这是最稳妥的首次验证方式。
-
-## 方式二：安装为 Pi 包
-
-在仓库目录执行：
+在本仓库根目录运行：
 
 ```bash
-npm install
-pi install ./ -l --approve   # 写入当前项目的 .pi/settings.json
-# 或
-pi install ./                # 写入个人 ~/.pi/agent/settings.json
+pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 ```
 
-之后 `pi list` 应能看到本包。包通过 `package.json` 的 `pi.extensions` 声明入口，`pi.skills` 声明宿主说明：
+`--no-extensions` 关闭自动发现，只加载显式 `-e` 的扩展。普通终端缺少 Rex 宿主身份时，本扩展不注册工具。
+
+## 安装为 Pi 包
+
+```bash
+pi install /absolute/path/to/pi-rex-agents
+```
+
+包通过以下 manifest 声明入口和操作指南：
 
 ```json
 {
   "pi": {
-    "extensions": ["./src/extension.ts"],
-    "skills": ["./skills"]
+    "extensions": ["./pi-extension/subagents/index.ts"],
+    "skills": ["./skills/pi-rex-agents"]
   }
 }
 ```
 
+打包内容仅包含运行时、README、LICENSE、示例配置和操作指南。开发测试、迁移文档和本机 `.pi` 配置留在源码检出中。
+
 ## 处理工具名冲突
 
-`pi-rex-agents` 复用了内核工具名（`subagent`、`worktree_list` 等）。Pi 无法同时注册两个同名工具，因此**不要同时加载未过滤的 `pi-herdr-agents` 和 `pi-rex-agents`**。
+**不要同时加载未过滤的 `pi-herdr-agents` 和 `pi-rex-agents`**：两者注册同名工具，包括 `subagent` 和 `worktree_list`。
 
-二选一：
-
-1. **Rex 场景**：用 `pi config` 禁用 `pi-herdr-agents`，保留 `pi-rex-agents`；或
-2. **临时验收**：使用上面的 `--no-extensions -e ...`，绕过自动发现。
-
-检查当前安装了哪些包：
+在 Rex 中使用本包时，用 `pi config` 禁用旧包，或使用上面的 `--no-extensions -e ...` 临时加载。检查包状态：
 
 ```bash
 pi list
 ```
 
-被 `pi config` 禁用的包仍会出现在列表里，但带 `(filtered)` 后缀——它不加载任何资源，不会注册工具。只有不带 `(filtered)` 的 `npm:pi-herdr-agents` 才算冲突。需要彻底移除时：
+带 `(filtered)` 的旧包不加载资源、不注册工具。只有未过滤的旧包构成冲突。若要卸载旧包，可执行：
 
 ```bash
 pi remove npm:pi-herdr-agents
 ```
 
-## 运行环境自检
+本包不读取或迁移旧的 `herdr-agents/config.json`；新配置位于 `~/.pi/agent/rex-agents/config.json`，也可由 `PI_CODING_AGENT_DIR` 改变根目录。配置缺失时使用默认值。
+
+## 自检与验证
+
+源码检出中执行：
 
 ```bash
 npm run doctor
-```
-
-它会检查 Rex/Pi CLI、入口文件和 `pi list` 中的包状态；只有未过滤的 `pi-herdr-agents` 与 `pi-rex-agents` 同时存在时才以非零码退出。
-
-## 验证
-
-进入 Rex 的交互式 Pi 后：
-
-```text
-/subagent list
-/worktree list
-```
-
-应看到命令正常执行。`/subagent list` 为空是正常的：本仓库没有定义角色，裸 `subagent` 调用仍可使用。
-
-要验证新 tab：
-
-```text
-让子代理在新 tab 运行
-```
-
-模型应调用 `subagent` 并带 `placement: "tab"`；`rex window ls` 会多一个 window。默认（不带 placement）是在当前 tab 右侧 split，最多 4 个子 block；达到上限后下一次自动改用新 tab。
-
-## 运行测试
-
-```bash
-npm run check       # typecheck + host message check + host surface check + P0
-npm run p1          # 普通子代理
-npm run p1:worktree # worktree 隔离
-npm run p1:persistent
-npm run p2          # cancel / interrupt / resume
-```
-
-`p1`、`p2` 必须在 Rex block 内运行；`p0` 也需要 Rex 环境。
-
-不需要 Rex 的部分：
-
-```bash
 npm run typecheck
-bun src/host-message-check.ts
-bun src/wording-check.ts
+bun test/smoke-extension.ts
+npm run test:integration:rex
 ```
+
+`doctor` 检查 Rex/Pi CLI、入口和 `pi list` 包状态，并保留未过滤旧包的冲突检查。Rex 集成测试使用隔离 server 和 fake provider；跳过表示没有验证该环境。
+
+在交互式 Pi 中，`/subagent list` 和 `/worktree list` 应能运行。空角色目录是正常情况；本包不附带角色。默认 split 最多容纳本父进程管理的 2 个子 block，满后使用新 tab；`placement: "tab"` 和 worktree 子代理直接使用新 tab。`panes.maxPerTab` 只接受 1..8 的整数，详见 [配置说明](configuration.md#pane-placement)。
+
+真实模型探针为 `npm run p1`、`npm run p1:persistent` 和 `npm run p2`，默认模型是 `CBAPI/cn:deepseek-v4.1-flash`。只在任务明确需要真实模型证据时运行。

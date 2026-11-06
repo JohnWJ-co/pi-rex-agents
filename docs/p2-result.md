@@ -1,5 +1,7 @@
 # P2 验收结果
 
+> 历史记录：保留 P0–P2 当时的适配层实现与验收证据。当前 hard fork 内核、命名、配置和回传行为以 [README](../README.md) 与 [P4 状态](p4/STATUS.md) 为准。
+
 日期：2026-11-04  
 环境：Rex 0.0.1793645657-gd018d2，Pi 1.5.0
 
@@ -9,10 +11,10 @@
 
 ```bash
 rex new p2-smoke -c "$PWD" --json -- \
-  pi --no-extensions -e "$PWD/src/extension.ts"
+  pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 ```
 
-启动页显示 `[Extensions] extension.ts`；`/subagent list` 和 `/worktree list` 均可执行。详见 [p2-interactive.md](p2-interactive.md)。
+启动页显示 `[Extensions] index.ts`；`/subagent list` 和 `/worktree list` 均可执行。详见 [p2-interactive.md](p2-interactive.md)。
 
 ## P2-2 父会话状态展示
 

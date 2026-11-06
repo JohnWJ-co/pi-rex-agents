@@ -1,21 +1,30 @@
 {
   "compilerOptions": {
-    "target": "ES2023",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "target": "es2023",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "strict": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
+    "erasableSyntaxOnly": true,
     "types": [
       "node"
     ],
     "lib": [
-      "ES2023"
+      "es2023"
     ]
   },
   "include": [
+    "pi-extension/**/*.ts",
+    "maestro/**/*.ts",
+    "scripts/**/*.ts",
+    "test/**/*.ts",
+    ".pi/skills/**/*.ts",
     "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
   ]
 }
