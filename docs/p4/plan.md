@@ -51,6 +51,7 @@
 | [T0](tasks/T0-vendor-baseline.md) | 原样入库内核 + 上游 Harness 工具，行为不变 | typecheck、`npm test` 全绿 |
 | [T1](tasks/T1-rex-harness.md) | Rex lab、Rex 集成 harness、AGENTS.md、验证技能、doctor | lab 自检、1 条端到端冒烟 |
 | [T2](tasks/T2-rex-surface.md) | Rex provider 入内核，删除 Herdr/sidebar/Windows | conformance（fake + lab）、集成套件 |
+| [T2b](tasks/T2b-context-tools.md) | 子代理自动带上已安装的压缩工具（billion-context），没装时依赖 Pi 原生压缩 | 单测、真实子代理调用 acp_status |
 | [T3](tasks/T3-placement-config.md) | placement 原生参数、maxPerTab=2、split 计数下沉 | schema 契约、placement 集成用例 |
 | [T4](tasks/T4-wording-entry.md) | 源头文案、删除替换层、入口切换、宿主提示 | no-foreign-host、pin 对比 |
 | [T5](tasks/T5-return-contract.md) | result 文件、`.exitcode`、`--name`、OSC 子记录、inbox fs.watch | 回传单测、集成套件、真实模型冒烟 |
