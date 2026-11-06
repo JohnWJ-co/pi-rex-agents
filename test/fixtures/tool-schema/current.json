@@ -60,7 +60,7 @@
 						"type": "string"
 					},
 					"tools": {
-						"description": "Comma-separated tools (overrides agent default)",
+						"description": "Comma-separated tools (overrides agent default). Installed context-compression tools (such as billion-context) are automatically appended; explicit tool denials still apply.",
 						"type": "string"
 					},
 					"cwd": {

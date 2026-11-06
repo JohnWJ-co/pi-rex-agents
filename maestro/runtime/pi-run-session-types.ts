@@ -50,6 +50,7 @@ export interface PiLaunchSnapshot {
 	};
 	parentRuntime?: ParentRuntime;
 	modelRegistry: ModelRegistryAdapter;
+	contextTools?: readonly string[];
 	paneConfig: PaneConfig;
 }
 

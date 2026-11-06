@@ -28,6 +28,7 @@ import {
 	type ResumePiLaunchRequest,
 } from "../maestro/adapters/pi/launch.ts";
 import { createWorktreeOperations } from "../maestro/runtime/worktree-operations.ts";
+import { resolveContextTools } from "../maestro/adapters/pi/context-tools.ts";
 import { createSubagentPaneFactory } from "../maestro/core/config/pane-config.ts";
 import { FakeSurfaceProvider } from "../maestro/surfaces/fake/fake-surface-provider.ts";
 import type { SurfaceProvider } from "../maestro/core/surface-provider.ts";
@@ -798,6 +799,90 @@ describe("Pi launch", () => {
 			);
 		});
 	});
+
+	for (const mode of ["auto-exit", "interactive", "persistent"]) {
+		for (const scenario of ["installed", "not installed", "marker denied"]) {
+			it(`passes parent compression tools into ${mode} launch commands (${scenario})`, async () => {
+				await withFixture(async ({ request }) => {
+					const compressionTools = [
+						"compress",
+						"decompress",
+						"search_context",
+						"acp_status",
+					];
+					request.contextTools = resolveContextTools([
+						"read",
+						"bash",
+						"unrelated",
+						...(scenario === "not installed" ? [] : compressionTools),
+					]);
+					request.behavior.autoExit = mode === "auto-exit";
+					request.behavior.persistent = mode === "persistent";
+					request.behavior.deniedTools = [
+						"subagent",
+						...(scenario === "marker denied" ? ["compress"] : []),
+					];
+					const commands: string[] = [];
+					const operations: PiLaunchOperations = {
+						worktree: createWorktreeOperations(),
+						createPane: () => "compression-pane",
+						createWorktree() {
+							throw new Error("ordinary launches do not create worktrees");
+						},
+						async waitForShellReady() {},
+						runScript(_surface, command, options) {
+							commands.push(command);
+							return options.scriptPath;
+						},
+						closePane() {},
+					};
+					const fresh = await launchPiSubagent(request, operations);
+					if (mode !== "persistent") {
+						// Pi normally creates the session; this fake transport does not run Pi.
+						writeFileSync(
+							fresh.sessionFile,
+							`${JSON.stringify({ type: "session", version: 3, id: "compression-child", cwd: request.parent.cwd })}\n`,
+						);
+						await launchPiSubagent(
+							{
+								kind: "resume",
+								name: "Compression resume",
+								sessionFile: fresh.sessionFile,
+								parent: request.parent,
+								contextTools: request.contextTools,
+								behavior: { autoExit: request.behavior.autoExit },
+							},
+							operations,
+						);
+					}
+					assert.equal(commands.length, mode === "persistent" ? 1 : 2);
+					for (const command of commands) {
+						const allowlist = command.match(/--tools '([^']+)'/)?.[1];
+						assert.deepEqual(allowlist?.split(","), [
+							"read",
+							"bash",
+							...(scenario === "not installed"
+								? []
+								: scenario === "marker denied"
+									? compressionTools.slice(1)
+									: compressionTools),
+							"caller_ping",
+							...(mode === "auto-exit" ? [] : ["subagent_done"]),
+						]);
+						if (scenario === "marker denied")
+							assert.match(command, /PI_DENY_TOOLS='subagent,compress'/);
+					}
+					if (mode === "persistent")
+						assert.match(commands[0], /PI_SUBAGENT_PERSISTENT=1/);
+					// Launch augmentation must not rewrite the caller's saved tool policy.
+					assert.deepEqual(readSubagentSessionPolicy(fresh.sessionFile).tools, [
+						"read",
+						"bash",
+					]);
+				});
+			});
+		}
+	}
 
 	it("treats an explicit null worktree as an ordinary pane", async () => {
 		await withFixture(async ({ request, project }) => {
@@ -2226,6 +2311,12 @@ describe("Pi launch", () => {
 					name: "Handoff",
 					worktree: { branch: "handoff/feature" },
 					handoff: { leafId: "assistant-1" },
+					contextTools: resolveContextTools([
+						"compress",
+						"decompress",
+						"search_context",
+						"acp_status",
+					]),
 				},
 				operations,
 			);
@@ -2239,6 +2330,11 @@ describe("Pi launch", () => {
 			assert.ok(
 				command.startsWith(`cd ${expectedShellQuote(worktreePath)} && `),
 			);
+			assert.match(
+				command,
+				/--tools 'read,bash,compress,decompress,search_context,acp_status,caller_ping'/,
+			);
+			assert.doesNotMatch(command, / -e /);
 			// A user-driven worktree handoff is a normal interactive Pi session,
 			// not a subagent: it receives no PI_SUBAGENT_ID or child protocol. It
 			// keeps this session's delegation depth, so it neither resets nor

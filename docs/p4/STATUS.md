@@ -12,13 +12,117 @@
 | T0 | 已完成，门禁通过 | `41af43a2c17ae86ec7c5e57b3c1989c6b71147a8` | 完整复制范围已修正；test-gate 最终通过，1452 个测试已加载 |
 | T1 | 已完成，门禁通过 | `15cdafc` | Rex lab、集成 harness、验证技能和 AGENTS.md 已完成；test-gate 与真实 Rex smoke 通过 |
 | T2 | 已完成返工，门禁通过 | `6202306` | 恢复通用测试并迁移 audit-stop 到 Rex harness；Rex provider 已入内核；Herdr/sidebar/Windows 专属路径已删除；保留 `test/verify-lab-guards.test.ts` |
-| T2b | 待开始 | | |
+| T2b | 已完成，门禁通过 | 本提交（P4.T2b） | 父端白名单覆盖 fresh/resume/persistent/handoff；真实 acp_status 调用及 block 清理通过 |
 | T3 | 待开始 | | |
 | T4 | 待开始 | | |
 | T5 | 待开始 | | |
 | T6 | 待开始 | | |
 
 ## 日志
+
+### T2b 完成：按 F11 统一父端白名单，真实压缩工具验证通过
+
+本轮修正与最终实现：
+
+- 监督已确认上轮真实验证使用了未重载的旧父内核，并在本轮开始前执行 `/reload`。按 `docs/p4/rex-facts.md` 的 F11，保留父端 `resolveContextTools` 注册表及 `extraTools` 路径；删除未提交的 `maestro/adapters/pi/child/context-tools.ts`、`subagent-done.ts` 中的激活调用和对应假 Pi 激活测试，交互 handoff 同样只通过父端白名单启用。
+- fresh、resume（`maestro/adapters/pi/launch-resume.ts`）、persistent、交互 handoff 均携带父端已注册的压缩工具；显式 denied 优先；未安装 provider 时不添加工具，保留 Pi 原生 auto-compaction；不改变保存的用户 tools 策略。父端发现通过 runtime barrel 导出，保留架构边界。
+- 新增父端启动命令矩阵，覆盖已安装、未安装、compress 被拒绝三种情况及全部四条启动路径；handoff 断言不加载 child 激活扩展或完成协议。注册表/allowlist 针对性测试 7 passed，启动路径针对性测试 10 passed，均为 0 failed、0 skipped。
+- 同步工具参数说明、生成文档及 schema 快照、README、配置文档、handoff 文档和 AGENTS 代码地图；将监督新增的 F11 与修订后的 T2b 任务卡一并提交。下方两轮失败记录保留为历史，其诊断建议已由本轮监督结论和修正替代。
+
+最终正式门禁（没有降低或修改基线）：
+
+- `npm run typecheck`、`npm run lint`、`npm run format:check`（148 个文件）、`npm run docs:tools:check`、`git diff --check`：全部通过。
+- `docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t2b-f11-gate.Z4ESzk`：通过，未覆盖默认 `MIN_TESTS=1155`。第 1 轮 `1171 tests / 1151 pass / 10 fail / 10 skipped`，第 2 轮 `1171 tests / 1153 pass / 8 fail / 10 skipped`，退出码 0，脚本输出 `OK：没有持续性新增失败`。第 1 轮三个暂定新增失败未持续；第 2 轮失败属于既有允许集合，不能将 raw npm test 描述为零失败。
+- 原始门禁输出、两轮测试日志及 test-gate 退出码保存在 `/tmp/pi-rex-agents-p4-t2b-f11-gate.Z4ESzk`（`console.log`、`run1.log`、`run2.log`、`exitcode` 及各静态检查日志）。
+- `npm pack --dry-run --json`：通过，163 个文件。新 `maestro/adapters/pi/context-tools.ts` 被包含；不存在已删除的 child 激活模块，没有本地配置、凭据或会话证据入包。
+
+真实门禁（当前 Rex 会话，本轮仅一个只读验证子代理）：
+
+- `t2b-f11-test`，ID `0943a09b-ef89-4596-9fe6-6629701b82b4`；请求和实际模型均为 `CBAPI/cn:deepseek-v4.1-flash`，`thinking=low`、`tools=read,bash`、`fork=false`。没有派出实现子代理，所有代码修改均由主会话完成。
+- 先检查启动脚本 `/Users/qiangwenjun/.pi/agent/sessions/--Users-qiangwenjun-Documents-project-pi-rex-agents-p4--/artifacts/01a1af49-443d-73f4-b681-23609c7191c0/subagent-scripts/t2b-f11-test-0943a09b-ef89-4596-9fe6-6629701b82b4.sh`，实际参数为 `--tools 'read,bash,compress,decompress,search_context,acp_status,caller_ping'`。
+- 再核验 session `/Users/qiangwenjun/.pi/agent/sessions/--Users-qiangwenjun-Documents-project-pi-rex-agents-p4--/2026-11-06T06-11-48-855Z_0943a09b-ef89-4596-9fe6-6629701b82b4-34cd4783-30728f76-7120.jsonl`：第 2 行模型记录匹配指定模型；第 4 行首轮工具快照包含上述全部工具。
+- 第 6 行：`toolCall name=acp_status arguments={}`，ID `call_00_DMDh25vaksAmeRCtc10e4525`。第 7 行：对应 `toolResult toolCallId=call_00_DMDh25vaksAmeRCtc10e4525 toolName=acp_status isError=false`。结果摘录：`ACTIVE SURFACE: pack=lean v1.0.0 | host=billion-context-pi 0.1.83`，`Estimate: 13.5k (4%)`。全文件恰好一次 toolCall 和一次 toolResult，没有其他工具调用。
+- 子 block `block:01a1af7c-1aaa-772f-b2f9-bf06505d2596` 已自动清理。只读核对前后 block 列表完全一致，均仅包含父 block `block:01a1af49-22e2-7bfe-b2e6-2984426ea5df`；没有关闭任何其他 block。
+- 筛选证据及前后快照保存在同一门禁目录的 `live-evidence.json`、`blocks-before.json`、`blocks-after.json`、`rex-before.json`、`rex-after.json`、`postflight.json`，原始会话和这些证据均未暂存入库。
+
+提交与清理：
+
+- `rex ls --json` 无测试会话；系统临时目录无 `pira-lab-*` 或 `pi-integ-*`；无本轮子进程、lab 或集成测试进程残留。只保留原有 Rex 主服务器，未修改其他 session。
+- `.pi/settings.json` 保持 `S`（skip-worktree），没有修改或暂存；没有修改主 checkout 或上游 checkout，没有合并或推送。根目录空目录检查通过。
+- 提交信息：`P4.T2b: guarantee context-compression tools in every subagent`。本轮只完成 T2b，停在此处，不开始 T3。
+
+### T2b 继续：runtime 分层修复通过，真实工具激活验证失败
+
+按监督指令进行的修复：
+
+- `maestro/runtime/index.ts` 新增 `export { resolveContextTools } from "../adapters/pi/context-tools.ts";`，`pi-extension/subagents/launch.ts` 改为从 `../../maestro/runtime/index.ts` 导入。没有修改 `test/maestro/dependency-rule.test.ts`；没有发现 runtime barrel 的独立出口集合约束。
+- `node --experimental-strip-types --test test/maestro/dependency-rule.test.ts`：14 passed、0 failed、0 skipped，之前的两项跨层 import 回归均消除。
+- 在静态门禁和 test-gate 全部通过之后，按本轮明确授权、在提交前派出唯一的只读验证子代理 `t2b-test`；没有派出实现子代理。
+
+本轮正式门禁：
+
+- `npm run typecheck`、`npm run lint`、`npm run format:check`（149 文件）、`npm run docs:tools:check`、`git diff --check`：全部通过。
+- `npm pack --dry-run`：通过，164 个文件，两个新 adapter 模块均包含；无本地配置或会话证据。
+- `docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t2b-fixed-gate.DWhoCZ`：通过，未覆盖 `MIN_TESTS=1155`。首轮 `1171 tests / 1154 pass / 7 fail / 10 skipped`，脚本输出 `OK：没有持续性新增失败`，退出码 0。原始输出见该目录的 `console.log`、`run1.log` 和 `exitcode`。
+- **真实 `acp_status` 门禁失败**，因此本轮不提交，也不继续修复或重试真实子代理。
+
+真实验证证据：
+
+- 子代理：`t2b-test`，ID `3e364dd2-a552-4124-b8ad-518165c9c644`；请求和实际模型均为 `CBAPI/cn:deepseek-v4.1-flash`，`thinking=low`，`tools=read,bash`，`fork=false`。任务仅要求一次 `acp_status({})` 后退出，不允许其他工具调用或实现工作。
+- 子 session：`/Users/qiangwenjun/.pi/agent/sessions/--Users-qiangwenjun-Documents-project-pi-rex-agents-p4--/2026-11-06T05-45-45-170Z_3e364dd2-a552-4124-b8ad-518165c9c644-e88864bc-bc6697c6-eaca.jsonl`。
+- JSONL 第 2 行确认 `provider=CBAPI`、`modelId=cn:deepseek-v4.1-flash`。第 4 行首轮 system 工具快照摘录：`message.toolsAdded[*].name = ["read", "bash", "caller_ping"]`；没有 `compress`、`decompress`、`search_context` 或 `acp_status`。
+- 全文件统计：所有 toolCall 为 0、所有 toolResult 为 0；`acp_status` toolCall 和结果均为 0，不能提供成功调用摘录。第 6 行子代理返回：`acp_status 未启用：我的工具清单只有 read、bash、caller_ping`，并报告验证失败，没有尝试替代工具。
+- 启动脚本：`/Users/qiangwenjun/.pi/agent/sessions/--Users-qiangwenjun-Documents-project-pi-rex-agents-p4--/artifacts/01a1af49-443d-73f4-b681-23609c7191c0/subagent-scripts/t2b-test-3e364dd2-a552-4124-b8ad-518165c9c644.sh`。明确加载 `-e '/Users/qiangwenjun/Documents/project/pi-rex-agents-p4/maestro/adapters/pi/child/subagent-done.ts'`，实际启动白名单是 `--tools 'read,bash,caller_ping'`。父端本次未追加压缩工具；尚未通过重载父会话验证父端新代码。
+- activity 证据的 `phase=done`、`turnIndex=0`，确认首轮已正常结束；模型完成不等于上下文工具门禁通过。
+- 子 block：`block:01a1af64-3e88-75b4-8190-ebd89407e438`。返回报告后执行只读 `rex block ls -s "$REX_SESSION" --json`，确认该 block 已消失；`blocks-before.json` 与 `blocks-after.json` 均只包含父 block `block:01a1af49-22e2-7bfe-b2e6-2984426ea5df`，不需要额外关闭其他 block。
+- 筛选后的会话证据与 block 前后快照保存在 `/tmp/pi-rex-agents-p4-t2b-fixed-gate.DWhoCZ/live-evidence.json`、`blocks-before.json`、`blocks-after.json`；原始会话和证据均未暂存入库。
+
+判断与建议：
+
+- 确认了真实首轮工具没有自动启用；现有假 Pi 的 `session_start` spy 测试不足以证明真实运行时生效。尚未定位是注册列表、事件时机、激活被覆盖或其他扩展交互；不能根据子代理的“没有注册”表述断定 provider 没有安装。
+- 下一轮建议先核对真实 Pi 的工具注册与 `session_start` 激活次序；如确认该时机的激活被覆盖，按任务卡改在第一次 `before_agent_start` 做，并重新执行规定门禁。当前仅记录建议，没有实施或再次派出子代理。
+- 按“门禁失败时停止”规则，本轮在真实验证失败处停止。分层修复保留在未提交工作区；T2b 仍未完成，不开始 T3。
+
+### T2b：上下文工具保障已实现，架构门禁失败后停止
+
+实现与范围（全部留在 `p4-kernel` 的未提交工作区）：
+
+- 新增 `maestro/adapters/pi/context-tools.ts`，按 `compress` marker 识别 billion-context，仅返回已注册的 `compress`、`decompress`、`search_context`、`acp_status` 和可选 `acp_rule`，结果去重且顺序稳定；未安装 provider 时不改工具或 Pi 原生 auto-compaction。
+- 新增 `maestro/adapters/pi/child/context-tools.ts`，由普通/persistent 子代理的 `session_start` 启用缺失工具，保留既有 active tools，并尊重 `parseDeniedTools`。交互 handoff 单独加载这个小扩展，避免加载子代理完成协议。
+- `buildSubagentToolAllowlist` 新增可选 `extraTools`，fresh、resume、persistent 和 handoff 启动链传递父端发现的工具；不限制 `tools` 时仍返回 `null`，不重写保存的用户工具策略。
+- 更新 `subagent.tools` 说明，已运行 `npm run docs:tools`；同步 README、配置文档、worktree handoff 文档和 AGENTS 代码地图。新增 `test/maestro/context-tools.test.ts`，补充 fresh/resume 启动命令与 handoff 扩展断言。
+
+正式门禁前的针对性检查：
+
+- `node --experimental-strip-types --test test/maestro/context-tools.test.ts`：15 passed、0 failed、0 skipped。
+- `node --experimental-strip-types --test --test-name-pattern='keeps compression tools visible|forks the active conversation and focuses after launch' test/launch.test.ts`：2 passed、0 failed、0 skipped。
+- 开发期间曾修正测试夹具自身的 persistent shutdown 计时器清理、以及 mock transport 不创建 resume session 文件的问题；没有删除或放宽产品断言。
+
+正式门禁结果：
+
+- `npm run typecheck`：通过。
+- `npm run lint`：通过。
+- `npm run format:check`：通过，检查 149 个文件。
+- `npm run docs:tools:check`：通过。
+- `git diff --check`：通过。
+- `npm pack --dry-run`：通过，164 个文件；检查清单确认两个新 adapter 模块被包含，没有打入本地配置、凭据或会话证据。
+- `docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t2b-gate.jdTnjw`：**失败，退出码 1**。未覆盖 `MIN_TESTS`，沿用脚本的 1155；三轮均为 `1171 tests / 1150 pass / 11 fail / 10 skipped`。脚本最终判定下列两个测试三轮持续失败，属于新增回归：
+  - `overall enforcement has no violations`
+  - `pi-extension never imports adapters or surfaces directly`
+- 完整输出和三轮日志：`/tmp/pi-rex-agents-p4-t2b-gate.jdTnjw/console.log`、`run1.log`、`run2.log`、`run3.log`。
+
+根因和后续建议：
+
+- 两项失败都指向同一个新增 import：`pi-extension/subagents/launch.ts:2` 的 `import { resolveContextTools } from "../../maestro/adapters/pi/context-tools.ts";`。
+- 架构检查原文：`pi-extension/subagents/launch.ts: forbidden import ../../maestro/adapters/pi/context-tools.ts`。这是本轮父端可见性实现越过 host → runtime → adapter 边界造成的确定性回归，与既有允许失败或墙钟超时无关。
+- 建议后续将父端 provider 解析放到 `maestro/runtime/` 内，经已有 runtime seam 传递已注册工具名；保持 adapter 内的注册表、子端第一轮激活逻辑和架构检查不变。按照工作规则，本轮不继续修复、不重跑 test-gate，等待用户指示。
+
+真实验证与收尾：
+
+- 因正式门禁失败，**没有提交，也没有派出任何子代理**；任务卡要求的 `CBAPI/cn:deepseek-v4.1-flash` / `tools: "read,bash"` / `acp_status` 真实验证尚未执行。因此目前只有假 Pi 的 `session_start` 激活证据，不能声称真实 Pi 激活或 JSONL 验证已通过。
+- 没有创建 block/window/lab；只读 `rex ls --json` 核验没有 `pira-lab-*` / `pi-integ-*` 会话，系统临时目录也没有相应根目录；没有遗留本轮 gate/integration 进程，未触碰其他 Rex session 的 block。Rex listing 保存在同一日志目录的 `rex-ls.json`。
+- `.pi/settings.json` 仍为 `S`（skip-worktree），本轮没有修改或暂存。没有修改主 checkout 或上游 checkout，没有合并或推送。
+- 根目录空目录检查通过。T2b 保持未提交、未完成状态；不开始 T3。
 
 ### T2：Rex provider 入内核，删除 Herdr/sidebar/Windows
 

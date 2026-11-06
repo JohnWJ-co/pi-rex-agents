@@ -31,6 +31,7 @@ This tree is the P4 migration worktree. Keep changes scoped to the current check
 - `maestro/core/` — host-neutral seams, lifecycle, routing, wakeups and worktree contracts retained by the fork
 - `maestro/runtime/` — Pi run sessions, delivery, cleanup, worktree operations and supervision
 - `maestro/adapters/pi/` — Pi launch transactions, child protocol, session I/O and process evidence
+- `maestro/adapters/pi/context-tools.ts` — registered compression-provider discovery; the parent appends these tools to fresh, resume, persistent and interactive handoff launch allowlists through the runtime seam
 - `maestro/surfaces/rex/` — the only real SurfaceProvider implementation; `maestro/surfaces/fake/` is test-only
 - `test/integration/rex-harness.ts` — isolated Rex server, fake-provider configuration, parent launch and observable wait helpers
 - `test/integration/rex-smoke.test.ts` — real parent-to-child Rex smoke lifecycle

@@ -51,6 +51,23 @@ Model routing does not read the example: no model overrides apply until a real
 when the extension starts. Run `/reload` after changing it. Package-root
 `config.json` files are ignored; move them manually or re-run `/subagents-init`.
 
+## Context-compression tools
+
+Every fresh or resumed child, persistent specialist, and interactive worktree
+handoff automatically activates installed context-compression tools before its
+first turn, even with a restricted `tools` list such as `read,bash`. The
+`billion-context` provider is detected by its registered `compress` tool; its
+registered `compress`, `decompress`, `search_context`, `acp_status`, and optional
+`acp_rule` tools are enabled. Explicit `deny-tools` entries take precedence.
+The parent discovers these tools from its full registered tool list and appends
+them to the launch `--tools` list, while preserving the caller's saved tool
+policy. Pi filters tool registration by `--tools`, so child-side activation
+cannot restore an omitted tool. Load the compression provider in both parent
+and child; run `/reload` in the parent after changing the launch code or
+extensions. Without an installed provider, no tools or compaction settings
+are changed: Pi uses its native auto-compaction. Additional providers belong
+in `maestro/adapters/pi/context-tools.ts`.
+
 ## Model preferences
 
 The copyable example is model-neutral, so it works without requiring credentials

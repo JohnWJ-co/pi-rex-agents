@@ -65,6 +65,13 @@ For an explicit interactive handoff, use `/worktree <worktree> [task]`. It creat
 
 `worktree` cannot be set in agent frontmatter and is not exposed by the `/subagent <agent> <task>` shorthand. It is selected per call to the `subagent` tool. Ordered model fallback lists are not supported for worktree subagents: a failed attempt retains its worktree and branch for review, so a retry cannot safely reuse the requested branch. A persistent specialist either holds one worktree lease for its full lifetime or runs read-only in an ordinary pane; it cannot be re-bound.
 
+The parent appends registered context-compression tools to the launch `--tools`
+list for worktree children and interactive handoffs, making them available from
+the first model turn. Handoffs keep their normal interactive startup without a
+child protocol extension. Explicit denials still apply to children; without an
+installed provider, Pi uses native auto-compaction. See
+[context-compression configuration](configuration.md#context-compression-tools).
+
 ## Parent and worker responsibilities
 
 | Parent/orchestrator | Worker |

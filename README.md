@@ -39,6 +39,8 @@ pi --no-extensions -e /Users/qiangwenjun/Documents/project/pi-rex-agents/src/ext
 
 本扩展只在 `REX_SESSION` 与 `REX_BLOCK` 都存在时注册工具；在普通终端里不会生效。子代理进程带 `PI_SUBAGENT_ID`，作为叶子不会注册 `subagent` 工具。
 
+子代理会在第一轮前自动启用已安装的上下文压缩工具，即使指定 `tools: "read,bash"`。目前支持 billion-context 的 `compress`、`decompress`、`search_context`、`acp_status` 以及可选的 `acp_rule`；显式的 `deny-tools` 仍然优先。新启动、resume、persistent 和 worktree handoff 都适用。未安装压缩插件时不添加工具，沿用 Pi 原生 auto-compaction，详见 [配置说明](docs/configuration.md#context-compression-tools)。
+
 ## 集成测试
 
 测试需要一个 Rex 会话，并且当前 Pi 进程运行在 Rex block 内（`REX_SESSION` / `REX_BLOCK` 已设置）。

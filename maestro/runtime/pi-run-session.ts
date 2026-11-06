@@ -490,6 +490,7 @@ export function createDefaultRunSession(
 			surface: state.infrastructure.surfaceProvider,
 			paneConfig: snapshot.paneConfig,
 			modelRegistry: snapshot.modelRegistry,
+			contextTools: snapshot.contextTools,
 			parent: snapshot.parent,
 			parentRuntime: snapshot.parentRuntime,
 			supervision: state.infrastructure.supervision,
@@ -875,6 +876,7 @@ export function createDefaultRunSession(
 					parent: { ...snapshot.parent },
 					runtimePlan: input.runtimePlan,
 					modelScope: snapshot.modelRegistry.scope,
+					contextTools: snapshot.contextTools,
 					behavior: {
 						deniedTools: [],
 						autoExit: false,

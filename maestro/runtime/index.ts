@@ -1,3 +1,4 @@
+export { resolveContextTools } from "../adapters/pi/context-tools.ts";
 export { createRunSession } from "./run-session.ts";
 export type {
 	CancelReport,

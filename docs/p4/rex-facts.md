@@ -1,7 +1,7 @@
 # Rex 通信机制实测记录（2026-11-06）
 
 环境：Rex `0.0.1793741575-g1b6654`（api_revision 10），Pi `v1.5.0`，测试模型 `CBAPI/cn:deepseek-v4.1-flash`。
-所有结论都来自真实 Rex 会话中的实验；编号 F1–F10 供计划和任务卡引用。
+所有结论都来自真实 Rex 会话中的实验；编号 F1–F11 供计划和任务卡引用。
 
 ## F1 Pi 原生上报 OSC 7501（根记录）
 
@@ -61,3 +61,10 @@
 
 - 用户日常使用的 pi 通过 `~/.pi/agent/settings.json` 加载 `../../Documents/project/pi-rex-agents`（主 checkout 源码）。
 - 推论：内核改造必须在独立的 worktree（`../pi-rex-agents-p4`，分支 `p4-kernel`）中进行，避免把半成品加载进正在使用的 pi 及其子代理。
+
+## F11 `--tools` 白名单会过滤扩展工具的注册（2026-11-06 T2b 实测）
+
+- 探针扩展在 `session_start` 中记录：`pi --tools read,bash` 时 `getAllTools()` 只返回 `read,bash`，billion-context 的 `compress`/`acp_status` 等不可见；`setActiveTools([...,"acp_status"])` 之后 active 仍是 `read,bash`。
+- 不传 `--tools`：`getAllTools()` 42 个（含 compress、acp_status），active 31 个。
+- `--tools read,bash,compress,decompress,search_context,acp_status`：这些工具都注册并激活，模型实际调用 `acp_status` 成功（输出 `ACTIVE SURFACE: pack=lean … host=billion-context-pi 0.1.83`）。
+- 推论：子代理一侧没办法补回白名单外的工具，压缩工具必须由父进程写进 `--tools`。扩展代码改动后，父 pi 必须 `/reload` 才会生效（子代理通过 `-e` 每次重新加载）。

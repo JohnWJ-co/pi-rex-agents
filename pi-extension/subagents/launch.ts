@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { resolveContextTools } from "../../maestro/runtime/index.ts";
 import type {
 	PiLaunchSnapshot,
 	PiAttemptSnapshot,
@@ -205,6 +206,9 @@ export function createLaunchPlanner({
 					? { provider: ctx.model.provider, modelId: ctx.model.id, thinking }
 					: undefined,
 			modelRegistry: sessionModelRegistry(ctx),
+			contextTools: resolveContextTools(
+				runtime.pi?.getAllTools().map((tool) => tool.name) ?? [],
+			),
 			paneConfig,
 		};
 	}

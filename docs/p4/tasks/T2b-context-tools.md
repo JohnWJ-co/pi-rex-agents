@@ -30,11 +30,8 @@ T2 的实现子代理 rex-surface-build 跑了约 4.7 小时，上下文涨到 8
    export function resolveContextTools(registered: Iterable<string>): string[]
    ```
    `resolveContextTools`：某个 provider 的 marker 工具已注册时，返回它 `tools` 中已注册的那些（`acp_rule` 已注册时也一并带上）。结果去重，顺序稳定。以后加新的压缩插件，只需要在注册表里加一行。
-2. **子代理一侧（主路径，必须做）**：在 `maestro/adapters/pi/child/subagent-done.ts` 的 `session_start` 中，已有的 `pi.getAllTools()` 之后计算 `missing = resolveContextTools(全部已注册) − pi.getActiveTools()`；`missing` 非空时调用 `pi.setActiveTools([...active, ...missing])`。要求：
-   - 不移除任何已有工具，也不加入注册表以外的工具。
-   - 如果 `session_start` 时调用 `setActiveTools` 不生效（实测核对），改在第一次 `before_agent_start` 时做，并在 STATUS 里记录实测结论。
-   - `denied` 工具（`parseDeniedTools`）优先：被显式禁用的压缩工具不要加回来。
-3. **父进程一侧（可见性）**：`buildSubagentToolAllowlist(tools, autoExit, extraTools?)` 增加可选参数 `extraTools`。`launch.ts:774` 和 `launch-resume.ts:136` 传入 `resolveContextTools(父进程已注册的工具名)`，让启动脚本里的 `--tools` 直接带上这些工具。如果父进程的已注册工具列表在这两处很难拿到，可以跳过这一步，但要在 STATUS 里说明；第 2 步已经能保证正确。
+2. **不做子代理一侧激活（F11）**：`--tools` 会过滤工具注册，`getAllTools()` 看不到白名单之外的扩展工具，`setActiveTools()` 无法补回。不要增加 child 激活扩展或在 `subagent-done.ts` 中激活压缩工具；交互式 handoff 同样通过父进程的白名单路径启用。显式 `denied` 工具优先，父进程不能自动加回。
+3. **父进程一侧（唯一有效路径，必须做，见 F11）**：`buildSubagentToolAllowlist(tools, autoExit, extraTools?)` 增加可选参数 `extraTools`。`launch.ts:774` 和 `launch-resume.ts:136` 传入 `resolveContextTools(父进程已注册的工具名)`，让启动脚本里的 `--tools` 直接带上这些工具。父进程本身不带 `--tools` 启动，`getAllTools()` 能看到全部工具。真实验证前，父 pi 必须先 `/reload`。
 4. 文档：在 `subagent` 工具 `tools` 参数的说明里写明"会自动附加已安装的上下文压缩工具（如 billion-context）"，然后运行 `npm run docs:tools`。这只是说明变化，不属于 breaking；在 `docs/configuration.md` 中补一段说明。
 
 ## 测试
@@ -43,12 +40,13 @@ T2 的实现子代理 rex-surface-build 跑了约 4.7 小时，上下文涨到 8
   - 装了 billion-context → 得到 4 个工具；有 `acp_rule` 时 5 个。
   - 没装 → `[]`。
   - 只注册了 `decompress`、没有 marker → `[]`。
-- 单测：子代理 `session_start` 用假的 `pi`（`getAllTools`/`getActiveTools`/`setActiveTools` 用 spy 记录调用）：
-  - 白名单是 `read,bash`，且已注册 billion-context → `setActiveTools` 收到 `read,bash,…,compress,decompress,search_context,acp_status`。
-  - 没装 → 不调用 `setActiveTools`。
-  - `compress` 在 denied 中 → 不加回来。
+- 单测：父进程生成的 fresh、resume（`launch-resume.ts`）、persistent 和交互式 handoff 启动命令：
+  - 白名单是 `read,bash`，父进程已注册 billion-context → `--tools` 包含四个压缩工具。
+  - 没装 → 不附加压缩工具。
+  - `compress` 在 denied 中 → 不自动加回，其他已注册压缩工具仍带上。
+  - 自动附加不修改保存的用户 tools 策略；handoff 不加载 child 激活或完成协议扩展。
 - 单测：`buildSubagentToolAllowlist` 带 `extraTools` 时结果去重；不传 `tools`（返回 null）时仍然返回 null，因为不限定工具时子代理本来就能用所有工具。
-- **真实验证（必须）**：在 Rex lab 或当前会话里，用 `CBAPI/cn:deepseek-v4.1-flash`（免费）启动一个 `tools: "read,bash"` 的子代理，让它调用一次 `acp_status` 并报告结果。从子代理的 session jsonl 中确认存在一次成功的 `acp_status` toolCall。测完清理 block。
+- **真实验证（必须）**：先 `/reload` 父 pi，再在 Rex lab 或当前会话里，用 `CBAPI/cn:deepseek-v4.1-flash`（免费）启动一个 `tools: "read,bash"` 的子代理，让它调用一次 `acp_status` 并报告结果。先检查它的启动脚本 `--tools` 包含 `compress,decompress,search_context,acp_status`，再从 session jsonl 中确认成功的 `acp_status` toolCall 和对应的非错误 toolResult。测完确认 block 已清理。
 
 ## 门禁
 

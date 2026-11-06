@@ -87,6 +87,7 @@ export interface PiHarnessAdapterOptions {
 	surface: SurfaceProvider;
 	paneConfig: PaneConfig;
 	modelRegistry: ModelRegistryAdapter;
+	contextTools?: readonly string[];
 	parent: FreshPiLaunchRequest["parent"];
 	/** Compatibility only; supervision owns its wake registry and registrations. */
 	wake?: FileWakeRegistry;
@@ -227,6 +228,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 					this.options.modelRegistry,
 				),
 			modelScope: this.options.modelRegistry.scope,
+			contextTools: this.options.contextTools,
 			behavior: {
 				tools: resolved
 					? resolved.tools
@@ -269,6 +271,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 			message: opts.message,
 			parent: this.options.parent,
 			modelScope: this.options.modelRegistry.scope,
+			contextTools: this.options.contextTools,
 			behavior: { autoExit: opts.autoExit },
 		});
 		return this.track(child);

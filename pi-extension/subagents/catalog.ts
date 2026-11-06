@@ -92,7 +92,8 @@ export const SubagentParams = Type.Object({
 	),
 	tools: Type.Optional(
 		Type.String({
-			description: "Comma-separated tools (overrides agent default)",
+			description:
+				"Comma-separated tools (overrides agent default). Installed context-compression tools (such as billion-context) are automatically appended; explicit tool denials still apply.",
 		}),
 	),
 	cwd: Type.Optional(

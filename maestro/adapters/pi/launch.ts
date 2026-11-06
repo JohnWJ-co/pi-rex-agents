@@ -85,6 +85,8 @@ export interface FreshPiLaunchRequest {
 	 * child receives it as its exact allowlist ({@link MODEL_SCOPE_ENV}) and as
 	 * Pi's `--models` hint; absent leaves it unscoped. */
 	modelScope?: readonly string[];
+	/** Registered compression tools discovered by the parent for the launch allowlist. */
+	contextTools?: readonly string[];
 	behavior: {
 		tools?: string;
 		skills?: string;
@@ -119,6 +121,7 @@ export interface ResumePiLaunchRequest {
 	 * it and is pinned with `--model`; the child receives it as its exact
 	 * allowlist ({@link MODEL_SCOPE_ENV}) and as Pi's `--models` hint. */
 	modelScope?: readonly string[];
+	contextTools?: readonly string[];
 	behavior?: {
 		autoExit?: boolean;
 		interactive?: boolean;
@@ -774,6 +777,9 @@ function buildPiCommand(
 	const toolAllowlist = buildSubagentToolAllowlist(
 		request.behavior.tools,
 		request.behavior.autoExit,
+		request.contextTools?.filter(
+			(tool) => !request.behavior.deniedTools.includes(tool),
+		),
 	);
 	if (toolAllowlist) parts.push("--tools", shellQuote(toolAllowlist));
 	if (!request.handoff) parts.push(shellQuote(artifacts.taskArg));

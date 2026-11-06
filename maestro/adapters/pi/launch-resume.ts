@@ -136,6 +136,9 @@ export async function launchResumedPiSubagent(
 		const toolAllowlist = buildSubagentToolAllowlist(
 			policy.tools?.join(","),
 			autoExit,
+			request.contextTools?.filter(
+				(tool) => !policy.deniedTools.includes(tool),
+			),
 		);
 		const command = [
 			...env,
