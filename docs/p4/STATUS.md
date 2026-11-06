@@ -11,7 +11,7 @@
 |---|---|---|---|
 | T0 | 已完成，门禁通过 | `41af43a2c17ae86ec7c5e57b3c1989c6b71147a8` | 完整复制范围已修正；test-gate 最终通过，1452 个测试已加载 |
 | T1 | 已完成，门禁通过 | `15cdafc` | Rex lab、集成 harness、验证技能和 AGENTS.md 已完成；test-gate 与真实 Rex smoke 通过 |
-| T2 | 已完成返工，门禁通过 | `待填` | 恢复通用测试并迁移 audit-stop 到 Rex harness；Rex provider 已入内核；Herdr/sidebar/Windows 专属路径已删除；保留 `test/verify-lab-guards.test.ts` |
+| T2 | 已完成返工，门禁通过 | `6202306` | 恢复通用测试并迁移 audit-stop 到 Rex harness；Rex provider 已入内核；Herdr/sidebar/Windows 专属路径已删除；保留 `test/verify-lab-guards.test.ts` |
 | T2b | 待开始 | | |
 | T3 | 待开始 | | |
 | T4 | 待开始 | | |
