@@ -13,16 +13,16 @@ This page is the detailed reference for the tools, commands, and run lifecycle o
 
 | Tool | Sessions | Description |
 | --- | --- | --- |
-| `subagent` | parent, child | Spawn a sub-agent in a dedicated terminal herdr pane, or in an isolated Herdr-managed Git worktree when worktree is provided. |
+| `subagent` | parent, child | Spawn a sub-agent in a dedicated Rex block beside you in the current tab (default), in a new Rex tab when placement is "tab", or in an isolated Rex-managed Git worktree when worktree is provided. |
 | `subagent_cancel` | parent, child | Cancel a running ordinary (non-persistent) Pi-backed subagent, including an interrupted one: records terminal intent first, terminates its owned process, and delivers exactly one cancelled result. |
 | `subagent_interrupt` | parent, child | Send Escape to the active turn of a currently running Pi-backed subagent. |
-| `subagent_resume` | parent, child | Resume a previous Pi-backed sub-agent session in a new herdr pane. |
+| `subagent_resume` | parent, child | Resume a previous Pi-backed sub-agent session in a new Rex block (or a new Rex tab when placement is "tab"). |
 | `subagent_send` | parent, child | Deliver one follow-up task to an idle persistent specialist. |
 | `subagent_stop` | parent, child | Gracefully stop a persistent specialist after its active task settles. |
 | `subagents_list` | parent, child | List all available package, global, and project subagent definitions. |
 | `subagents_write_task_models` | parent only | Validate and atomically replace models.tasks and models.tasksMeta in the durable Pi agent config, preserving unrelated settings. |
 | `worktree_list` | parent only | Inspect managed worktrees, including cross-session orphans. |
-| `worktree_remove` | parent only | Explicitly remove one managed worktree by exact path, branch, or workspace ID. |
+| `worktree_remove` | parent only | Explicitly remove one managed worktree by exact path, branch, or window ID. |
 <!-- generated:tools:end -->
 
 | Skill | Description |
@@ -151,7 +151,7 @@ subagent({
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `name` | string | yes | Short stable label for the subagent; for a new coordinated group use \<task>-\<role>[-n] (shown in the widget and pane title) |
+| `name` | string | yes | Short stable label for the subagent; for a new coordinated group use \<task>-\<role>[-n] (shown in the widget and block title) |
 | `task` | string | yes | Task/prompt for the sub-agent |
 | `agent` | string | no | Role definition name to load defaults from. Discovery precedence is project .pi/agents, global ~/.pi/agent/agents, then installed role packs; this extension ships no roles. A missing name fails before launch. Omit for a bare agent. |
 | `systemPrompt` | string | no | Role/system-prompt text for a bare spawn. Named agents keep their definition body. |
@@ -160,8 +160,8 @@ subagent({
 | `skills` | string | no | Comma-separated skills (overrides agent default) |
 | `tools` | string | no | Comma-separated tools (overrides agent default). Installed context-compression tools (such as billion-context) are automatically appended; explicit tool denials still apply. |
 | `cwd` | string | no | Working directory for the sub-agent. Without worktree, the agent starts in this folder. With worktree, this selects the source Git repository and the agent starts at the created worktree root. |
-| `worktree` | object \| null | no | Optional isolated Herdr-managed Git worktree. Omit or pass null to use an ordinary pane in cwd. |
-| `worktree.branch` | string | yes | New branch name for an isolated Herdr-managed Git worktree |
+| `worktree` | object \| null | no | Optional isolated Rex-managed Git worktree. Omit or pass null to use an ordinary block in cwd. |
+| `worktree.branch` | string | yes | New branch name for an isolated Rex-managed Git worktree |
 | `worktree.base` | string | no | Git revision to branch from. Defaults to the source checkout's committed HEAD. |
 | `placement` | `"split"` \| `"tab"` | no | Where the child runs. "split" (default) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. "tab" opens the child in a new Rex tab (a Rex window). Worktree children always open in a new tab. |
 | `fork` | boolean | no | Override the child session mode for this spawn. `true` forces full-context fork; `false` forces standalone. Omit to inherit the agent frontmatter session-mode. |
@@ -171,7 +171,7 @@ subagent({
 | `accept.maxRetries` | integer | no | Extra child turns after a failed check, each with the failing output. Default 1. |
 | `accept.timeoutSec` | integer | no | Per-run timeout in seconds. Default 600. A timeout is verdict `error`. |
 | `accept.paths` | string[] | no | Repo-relative check files (for example tests). The delivery reports any the child changed; the verdict is unchanged. |
-| `interactive` | boolean | no | Mark the subagent as interactive (long-running, user drives the conversation in its own pane). When true, the main session is not woken by status transitions (stalled/recovered) for this subagent. If omitted, falls back to the agent's `interactive` frontmatter, otherwise the inverse of `auto-exit` (agents that auto-exit are autonomous and get stall pings; agents that don't are interactive and stay quiet). |
+| `interactive` | boolean | no | Mark the subagent as interactive (long-running, user drives the conversation in its own block). When true, the main session is not woken by status transitions (stalled/recovered) for this subagent. If omitted, falls back to the agent's `interactive` frontmatter, otherwise the inverse of `auto-exit` (agents that auto-exit are autonomous and get stall pings; agents that don't are interactive and stay quiet). |
 <!-- generated:subagent-params:end -->
 
 Defaults and behavior the schema does not carry:
@@ -442,7 +442,7 @@ is no other parent/child protocol.
 
 `/worktree <worktree> [task]` creates a Herdr-managed worktree from the current committed branch and launches a new interactive Pi session there with the active conversation branch. The original session remains available. Use `/worktree list` or `worktree_list({})` to inspect managed worktrees, including cross-session orphans, whose canonical source repositories are inside the session's cwd subtree. This is a new-process handoff, not an in-place move of the existing shell or Pi process.
 
-The destination workspace is focused only after Pi startup is confirmed. Every fresh launch, including the handoff, sets `PI_HERDR_AGENTS_SESSION` to its session file; confirmation requires a Pi process in the root pane with the worktree cwd whose launch-time environment carries that value. Pi rewrites its process title, so command-line text is never evidence. Nothing inside Pi reads the variable, and it is not a child-context hint. Confirmation reads Linux `/proc`; see [Worktree subagents](worktree-subagents.md).
+The destination window is focused only after Pi startup is confirmed. Every fresh launch, including the handoff, sets `PI_REX_AGENTS_SESSION` to its session file; confirmation requires a Pi process in the root block with the worktree cwd whose launch-time environment carries that value. Pi rewrites its process title, so command-line text is never evidence. Nothing inside Pi reads the variable, and it is not a child-context hint. Confirmation reads Linux `/proc`; see [Worktree subagents](worktree-subagents.md).
 
 ### Explicit worktree cleanup
 
@@ -515,7 +515,7 @@ Registered in: parent, child sessions.
 | --- | --- | --- | --- |
 | `placement` | `"split"` \| `"tab"` | no | Where the child runs. "split" (default) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. "tab" opens the child in a new Rex tab (a Rex window). Worktree children always open in a new tab. |
 | `sessionPath` | string | yes | Path to the session .jsonl file to resume |
-| `name` | string | no | Display name for the terminal tab. Default: 'Resume' |
+| `name` | string | no | Display name for the Rex tab. Default: 'Resume' |
 | `message` | string | no | Optional message to send after resuming (e.g. follow-up instructions) |
 | `autoExit` | boolean | no | Whether the resumed session should automatically exit after completing its response. Defaults to true for autonomous follow-up work; set false for interactive resumed sessions. |
 

@@ -1,4 +1,7 @@
 import { withEncodedToolErrors } from "./tool-boundary.ts";
+import { createRexInfrastructure, rexHostContext } from "./rex-composition.ts";
+import { registerRexHostNotice } from "./host-notice.ts";
+import { rexWorktreeRoot } from "../../maestro/surfaces/rex/worktree.ts";
 import type {
 	ExtensionAPI,
 	ExtensionContext,
@@ -292,6 +295,14 @@ export default function subagentsExtension(
 		infrastructure?: PiRunSessionInfrastructure;
 	} = {},
 ) {
+	const rexHost = rexHostContext();
+	// Outside Rex the public entry point has no usable host. Tests can inject
+	// their own deterministic infrastructure without acquiring a real surface.
+	const infrastructure =
+		options.infrastructure ??
+		(rexHost ? createRexInfrastructure(rexHost) : undefined);
+	if (!infrastructure) return;
+	if (rexHost) registerRexHostNotice(pi, rexHost, spawningConfig);
 	runtime.pi = pi;
 	runtime.session = createDefaultRunSession(
 		{
@@ -300,7 +311,7 @@ export default function subagentsExtension(
 			roles: [],
 			forcePolling: supervisionConfig.forcePolling,
 			outcomeLedger: outcomeLedgerConfig.enabled,
-			infrastructure: options.infrastructure,
+			infrastructure,
 			getLaunchSnapshot() {
 				const ctx = runtime.latestCtx;
 				if (!ctx) throw new Error("No parent launch context");
@@ -391,6 +402,7 @@ export default function subagentsExtension(
 					ctx.sessionManager.getSessionId(),
 					"worktree-runs",
 				),
+				managedRoot: rexWorktreeRoot(),
 				liveHolders: () =>
 					[...runningSubagents.values()].flatMap((child) =>
 						child.worktree

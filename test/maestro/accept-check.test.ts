@@ -44,6 +44,7 @@ import { SubagentParams } from "../../pi-extension/subagents/catalog.ts";
 import * as subagentsModule from "../../pi-extension/subagents/index.ts";
 import { createMockExtensionApi } from "../helpers/mock-extension-api.ts";
 import { isString } from "../../maestro/core/config/type-guards.ts";
+import { SupervisionCoordinator } from "../../maestro/core/supervision.ts";
 
 describe("accept parameter", () => {
 	it("applies defaults and validates bounds", () => {
@@ -123,12 +124,31 @@ describe("accept parameter", () => {
 		const previous = {
 			REX_SESSION: process.env.REX_SESSION,
 			REX_BLOCK: process.env.REX_BLOCK,
+			REX_SERVER: process.env.REX_SERVER,
 		};
 		delete process.env.REX_SESSION;
 		delete process.env.REX_BLOCK;
+		process.env.REX_SESSION = "session:test-accept";
+		process.env.REX_BLOCK = "block:test-accept";
+		process.env.REX_SERVER = "unix:///tmp/pi-rex-agents-no-server";
 		try {
+			const provider = new FakeSurfaceProvider();
+			provider.isAvailable = () => false;
 			const { api, registeredTools } = createMockExtensionApi();
-			subagentsModule.default(api);
+			subagentsModule.default(api, {
+				infrastructure: {
+					surfaceProvider: provider,
+					launchOperations: launchOperationsFromSurface(provider, {
+						mode: "tab",
+						direction: "right",
+						maxPerTab: 1,
+					}),
+					supervision: new SupervisionCoordinator(
+						async () => ({ complete: true, panes: [] }),
+						(id) => provider.inspectSurface(id),
+					),
+				},
+			});
 			const tool = registeredTools.find((entry) => entry.name === "subagent");
 			return await tool.execute(
 				"call-1",
@@ -142,6 +162,8 @@ describe("accept parameter", () => {
 			else process.env.REX_SESSION = previous.REX_SESSION;
 			if (previous.REX_BLOCK === undefined) delete process.env.REX_BLOCK;
 			else process.env.REX_BLOCK = previous.REX_BLOCK;
+			if (previous.REX_SERVER === undefined) delete process.env.REX_SERVER;
+			else process.env.REX_SERVER = previous.REX_SERVER;
 		}
 	}
 
@@ -153,7 +175,7 @@ describe("accept parameter", () => {
 		}
 		// An auto-exit bare launch passes the refusal and stops at Herdr.
 		const passed = await launch({ accept: { run: "true" } });
-		assert.equal(passed.details.error, "herdr not available");
+		assert.equal(passed.details.error, "rex not available");
 		await assert.rejects(
 			launch({ accept: { run: "x", paths: ["../escape"] } }),
 			/Invalid accept check/,

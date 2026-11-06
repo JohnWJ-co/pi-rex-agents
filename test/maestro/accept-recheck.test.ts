@@ -186,7 +186,7 @@ async function fixture(
 			writeFileSync(`${record.sessionFile}.exit`, JSON.stringify(sidecar));
 		},
 		ledger() {
-			const file = join(dir, "herdr-agents", "outcomes.jsonl");
+			const file = join(dir, "rex-agents", "outcomes.jsonl");
 			return existsSync(file)
 				? readFileSync(file, "utf8")
 						.trim()
@@ -261,7 +261,7 @@ test("the parent re-check accepts a completed run and writes one ledger line", (
 		assert.equal(line.checkTries, 2);
 		assert.equal(line.runId, "public-control");
 		const raw = readFileSync(
-			join(f.dir, "herdr-agents", "outcomes.jsonl"),
+			join(f.dir, "rex-agents", "outcomes.jsonl"),
 			"utf8",
 		);
 		assert.ok(!raw.includes(run) && !raw.includes("bounded"), raw);
@@ -371,7 +371,7 @@ test("an unchecked run has no verdict and logs verdict none; the off switch writ
 			const { completed } = await runChild(f, f.input({ run: "true" }));
 			assert.equal(completed.accept?.verdict, "accepted");
 			assert.equal(
-				existsSync(join(f.dir, "herdr-agents", "outcomes.jsonl")),
+				existsSync(join(f.dir, "rex-agents", "outcomes.jsonl")),
 				false,
 			);
 		},

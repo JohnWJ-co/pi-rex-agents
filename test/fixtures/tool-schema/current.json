@@ -18,13 +18,13 @@
 		{
 			"name": "subagent",
 			"scopes": ["parent", "child"],
-			"description": "Spawn a sub-agent in a dedicated terminal herdr pane, or in an isolated Herdr-managed Git worktree when worktree is provided. Use ordinary panes for read-only tasks; a single or sequential writer can work in the parent checkout without a worktree. Reserve unique worktree branches for parallel independent writers starting from committed state — the worktree base is committed HEAD, so uncommitted parent changes are not copied. Worktree runs retain their workspace after completion for parent review; they are not pushed, merged, or removed automatically. To inspect a retained worktree result, spawn read-only agents in an ordinary pane with cwd set to that worktree path — do not create a new worktree for them. This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. DO NOT fabricate, assume, or summarize results after calling this tool. After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
+			"description": "Spawn a sub-agent in a dedicated Rex block beside you in the current tab (default), in a new Rex tab when placement is \"tab\", or in an isolated Rex-managed Git worktree when worktree is provided. Use ordinary blocks for read-only tasks; a single or sequential writer can work in the parent checkout without a worktree. Reserve unique worktree branches for parallel independent writers starting from committed state — the worktree base is committed HEAD, so uncommitted parent changes are not copied. Worktree runs retain their window after completion for parent review; they are not pushed, merged, or removed automatically. To inspect a retained worktree result, spawn read-only agents in an ordinary block with cwd set to that worktree path — do not create a new worktree for them. This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. DO NOT fabricate, assume, or summarize results after calling this tool. After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
 			"parameters": {
 				"type": "object",
 				"required": ["name", "task"],
 				"properties": {
 					"name": {
-						"description": "Short stable label for the subagent; for a new coordinated group use <task>-<role>[-n] (shown in the widget and pane title)",
+						"description": "Short stable label for the subagent; for a new coordinated group use <task>-<role>[-n] (shown in the widget and block title)",
 						"type": "string"
 					},
 					"task": {
@@ -68,7 +68,7 @@
 						"type": "string"
 					},
 					"worktree": {
-						"description": "Optional isolated Herdr-managed Git worktree. Omit or pass null to use an ordinary pane in cwd.",
+						"description": "Optional isolated Rex-managed Git worktree. Omit or pass null to use an ordinary block in cwd.",
 						"anyOf": [
 							{
 								"type": "object",
@@ -76,7 +76,7 @@
 								"properties": {
 									"branch": {
 										"minLength": 1,
-										"description": "New branch name for an isolated Herdr-managed Git worktree",
+										"description": "New branch name for an isolated Rex-managed Git worktree",
 										"type": "string"
 									},
 									"base": {
@@ -133,7 +133,7 @@
 						}
 					},
 					"interactive": {
-						"description": "Mark the subagent as interactive (long-running, user drives the conversation in its own pane). When true, the main session is not woken by status transitions (stalled/recovered) for this subagent. If omitted, falls back to the agent's `interactive` frontmatter, otherwise the inverse of `auto-exit` (agents that auto-exit are autonomous and get stall pings; agents that don't are interactive and stay quiet).",
+						"description": "Mark the subagent as interactive (long-running, user drives the conversation in its own block). When true, the main session is not woken by status transitions (stalled/recovered) for this subagent. If omitted, falls back to the agent's `interactive` frontmatter, otherwise the inverse of `auto-exit` (agents that auto-exit are autonomous and get stall pings; agents that don't are interactive and stay quiet).",
 						"type": "boolean"
 					}
 				}
@@ -142,7 +142,7 @@
 		{
 			"name": "subagent_cancel",
 			"scopes": ["parent", "child"],
-			"description": "Cancel a running ordinary (non-persistent) Pi-backed subagent, including an interrupted one: records terminal intent first, terminates its owned process, and delivers exactly one cancelled result. No model fallback, retry, or recovery starts after a cancel. An ordinary pane is closed; a managed-worktree child stops only its Pi process and keeps the workspace, checkout, commits, and manifest. Returns confirmed, requested (launch still in flight), unconfirmed (the run stays live; call again to retry), or already-terminal. Persistent specialists are rejected; use subagent_stop. Do not poll: the cancelled result arrives automatically.",
+			"description": "Cancel a running ordinary (non-persistent) Pi-backed subagent, including an interrupted one: records terminal intent first, terminates its owned process, and delivers exactly one cancelled result. No model fallback, retry, or recovery starts after a cancel. An ordinary block is closed; a managed-worktree child stops only its Pi process and keeps the window, checkout, commits, and manifest. Returns confirmed, requested (launch still in flight), unconfirmed (the run stays live; call again to retry), or already-terminal. Persistent specialists are rejected; use subagent_stop. Do not poll: the cancelled result arrives automatically.",
 			"parameters": {
 				"type": "object",
 				"properties": {
@@ -166,7 +166,7 @@
 		{
 			"name": "subagent_interrupt",
 			"scopes": ["parent", "child"],
-			"description": "Send Escape to the active turn of a currently running Pi-backed subagent. The child pane, session, watcher, and running entry remain alive; this returns only a local acknowledgement and does not emit a subagent_result solely because of this request.",
+			"description": "Send Escape to the active turn of a currently running Pi-backed subagent. The child block, session, watcher, and running entry remain alive; this returns only a local acknowledgement and does not emit a subagent_result solely because of this request.",
 			"parameters": {
 				"type": "object",
 				"properties": {
@@ -184,7 +184,7 @@
 		{
 			"name": "subagent_resume",
 			"scopes": ["parent", "child"],
-			"description": "Resume a previous Pi-backed sub-agent session in a new herdr pane. This does not reattach a retained managed worktree; continue worktree-bound follow-up in its existing workspace. This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. When the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT poll for status. All of that is wasted work — the harness handles delivery for you. DO NOT fabricate or assume results. After resuming, either end your turn or work on other independent tasks; the harness will wake you when the result is ready. Use when a sub-agent was cancelled or needs follow-up work.",
+			"description": "Resume a previous Pi-backed sub-agent session in a new Rex block (or a new Rex tab when placement is \"tab\"). This does not reattach a retained managed worktree; continue worktree-bound follow-up in its existing window. This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. When the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT poll for status. All of that is wasted work — the harness handles delivery for you. DO NOT fabricate or assume results. After resuming, either end your turn or work on other independent tasks; the harness will wake you when the result is ready. Use when a sub-agent was cancelled or needs follow-up work.",
 			"parameters": {
 				"type": "object",
 				"required": ["sessionPath"],
@@ -201,7 +201,7 @@
 						"type": "string"
 					},
 					"name": {
-						"description": "Display name for the terminal tab. Default: 'Resume'",
+						"description": "Display name for the Rex tab. Default: 'Resume'",
 						"type": "string"
 					},
 					"message": {
@@ -377,7 +377,7 @@
 		{
 			"name": "worktree_remove",
 			"scopes": ["parent"],
-			"description": "Explicitly remove one managed worktree by exact path, branch, or workspace ID. Rechecks cwd containment, live children/leases, and Git state. Branches and commits are retained. Dirty work requires explicit preserve: true to make a WIP commit first.",
+			"description": "Explicitly remove one managed worktree by exact path, branch, or window ID. Rechecks cwd containment, live children/leases, and Git state. Branches and commits are retained. Dirty work requires explicit preserve: true to make a WIP commit first.",
 			"parameters": {
 				"type": "object",
 				"required": ["target"],

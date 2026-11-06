@@ -373,7 +373,7 @@ function cleanupCommandFields(worktree: WorktreeHandoff): HostField[] {
 	if (id)
 		fields.push(
 			hostText("Operator override after independent safety checks:"),
-			hostLine`  herdr worktree remove --workspace ${command(id)}`,
+			hostLine`  rex window close ${command(id)}`,
 		);
 	return fields;
 }
@@ -393,7 +393,7 @@ export function worktreeHandoffFields(worktree: WorktreeHandoff): HostField[] {
 	const fields = [
 		hostText("Worktree result retained for review:"),
 		hostLine`Worktree: ${value(worktree.path, HOST_PATH_CHARS)}`,
-		hostLine`Workspace: ${worktree.workspaceId}`,
+		hostLine`Window: ${worktree.workspaceId}`,
 		hostLine`Branch: ${worktree.branch}`,
 		hostLine`Base/head: ${worktree.baseSha} -> ${worktree.headSha ?? "unknown"}`,
 		hostLine`State: ${state} · ${ahead}`,

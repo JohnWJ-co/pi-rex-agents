@@ -111,7 +111,7 @@ export function ledgerOutcome(
 }
 
 export function outcomeLedgerFile(configDir: string): string {
-	return join(configDir, "herdr-agents", OUTCOME_LEDGER_FILE);
+	return join(configDir, "rex-agents", OUTCOME_LEDGER_FILE);
 }
 
 /** Best effort: a ledger failure never changes or delays a delivery. */

@@ -6,8 +6,8 @@
 
 export const DELEGATION_DEPTH_ENV = "PI_SUBAGENT_DEPTH";
 
-/** Parent 0, children 1, grandchildren 2, great-grandchildren 3. */
-export const DEFAULT_MAX_DELEGATION_DEPTH = 3;
+/** Rex parents are depth 0; their children are leaves by default. */
+export const DEFAULT_MAX_DELEGATION_DEPTH = 1;
 
 export type DelegationDepth =
 	| { kind: "known"; depth: number }

@@ -9,10 +9,10 @@
 
 ```bash
 rex new p2-smoke -c "$PWD" --json -- \
-  pi --no-extensions -e "$PWD/src/extension.ts"
+  pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 ```
 
-启动页显示 `[Extensions] extension.ts`；`/subagent list` 和 `/worktree list` 均可执行。详见 [p2-interactive.md](p2-interactive.md)。
+启动页显示 `[Extensions] index.ts`；`/subagent list` 和 `/worktree list` 均可执行。详见 [p2-interactive.md](p2-interactive.md)。
 
 ## P2-2 父会话状态展示
 

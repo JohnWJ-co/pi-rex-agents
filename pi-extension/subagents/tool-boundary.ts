@@ -12,7 +12,7 @@ export class HostEncodedError extends Error {}
 
 /** Marks a tool `execute` that passed through {@link withEncodedToolErrors}. */
 export const ENCODED_TOOL_ERRORS = Symbol.for(
-	"pi-herdr-agents/encoded-tool-errors",
+	"pi-rex-agents/encoded-tool-errors",
 );
 
 function encodedMessage(message: string): string {

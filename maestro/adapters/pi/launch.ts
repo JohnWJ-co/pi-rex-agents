@@ -183,7 +183,7 @@ export class AcquiredPiLaunchError extends Error {
 	readonly child: PiRunningChild;
 	constructor(child: PiRunningChild, cause: unknown) {
 		super(
-			`Launch outcome uncertain; ${child.worktree ? `worktree retained at ${child.worktree.path} (workspace ${child.worktree.workspaceId}); ` : `pane ${child.surface}; `}owner retained, no fallback: ${errorMessage(cause)}`,
+			`Launch outcome uncertain; ${child.worktree ? `worktree retained at ${child.worktree.path} (window ${child.worktree.workspaceId}); ` : `block ${child.surface}; `}owner retained, no fallback: ${errorMessage(cause)}`,
 			{ cause },
 		);
 		this.name = "AcquiredPiLaunchError";
@@ -358,7 +358,7 @@ async function launchFreshPiSubagent(
 							),
 						);
 					throw new AcquisitionUncertainError(
-						`${errorMessage(error)}; rollback unconfirmed: ${errorMessage(rollback)}; pane retained: ${surface.surface}; no fallback`,
+						`${errorMessage(error)}; rollback unconfirmed: ${errorMessage(rollback)}; block retained: ${surface.surface}; no fallback`,
 						{
 							kind: "surface-create",
 							placement: "tab",
@@ -402,7 +402,7 @@ async function launchFreshPiSubagent(
 		}
 		throw new Error(
 			`Failed to launch subagent; worktree retained at ${surface.worktree.path} ` +
-				`(workspace ${surface.worktree.workspaceId}): ${errorMessage(error)}`,
+				`(window ${surface.worktree.workspaceId}): ${errorMessage(error)}`,
 		);
 	}
 }
@@ -466,7 +466,7 @@ async function prepareLaunchSurface(
 		};
 	}
 	if (request.surface)
-		throw new Error("A worktree subagent cannot use a pre-created pane");
+		throw new Error("A worktree subagent cannot use a pre-created block");
 
 	const worktreeOps = requireWorktreeOperations(operations);
 	const baseRef = request.worktree.base ?? "HEAD";

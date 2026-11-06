@@ -26,7 +26,7 @@ panes default to split, right, and `maxPerTab: 2`.
     "maxAgents": 3
   },
   "spawning": {
-    "maxDepth": 3
+    "maxDepth": 1
   },
   "supervision": {
     "forcePolling": false,
@@ -247,7 +247,7 @@ Set `persistent.maxAgents` to the maximum concurrently retained persistent speci
 
 ## Delegation depth limit
 
-Set `spawning.maxDepth` to the deepest child any launch may create. It must be a positive integer and defaults to `3`; unknown keys and other values fail configuration loading. A top-level parent session is depth `0`, its children are depth `1`, grandchildren `2`, and great-grandchildren `3`. A session at depth `maxDepth` cannot launch anything.
+Set `spawning.maxDepth` to the deepest child any launch may create. It must be a positive integer and defaults to `1`; unknown keys and other values fail configuration loading. A top-level parent session is depth `0`, and its children are depth `1`, so children are leaves by default. A session at depth `maxDepth` cannot launch anything.
 
 The limit is enforced by the host on every child launch path: `subagent` (including `agent`, persistent, and `worktree` launches), `subagent_resume`, and `/subagent`. It applies to all roles, not only `self-spawn` ones. A refused launch returns an actionable error before Rex creates a pane or workspace. A `/worktree` handoff is not a child: it continues the parent's conversation at the parent's own depth, so it is allowed at the limit and refused only when the parent's depth is unknown.
 
@@ -255,7 +255,7 @@ Every launched child receives `PI_SUBAGENT_DEPTH=<parent depth + 1>`, and a `/wo
 
 ## Outcome ledger
 
-The parent appends one JSON line per model attempt to `$PI_CODING_AGENT_DIR/herdr-agents/outcomes.jsonl`, defaulting to `~/.pi/agent/herdr-agents/outcomes.jsonl`. A fallback model attempt gets its own line. Checked and unchecked runs are both recorded, so later routing tools have data from every run; nothing reads the file yet.
+The parent appends one JSON line per model attempt to `$PI_CODING_AGENT_DIR/rex-agents/outcomes.jsonl`, defaulting to `~/.pi/agent/rex-agents/outcomes.jsonl`. A fallback model attempt gets its own line. Checked and unchecked runs are both recorded, so later routing tools have data from every run; nothing reads the file yet.
 
 ```json
 {"v":1,"at":"2026-10-30T16:52:03.000Z","runId":"a1b2c3d4","attempt":1,"role":"worker","requestedModel":"task:implementation","category":"implementation","model":"provider/model-id","thinking":"medium","elapsedSec":252,"outcome":"completed","checkTries":2,"verdict":"rejected","checkHash":"sha256:9f2c…"}

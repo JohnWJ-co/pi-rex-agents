@@ -9,13 +9,13 @@ import { isFunction, isRecord, isString } from "./type-guards.ts";
  * writes offers to open its flow for this one request.
  */
 export const TASK_MODEL_INIT_APPROVAL_EVENT =
-	"pi-herdr-subagents:task-models:init:approval:v1";
+	"pi-rex-subagents:task-models:init:approval:v1";
 /**
  * Emitted by another extension's command to start host init. The host offers
  * to run it; the emitter starts it only if exactly one host offered.
  */
 export const TASK_MODEL_INIT_START_EVENT =
-	"pi-herdr-subagents:task-models:init:start:v1";
+	"pi-rex-subagents:task-models:init:start:v1";
 export const DIRECT_WRITER_TOOL = "subagents_write_task_models";
 
 export type NonEmpty<T> = [T, ...T[]];

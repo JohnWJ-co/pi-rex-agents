@@ -41,7 +41,7 @@ interface Registry {
 	exitHook: boolean;
 }
 
-const SLOT = Symbol.for("pi-herdr-agents/accept-check-groups");
+const SLOT = Symbol.for("pi-rex-agents/accept-check-groups");
 
 function registry(): Registry {
 	// SAFETY: `globalThis` has no index signature for this symbol key; this

@@ -252,7 +252,7 @@ export class SupervisionCoordinator {
 		try {
 			const snapshot = await this.listPanes();
 			if (this.closed) return;
-			if (!snapshot.complete) throw new Error("malformed pane list");
+			if (!snapshot.complete) throw new Error("malformed block list");
 			const bySurface = new Set(snapshot.panes.map((pane) => pane.paneId));
 			for (const entry of this.entries) {
 				entry.fallback = entry.fileFallback;

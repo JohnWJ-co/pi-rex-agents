@@ -64,7 +64,7 @@ export function registerWorktreeTools(
 			name: "worktree_remove",
 			label: "Remove worktree",
 			description:
-				"Explicitly remove one managed worktree by exact path, branch, or workspace ID. Rechecks cwd containment, live children/leases, and Git state. Branches and commits are retained. Dirty work requires explicit preserve: true to make a WIP commit first.",
+				"Explicitly remove one managed worktree by exact path, branch, or window ID. Rechecks cwd containment, live children/leases, and Git state. Branches and commits are retained. Dirty work requires explicit preserve: true to make a WIP commit first.",
 			parameters: Type.Object({
 				target: Type.String({ minLength: 1 }),
 				preserve: Type.Optional(Type.Boolean()),
@@ -137,7 +137,7 @@ export function registerWorktreeCommand(
 					.replace(/\s+--preserve$/, "");
 				if (!target || target === "--preserve") {
 					ctx.ui.notify(
-						"Usage: /worktree remove <path|branch|workspace-id> [--preserve]",
+						"Usage: /worktree remove <path|branch|window-id> [--preserve]",
 						"warning",
 					);
 					return;
@@ -229,8 +229,8 @@ export function registerWorktreeCommand(
 				const path = encodeHostValue(worktree.path, HOST_PATH_CHARS);
 				ctx.ui.notify(
 					(result.focusError
-						? `Worktree launched, but workspace focus failed: ${errorText(result.focusError)}\nWorktree: ${path}`
-						: `Worktree launched in ${path} (workspace ${encodeHostValue(worktree.workspaceId)}).`) +
+						? `Worktree launched, but tab focus failed: ${errorText(result.focusError)}\nWorktree: ${path}`
+						: `Worktree launched in ${path} (window ${encodeHostValue(worktree.workspaceId)}).`) +
 						launchDiagnosticsText(worktree.diagnostics, "\n", ""),
 					result.focusError || worktree.diagnostics?.length
 						? "warning"

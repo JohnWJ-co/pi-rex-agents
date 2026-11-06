@@ -31,7 +31,10 @@ export { flattenBlocks };
 
 const HARNESS_DIR = dirname(fileURLToPath(import.meta.url));
 export const PROJECT_ROOT = resolve(HARNESS_DIR, "../..");
-export const EXTENSION_SOURCE = join(PROJECT_ROOT, "src/extension.ts");
+export const EXTENSION_SOURCE = join(
+	PROJECT_ROOT,
+	"pi-extension/subagents/index.ts",
+);
 export const PI_TIMEOUT = Number(process.env.PI_TEST_TIMEOUT ?? "120000");
 
 export function rexBinary(): string {

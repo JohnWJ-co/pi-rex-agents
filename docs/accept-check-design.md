@@ -162,7 +162,7 @@ output. The full output stays in the child's session as the retry message.
 ### Outcome ledger
 
 The parent appends one JSON line per run attempt to
-`$PI_CODING_AGENT_DIR/herdr-agents/outcomes.jsonl`. The directory comes from
+`$PI_CODING_AGENT_DIR/rex-agents/outcomes.jsonl`. The directory comes from
 `getSubagentsConfigDir` (`pi-extension/subagents/config-path.ts:12-14`). A
 fallback model launch is a separate attempt and gets its own line.
 

@@ -412,8 +412,8 @@ its own definition again. Notes:
   pane's shell cannot enable it.
 - **Depth limit.** Self-spawn is bounded by the host-enforced delegation depth
   limit that applies to every launch, whatever the role. A top-level parent is
-  depth 0 and each launch adds one; by default nothing deeper than depth 3 can be
-  launched (parent 0, children 1, grandchildren 2, great-grandchildren 3). A
+  depth 0 and each launch adds one; the default maximum is depth 1, so children
+  are leaves. A
   session at the limit gets a refusal from `subagent`, `subagent_resume`, and
   `/subagent`, so an untrusted role that opts in cannot recurse without bound.
   A `/worktree` handoff keeps the parent's depth, so it is allowed at the limit

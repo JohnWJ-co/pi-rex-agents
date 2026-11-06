@@ -259,7 +259,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 	async resume(opts: ResumeOptions): Promise<AgentHandle> {
 		this.rejectEnvironment(opts.env);
 		if (opts.surface)
-			throw new Error("Pi public resume owns its new ordinary pane");
+			throw new Error("Pi public resume owns its new ordinary block");
 		if (opts.tools)
 			throw new Error(
 				"Pi resume restores saved tools; tool overrides are not supported",
@@ -380,8 +380,8 @@ export class PiHarnessAdapter implements HarnessAdapter {
 	private async stopRetainedPi(child: PiRunningChild): Promise<void> {
 		const probe = this.options.processProbe ?? linuxProcessProbe;
 		const retainedDescription = child.worktree
-			? "retained worktree pane"
-			: "caller-provided pane";
+			? "retained worktree block"
+			: "caller-provided block";
 		const timeoutMs = this.options.killTimeoutMs ?? 5_000;
 		const deadline = Date.now() + timeoutMs;
 		const paneGone = async () =>

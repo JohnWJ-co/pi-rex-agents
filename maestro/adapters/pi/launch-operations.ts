@@ -101,7 +101,7 @@ function worktreeSurfaceForLaunch(
  * rewrites its command line, so `--session` is never readiness evidence.
  * Nothing inside Pi reads it.
  */
-export const PI_LAUNCH_SESSION_ENV = "PI_HERDR_AGENTS_SESSION";
+export const PI_LAUNCH_SESSION_ENV = "PI_REX_AGENTS_SESSION";
 
 export function isExpectedPiProcess(
 	process: {
@@ -157,7 +157,7 @@ async function waitForSurfacePiReady(
 		);
 	}
 	throw new Error(
-		`Timed out waiting for Pi session ${sessionFile} in Herdr pane ${surface}: ${lastError}`,
+		`Timed out waiting for Pi session ${sessionFile} in Rex block ${surface}: ${lastError}`,
 	);
 }
 
@@ -199,12 +199,12 @@ export async function captureSurfacePiProcessIdentity(
 				if (!info) {
 					// The deadline passed; an earlier answer's refusal says more.
 					if (!answered)
-						lastError = `Herdr process info for pane ${surface} timed out`;
+						lastError = `Rex process info for block ${surface} timed out`;
 					break;
 				}
 				answered = true;
 				if (info.shellPid === undefined)
-					throw new Error(`Herdr reports no shell for pane ${surface}`);
+					throw new Error(`Rex reports no shell for block ${surface}`);
 				return verifyProcessIdentityRecord(
 					record,
 					{ ...expected, shellPid: info.shellPid },

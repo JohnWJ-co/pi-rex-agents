@@ -22,6 +22,7 @@ import {
 import { buildSubagentToolAllowlist } from "../maestro/adapters/pi/launch-command.ts";
 import "./isolated-agent-dir.ts";
 import { createMockExtensionApi } from "./helpers/mock-extension-api.ts";
+import { SUBAGENT_RUNTIME_KEY } from "../maestro/core/undelivered-children.ts";
 import {
 	ENCODED_TOOL_ERRORS,
 	withEncodedToolErrors,
@@ -319,7 +320,7 @@ async function withIsolatedAgentEnv(
 }
 async function withFreshSubagentRuntime<T>(fn: () => Promise<T>): Promise<T> {
 	// SAFETY: this process-local extension runtime is owned by subagents/index.ts.
-	const runtime = (globalThis as any)[Symbol.for("pi-subagents/runtime")];
+	const runtime = (globalThis as any)[SUBAGENT_RUNTIME_KEY];
 	const previous = {
 		pi: runtime.pi,
 		latestCtx: runtime.latestCtx,
@@ -586,7 +587,7 @@ function presentText(
 async function withAdapterHost(run: (f: any) => Promise<void>) {
 	await withIsolatedAgentEnv(async (paths) => {
 		// SAFETY: this process-local extension runtime is owned by index.ts.
-		const runtime = (globalThis as any)[Symbol.for("pi-subagents/runtime")];
+		const runtime = (globalThis as any)[SUBAGENT_RUNTIME_KEY];
 		const previous = {
 			pi: runtime.pi,
 			latestCtx: runtime.latestCtx,
@@ -905,7 +906,7 @@ describe("host adapter migration", () => {
 				},
 			};
 			const owner =
-				f.runtime.session[Symbol.for("pi-herdr-agents/PiRunSession-owner")];
+				f.runtime.session[Symbol.for("pi-rex-agents/PiRunSession-owner")];
 			const onObserved = owner.options.hooks.onObserved;
 			const observation = {
 				observedAt: Date.now(),
@@ -1023,8 +1024,7 @@ describe("host adapter migration", () => {
 					});
 					const session = f.runtime.session;
 					const controlTaskId = session.getControlTaskId(child.id);
-					const owner =
-						session[Symbol.for("pi-herdr-agents/PiRunSession-owner")];
+					const owner = session[Symbol.for("pi-rex-agents/PiRunSession-owner")];
 					const observed = owner.options.hooks.onObserved;
 					const completions: any[] = [];
 					owner.options.hooks.onObserved = (record: any, observation: any) => {
@@ -2225,7 +2225,7 @@ describe("host adapter migration", () => {
 					await assert.rejects(
 						f.launch({ name: "missing", task: "bounded", agent, worktree }),
 						new RegExp(
-							`Agent \\\\"${agent}\\\\" was not found\\. pi-herdr-agents ships no roles`,
+							`Agent \\\\"${agent}\\\\" was not found\\. this host ships no roles`,
 						),
 					);
 			assert.equal(worktrees, 0);
@@ -2252,7 +2252,7 @@ describe("host adapter migration", () => {
 				/EISDIR/,
 			);
 			const owner =
-				f.runtime.session[Symbol.for("pi-herdr-agents/PiRunSession-owner")];
+				f.runtime.session[Symbol.for("pi-rex-agents/PiRunSession-owner")];
 			assert.equal(owner.entries.size, 0);
 			assert.equal(f.runtime.runningSubagents.size, 0);
 			assert.equal(f.registrations(), 0);
@@ -2292,8 +2292,7 @@ describe("host adapter migration", () => {
 					const child = f.runtime.runningSubagents.get(started.details.id);
 					const session = f.runtime.session;
 					const control = session.getControlTaskId(child.id);
-					const owner =
-						session[Symbol.for("pi-herdr-agents/PiRunSession-owner")];
+					const owner = session[Symbol.for("pi-rex-agents/PiRunSession-owner")];
 					const corrupt = () => {
 						rmSync(path);
 						mkdirSync(path);
@@ -2429,7 +2428,7 @@ describe("host adapter migration", () => {
 				const child = f.runtime.runningSubagents.get(started.details.id);
 				const session = f.runtime.session;
 				const control = session.getControlTaskId(child.id);
-				const owner = session[Symbol.for("pi-herdr-agents/PiRunSession-owner")];
+				const owner = session[Symbol.for("pi-rex-agents/PiRunSession-owner")];
 				const settled = owner.options.hooks.onSettled;
 				const late: any[] = [],
 					sends: any[] = [],
@@ -2729,7 +2728,7 @@ describe("subagent_cancel public tool", { timeout: 20_000 }, () => {
 			/terminal intent first/,
 			/exactly one cancelled result/,
 			/No model fallback, retry, or recovery/,
-			/keeps the workspace, checkout, commits, and manifest/,
+			/keeps the window, checkout, commits, and manifest/,
 			/confirmed, requested .*unconfirmed .*already-terminal/,
 			/Persistent specialists are rejected; use subagent_stop/,
 			/Do not poll/,
@@ -2790,7 +2789,7 @@ describe("subagent_cancel public tool", { timeout: 20_000 }, () => {
 			assert.equal(response.details.id, child.id);
 			assert.match(
 				response.content[0].text,
-				/pane was closed and Herdr confirmed it is gone\. No model fallback, retry, or recovery will start\./,
+				/block was closed and Rex confirmed it is gone\. No model fallback, retry, or recovery will start\./,
 			);
 			await until(f, () => results(f).length === 1, "the cancelled result");
 			const [delivered] = results(f);
@@ -2970,7 +2969,7 @@ describe("subagent_cancel public tool", { timeout: 20_000 }, () => {
 			assert.equal(retry.details.status, "confirmed");
 			assert.match(
 				retry.content[0].text,
-				/Pi process exit is confirmed; the worktree workspace, checkout, commits, and manifest are retained/,
+				/Pi process exit is confirmed; the worktree window, checkout, commits, and manifest are retained/,
 			);
 			await until(f, () => results(f).length === 1, "the cancelled result");
 			const delivered = results(f)[0].message;
@@ -4716,7 +4715,7 @@ describe("shared subagent configuration path", () => {
 });
 
 describe("runtime reload configuration", () => {
-	const runtimeKey = Symbol.for("pi-subagents/runtime");
+	const runtimeKey = SUBAGENT_RUNTIME_KEY;
 	type ReloadRuntime = {
 		session?: PiRunSession;
 		runningSubagents?: Map<string, object>;
@@ -4733,6 +4732,78 @@ describe("runtime reload configuration", () => {
 			`../pi-extension/subagents/index.ts?reload-test-${Date.now()}-${Math.random()}`
 		);
 	}
+
+	it("ignores an external runtime and presentation timers in the legacy namespace", async () => {
+		const foreignChild = Object.freeze({ id: "foreign-child" });
+		const foreignChildren = new Map([[foreignChild.id, foreignChild]]);
+		const foreignRuntime = Object.freeze({
+			session: Object.freeze({}),
+			runningSubagents: foreignChildren,
+		});
+		type TestSlot =
+			| ReloadRuntime
+			| typeof foreignRuntime
+			| ReturnType<typeof setInterval>
+			| undefined;
+		// SAFETY: save/restore the concrete runtime and timer values owned by
+		// this fixture to simulate the pre-trust and project extension loads.
+		const slots = globalThis as Record<symbol, TestSlot>;
+		const foreignRuntimeKey = Symbol.for("pi-subagents/runtime");
+		const foreignWidgetKey = Symbol.for("pi-subagents/widget-interval");
+		const foreignStatusKey = Symbol.for("pi-subagents/status-interval");
+		const keys = [
+			runtimeKey,
+			foreignRuntimeKey,
+			foreignWidgetKey,
+			foreignStatusKey,
+		];
+		const previous = keys.map((key) => ({
+			key,
+			had: Object.hasOwn(slots, key),
+			value: slots[key],
+		}));
+		const foreignWidget = setInterval(() => {}, 60_000);
+		const foreignStatus = setInterval(() => {}, 60_000);
+		const previousId = process.env.PI_SUBAGENT_ID;
+		const mock = createMockExtensionApi();
+		try {
+			delete process.env.PI_SUBAGENT_ID;
+			delete slots[runtimeKey];
+			slots[foreignRuntimeKey] = foreignRuntime;
+			slots[foreignWidgetKey] = foreignWidget;
+			slots[foreignStatusKey] = foreignStatus;
+			const reloaded = await importReloadedSubagents();
+			assert.doesNotThrow(() => reloaded.default(mock.api));
+			assert.ok(mock.registeredTools.some((tool) => tool.name === "subagent"));
+			const rexRuntime = slots[runtimeKey];
+			assert.ok(rexRuntime && "session" in rexRuntime);
+			assert.ok(rexRuntime.session);
+			assert.notEqual(rexRuntime, foreignRuntime);
+			assert.notEqual(reloaded.__test__.runningSubagents, foreignChildren);
+			assert.equal(
+				reloaded.__test__.runningSubagents.has("foreign-child"),
+				false,
+			);
+			assert.equal(slots[foreignRuntimeKey], foreignRuntime);
+			assert.deepEqual([...foreignChildren.values()], [foreignChild]);
+			assert.deepEqual(foreignChild, { id: "foreign-child" });
+			assert.equal(slots[foreignWidgetKey], foreignWidget);
+			assert.equal(slots[foreignStatusKey], foreignStatus);
+		} finally {
+			try {
+				for (const handler of mock.eventHandlers.get("session_shutdown") ?? [])
+					await handler({ reason: "quit" }, { ui: { setWidget() {} } });
+			} finally {
+				clearInterval(foreignWidget);
+				clearInterval(foreignStatus);
+				for (const slot of previous) {
+					if (slot.had) slots[slot.key] = slot.value;
+					else delete slots[slot.key];
+				}
+				restoreEnvVar("PI_SUBAGENT_ID", previousId);
+			}
+		}
+	});
 
 	it("loads the Rex kernel with defaults despite an untouched legacy grouped config", async () => {
 		const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
@@ -4772,7 +4843,7 @@ describe("runtime reload configuration", () => {
 
 	it("refreshes pane-backed launch operations from the reloaded module config while preserving running children", async () => {
 		const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
-		// SAFETY: pi-herdr-agents owns this process-local runtime symbol.
+		// SAFETY: pi-rex-agents owns this process-local runtime symbol.
 		const runtimeSlot = globalThis as RuntimeSlot;
 		const beforeRuntime = runtimeSlot[runtimeKey];
 		const beforeSurfaceProvider = beforeRuntime?.surfaceProvider;
@@ -4844,7 +4915,7 @@ describe("runtime reload configuration", () => {
 	});
 
 	it("upgrades a pre-refresh runtime slot that lacks provider fields", async () => {
-		// SAFETY: pi-herdr-agents owns this process-local runtime symbol.
+		// SAFETY: pi-rex-agents owns this process-local runtime symbol.
 		const runtimeSlot = globalThis as RuntimeSlot;
 		const beforeRuntime = runtimeSlot[runtimeKey];
 		const runningSubagents = new Map<string, object>();
@@ -4862,7 +4933,7 @@ describe("runtime reload configuration", () => {
 	});
 
 	it("reports a legacy roles.bundled value once per parent load without rewriting config", async () => {
-		// SAFETY: pi-herdr-agents owns this process-local runtime symbol.
+		// SAFETY: pi-rex-agents owns this process-local runtime symbol.
 		const runtimeSlot = globalThis as RuntimeSlot;
 		const beforeRuntime = runtimeSlot[runtimeKey];
 		const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
@@ -6494,7 +6565,7 @@ describe("subagent discovery", () => {
 
 				const { api } = createMockExtensionApi();
 				api.events.on(
-					"pi-herdr-subagents:roles:discover:v1",
+					"pi-rex-subagents:roles:discover:v1",
 					(request: { register(path: string): void }) =>
 						request.register(rolesDir),
 				);
@@ -6991,7 +7062,7 @@ describe("subagent discovery", () => {
 
 				const { api, registeredTools } = createMockExtensionApi();
 				api.events.on(
-					"pi-herdr-subagents:roles:discover:v1",
+					"pi-rex-subagents:roles:discover:v1",
 					(request: { register(path: string): void }) =>
 						request.register(rolesDir),
 				);
@@ -7040,7 +7111,7 @@ describe("subagent discovery", () => {
 
 				const { api, registeredTools } = createMockExtensionApi();
 				api.events.on(
-					"pi-herdr-subagents:roles:discover:v1",
+					"pi-rex-subagents:roles:discover:v1",
 					(request: { register(path: string): void }) =>
 						request.register(rolesDir),
 				);
@@ -7188,7 +7259,7 @@ describe("subagent discovery", () => {
 
 			const { api, registeredTools } = createMockExtensionApi();
 			api.events.on(
-				"pi-herdr-subagents:roles:discover:v1",
+				"pi-rex-subagents:roles:discover:v1",
 				(request: { register(path: string): void }) =>
 					request.register(rolesDir),
 			);
@@ -7323,7 +7394,7 @@ describe("subagent discovery", () => {
 
 					const { api, registeredTools } = createMockExtensionApi();
 					api.events.on(
-						"pi-herdr-subagents:roles:discover:v1",
+						"pi-rex-subagents:roles:discover:v1",
 						(request: { register(path: string): void }) =>
 							request.register(rolesDir),
 					);
@@ -7393,7 +7464,7 @@ describe("subagent discovery", () => {
 								() => {},
 								{},
 							);
-							assert.equal(launch.details.error, "herdr not available");
+							assert.equal(launch.details.error, "rex not available");
 							assert.doesNotMatch(
 								launch.content[0].text,
 								/invalid capability declaration/i,
@@ -7596,7 +7667,7 @@ describe("self-spawn guard", () => {
 		selfSpawn: string | undefined,
 	) {
 		// SAFETY: this process-local extension runtime is owned by subagents/index.ts.
-		const runtime = (globalThis as any)[Symbol.for("pi-subagents/runtime")];
+		const runtime = (globalThis as any)[SUBAGENT_RUNTIME_KEY];
 		const previousRuntime = {
 			pi: runtime.pi,
 			latestCtx: runtime.latestCtx,
@@ -7615,15 +7686,29 @@ describe("self-spawn guard", () => {
 		};
 		process.env.PI_SUBAGENT_AGENT = currentAgent;
 		restoreEnvVar("PI_SUBAGENT_SELF_SPAWN", selfSpawn);
-		// Without a Rex block, a launch that passes the guard stops at the
-		// surface availability check instead of trying to access a fake ctx.
+		// Keep the kernel on the Rex path while preventing any real server access.
 		delete process.env.HERDR_ENV;
-		delete process.env.REX_SESSION;
-		delete process.env.REX_BLOCK;
-		delete process.env.REX_SERVER;
+		process.env.REX_SESSION = "session:test-self-spawn";
+		process.env.REX_BLOCK = "block:test-self-spawn";
+		process.env.REX_SERVER = "unix:///tmp/pi-rex-agents-no-server";
 		try {
 			const { api, registeredTools } = createMockExtensionApi();
-			subagentsModule.default(api);
+			const unavailableSurface = new FakeSurfaceProvider();
+			unavailableSurface.isAvailable = () => false;
+			subagentsModule.default(api, {
+				infrastructure: {
+					surfaceProvider: unavailableSurface,
+					launchOperations: launchOperationsFromSurface(unavailableSurface, {
+						mode: "tab",
+						direction: "right",
+						maxPerTab: 1,
+					}),
+					supervision: new SupervisionCoordinator(
+						async () => ({ complete: true, panes: [] }),
+						(id) => unavailableSurface.inspectSurface(id),
+					),
+				},
+			});
 			const tool = registeredTools.find((entry) => entry.name === "subagent");
 			assert.ok(tool, "expected subagent to be registered");
 			return await tool.execute(
@@ -7653,7 +7738,7 @@ describe("self-spawn guard", () => {
 	it("allows a role that declared self-spawn to launch its own role", async () => {
 		const result = await runSelfSpawnLaunch("worker", "worker", "1");
 		assert.notEqual(result.details.error, "self-spawn blocked");
-		assert.equal(result.details.error, "herdr not available");
+		assert.equal(result.details.error, "rex not available");
 	});
 
 	it("does not treat other self-spawn env values as an opt-in", async () => {
@@ -7675,7 +7760,7 @@ describe("self-spawn guard", () => {
 		depth: string | undefined,
 	) {
 		// SAFETY: this process-local extension runtime is owned by subagents/index.ts.
-		const runtime = (globalThis as any)[Symbol.for("pi-subagents/runtime")];
+		const runtime = (globalThis as any)[SUBAGENT_RUNTIME_KEY];
 		const previousRuntime = {
 			pi: runtime.pi,
 			latestCtx: runtime.latestCtx,
@@ -7695,12 +7780,27 @@ describe("self-spawn guard", () => {
 		restoreEnvVar("PI_SUBAGENT_DEPTH", depth);
 		delete process.env.PI_SUBAGENT_AGENT;
 		delete process.env.HERDR_ENV;
-		delete process.env.REX_SESSION;
-		delete process.env.REX_BLOCK;
-		delete process.env.REX_SERVER;
+		process.env.REX_SESSION = "session:test-depth";
+		process.env.REX_BLOCK = "block:test-depth";
+		process.env.REX_SERVER = "unix:///tmp/pi-rex-agents-no-server";
 		try {
 			const { api, registeredTools } = createMockExtensionApi();
-			subagentsModule.default(api);
+			const unavailableSurface = new FakeSurfaceProvider();
+			unavailableSurface.isAvailable = () => false;
+			subagentsModule.default(api, {
+				infrastructure: {
+					surfaceProvider: unavailableSurface,
+					launchOperations: launchOperationsFromSurface(unavailableSurface, {
+						mode: "tab",
+						direction: "right",
+						maxPerTab: 1,
+					}),
+					supervision: new SupervisionCoordinator(
+						async () => ({ complete: true, panes: [] }),
+						(id) => unavailableSurface.inspectSurface(id),
+					),
+				},
+			});
 			const tool = registeredTools.find((entry) => entry.name === toolName);
 			assert.ok(tool, `expected ${toolName} to be registered`);
 			const params =
@@ -7725,15 +7825,15 @@ describe("self-spawn guard", () => {
 		}
 	}
 
-	it("allows launches below the default depth limit of 3 and refuses at it", async () => {
-		for (const depth of [undefined, "0", "2"]) {
+	it("allows launches below the default depth limit of 1 and refuses at it", async () => {
+		for (const depth of [undefined, "0"]) {
 			const result = await runDepthLaunch("subagent", depth);
-			assert.equal(result.details.error, "herdr not available", String(depth));
+			assert.equal(result.details.error, "rex not available", String(depth));
 		}
 		for (const toolName of ["subagent", "subagent_resume"] as const) {
-			const result = await runDepthLaunch(toolName, "3");
+			const result = await runDepthLaunch(toolName, "1");
 			assert.equal(result.details.error, "delegation-max-depth", toolName);
-			assert.match(result.content[0].text, /depth 3 and the maximum is 3/);
+			assert.match(result.content[0].text, /depth 1 and the maximum is 1/);
 			assert.match(result.content[0].text, /spawning\.maxDepth/);
 		}
 	});
@@ -9511,14 +9611,14 @@ describe("no-progress advisories", () => {
 				name: "worktree",
 				running: { ...running, worktree },
 				expected:
-					"interrupt, or retain the workspace and continue there after confirming the previous process exited",
+					"interrupt, or retain the window and continue there after confirming the previous process exited",
 				forbidden: /subagent_resume|new spawn/,
 			},
 			{
 				name: "persistent worktree",
 				running: { ...running, persistent: true, worktree },
 				expected:
-					"interrupt, or retain the workspace and continue there after confirming the previous process exited",
+					"interrupt, or retain the window and continue there after confirming the previous process exited",
 				forbidden: /subagent_resume|new persistent specialist/,
 			},
 		];
@@ -9798,7 +9898,7 @@ describe("completion.ts", () => {
 			reason: "error",
 			exitCode: 1,
 			errorMessage:
-				"Subagent pane disappeared before completion evidence was recorded.",
+				"Subagent block disappeared before completion evidence was recorded.",
 			errorSource: "host",
 		});
 	});
@@ -9965,7 +10065,7 @@ describe("commands", () => {
 				const { api, registeredCommands, sentUserMessages } =
 					createMockExtensionApi();
 				api.events.on(
-					"pi-herdr-subagents:roles:discover:v1",
+					"pi-rex-subagents:roles:discover:v1",
 					(request: { register(path: string): void }) =>
 						request.register(rolesDir),
 				);
@@ -10561,7 +10661,7 @@ describe("commands", () => {
 		});
 		assert.deepEqual(
 			offers.map((entry) => entry.owner),
-			["pi-herdr-agents"],
+			["pi-rex-agents"],
 		);
 		// Not deepEqual: its assertion signature would narrow the array to never[].
 		assert.equal(sentUserMessages.length, 0, "offering starts nothing");
@@ -11798,7 +11898,7 @@ describe("subagent parent lifecycle", () => {
 describe("Task15 unowned host activity", () => {
 	it("refreshes without a session/context, hydrates legacy rows and retains successful activity", () => {
 		// SAFETY: this fixture saves/restores the extension-owned runtime slot to exercise pre-initialization.
-		const root = (globalThis as any)[Symbol.for("pi-subagents/runtime")];
+		const root = (globalThis as any)[SUBAGENT_RUNTIME_KEY];
 		const previous = { session: root.session, latestCtx: root.latestCtx };
 		root.session = undefined;
 		root.latestCtx = undefined;
@@ -12274,7 +12374,7 @@ describe("Task13 demand-driven persistent I/O", () => {
 		io: PiPersistentIO,
 	) {
 		// SAFETY: index.ts owns this process-local extension slot; fixture swaps only its delivery binding.
-		const root = (globalThis as any)[Symbol.for("pi-subagents/runtime")];
+		const root = (globalThis as any)[SUBAGENT_RUNTIME_KEY];
 		const previous = root.pi;
 		root.pi = api;
 		try {
@@ -12540,7 +12640,7 @@ describe("persistent delivery batch ledger", () => {
 	const testApi = subagentsModule.__test__;
 	// SAFETY: the extension stores this private runtime under the documented global symbol.
 	const runtime = (globalThis as Record<symbol, { pi?: unknown } | undefined>)[
-		Symbol.for("pi-subagents/runtime")
+		SUBAGENT_RUNTIME_KEY
 	];
 	const runtimePi = runtime?.pi;
 	before(() => {
@@ -13196,7 +13296,7 @@ describe("persistent subagent stop", () => {
 	const testApi = subagentsModule.__test__;
 	// SAFETY: bind the test's notification API in the extension-owned runtime slot.
 	const runtime = (globalThis as Record<symbol, { liveApi?: unknown }>)[
-		Symbol.for("pi-subagents/runtime")
+		SUBAGENT_RUNTIME_KEY
 	];
 	const previousLiveApi = runtime.liveApi;
 	after(() => {
@@ -14087,7 +14187,7 @@ describe("subagent interruption", () => {
 			presentation,
 			/After review and preservation, explicitly remove/,
 		);
-		assert.match(presentation, /herdr worktree remove --workspace w9/);
+		assert.match(presentation, /rex window close w9/);
 		assert.match(presentation, /\/worktree remove w9/);
 		assert.match(presentation, /worktree_remove/);
 		assert.equal(testApi.shouldRetainSubagentSurface({ worktree }), true);
@@ -14268,7 +14368,7 @@ describe("subagent interruption", () => {
 			);
 
 			const manifest = JSON.parse(readFileSync(manifestFile, "utf8"));
-			assert.equal(manifest.owner, "pi-herdr-subagents");
+			assert.equal(manifest.owner, "pi-rex-subagents");
 			assert.equal(manifest.kind, "worktree-run");
 			assert.equal(manifest.id, "run-1");
 			assert.equal(manifest.state, "failed");
@@ -15628,7 +15728,7 @@ describe("parent messages are structured, not cut", () => {
 		const commands = content.match(/^ {2}worktree_remove\(.*$/gm) ?? [];
 		assert.deepEqual(commands, ['  worktree_remove({ target: "w" })']);
 		assert.match(content, /^ {2}\/worktree remove w$/m);
-		assert.match(content, /^ {2}herdr worktree remove --workspace w$/m);
+		assert.match(content, /^ {2}rex window close w$/m);
 		assert.doesNotMatch(content, /abbreviated \.\.\.\] a+"/);
 	});
 
@@ -16086,7 +16186,7 @@ describe("parent messages are structured, not cut", () => {
 
 		await withAdapterHost(async (f) => {
 			const owner =
-				f.runtime.session[Symbol.for("pi-herdr-agents/PiRunSession-owner")];
+				f.runtime.session[Symbol.for("pi-rex-agents/PiRunSession-owner")];
 			const settled = owner.options.hooks.onSettled;
 			const sources: string[] = [];
 			owner.options.hooks.onSettled = (

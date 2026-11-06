@@ -253,7 +253,7 @@ export function registerTaskModelInit(pi: ExtensionAPI): void {
 			if (!request) return;
 			const { input } = request;
 			request.offer({
-				owner: "pi-herdr-agents",
+				owner: "pi-rex-agents",
 				start: (): TaskModelInitOutcome =>
 					input
 						? runTaskModelInit(input.context, input.preferences)

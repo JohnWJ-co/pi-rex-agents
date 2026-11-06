@@ -3,7 +3,7 @@
  * done. A listener that knows the child is still waiting on work of its own,
  * such as running subagents, sets `busy` synchronously.
  */
-export const CHILD_BUSY_CHANNEL = "pi-herdr-agents:child-busy";
+export const CHILD_BUSY_CHANNEL = "pi-rex-agents:child-busy";
 
 export interface ChildBusyProbe {
 	busy: boolean;

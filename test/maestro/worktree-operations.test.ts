@@ -40,7 +40,7 @@ test("continues writing the stable manifest owner value", () => {
 		writeWorktreeManifest(file, existing);
 		writeWorktreeManifest(file, { state: "removed", owner: "not-an-owner" });
 		const value = readWorktreeManifest(file)!;
-		assert.equal(value.owner, "pi-herdr-subagents");
+		assert.equal(value.owner, "pi-rex-subagents");
 		assert.equal(value.version, 1);
 		assert.equal(value.kind, "worktree-run");
 		assert.equal(value.baseSha, "base");
@@ -98,7 +98,7 @@ test("cleanup uses the injected provider with 30-second deadlines and unavailabl
 		entry.workspaceId = "workspace";
 		assert.match(
 			(await ops.holders(entry)).blockers.join(),
-			/foreground process in pane pane/,
+			/foreground process in block pane/,
 		);
 		await ops.removeWorkspace("workspace");
 		assert.deepEqual(calls, [

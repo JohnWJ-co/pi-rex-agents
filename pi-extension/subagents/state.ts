@@ -24,8 +24,8 @@ import type {
 // Survive /reload: replace presentation timers while keeping active completion
 // watchers and their registry alive. Old module closures continue watching the
 // children; the reloaded module adopts the shared registry for status/interrupts.
-export const WIDGET_INTERVAL_KEY = Symbol.for("pi-subagents/widget-interval");
-export const STATUS_INTERVAL_KEY = Symbol.for("pi-subagents/status-interval");
+export const WIDGET_INTERVAL_KEY = Symbol.for("pi-rex-agents/widget-interval");
+export const STATUS_INTERVAL_KEY = Symbol.for("pi-rex-agents/status-interval");
 export const RUNTIME_KEY = SUBAGENT_RUNTIME_KEY;
 
 export function readGlobalSlot<T>(key: symbol): T | undefined {

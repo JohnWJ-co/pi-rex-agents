@@ -267,7 +267,7 @@ async function detectCompletion(
 					reason: "error",
 					exitCode: 1,
 					errorMessage:
-						"Subagent pane disappeared before completion evidence was recorded.",
+						"Subagent block disappeared before completion evidence was recorded.",
 					errorSource: "host",
 				};
 			}

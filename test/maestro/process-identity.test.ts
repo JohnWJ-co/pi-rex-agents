@@ -314,7 +314,7 @@ describe("process identity", () => {
 					{ ...expected, shellPid: 11 },
 					tree,
 				),
-			/not the Herdr pane shell 11 or its descendant/,
+			/not the Rex block shell 11 or its descendant/,
 		);
 	});
 
@@ -436,7 +436,7 @@ describe("process identity", () => {
 	);
 
 	it(
-		"bounds Herdr process info by the capture deadline and drops a late answer",
+		"bounds Rex process info by the capture deadline and drops a late answer",
 		{ timeout: ANCHORED_TEST_TIMEOUT_MS },
 		withDir((dir, t) =>
 			whileParentLoopAlive(t, async () => {
@@ -471,7 +471,7 @@ describe("process identity", () => {
 				);
 				await assert.rejects(
 					capture,
-					/not captured within 40ms: Herdr process info for pane pane timed out/,
+					/not captured within 40ms: Rex process info for block pane timed out/,
 				);
 				assert.ok(Date.now() - started < 1_000, "rejected on time");
 				assert.equal(calls, 1, "no further query after the deadline");
@@ -515,7 +515,7 @@ describe("process identity", () => {
 	);
 
 	it(
-		"drops an overdue Herdr answer that wins the race before the overdue timer runs",
+		"drops an overdue Rex answer that wins the race before the overdue timer runs",
 		withDir(async (dir) => {
 			const file = join(dir, "s.jsonl.process.json");
 			writeProcessIdentityRecord(file, record());
@@ -538,7 +538,7 @@ describe("process identity", () => {
 					timeoutMs: 5,
 					probe,
 				}),
-				/not captured within 5ms: Herdr process info for pane pane timed out/,
+				/not captured within 5ms: Rex process info for block pane timed out/,
 			);
 			// Negative control: the same synchronous answer inside its budget is used.
 			assert.deepEqual(

@@ -176,7 +176,7 @@ describe("PiHarnessAdapter", () => {
 			assert.equal(handle.worktree?.baseSha, "base-sha");
 			assert.equal(
 				readWorktreeManifest(handle.worktree!.manifestFile)?.owner,
-				"pi-herdr-subagents",
+				"pi-rex-subagents",
 			);
 			assert.equal(f.surface.listSurfaces().length, 1);
 			await assert.rejects(
@@ -931,7 +931,7 @@ describe("PiHarnessAdapter retained worktree kill", () => {
 			const w = await worktreeChild(f, { probe, identity: identity() });
 			await assert.rejects(
 				w.adapter.kill(w.h),
-				/Owned Pi process exit unconfirmed in retained worktree pane .*process 20 \(start time 5000\) is still alive 150ms after SIGTERM/,
+				/Owned Pi process exit unconfirmed in retained worktree block .*process 20 \(start time 5000\) is still alive 150ms after SIGTERM/,
 			);
 			assert.deepEqual(signals, [20], "no repeated signal and no SIGKILL");
 			assert.deepEqual(w.closes, []);
@@ -1014,7 +1014,7 @@ describe("PiHarnessAdapter retained worktree kill", () => {
 			});
 			await assert.rejects(
 				w.adapter.kill(w.h),
-				/identity was not captured for retained worktree pane .*nothing was signalled: Process identity not captured within 15000ms/,
+				/identity was not captured for retained worktree block .*nothing was signalled: Process identity not captured within 15000ms/,
 			);
 			assert.deepEqual(signals, []);
 		}));

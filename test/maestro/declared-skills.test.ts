@@ -127,10 +127,7 @@ describe("child declared-skill injection", () => {
 			const inject = createDeclaredSkillsInjector(["review", "tdd"]);
 			const result = inject(event([tdd, other, review]));
 			assert.ok(result?.message);
-			assert.equal(
-				result.message.customType,
-				"pi-herdr-agents:declared-skills",
-			);
+			assert.equal(result.message.customType, "pi-rex-agents:declared-skills");
 			assert.equal(
 				result.message.content,
 				`${block(review, "Review body.")}\n\n${block(tdd, "# TDD\nWrite the failing test first.")}`,

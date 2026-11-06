@@ -311,7 +311,7 @@ export function verifyProcessIdentityRecord(
 		pid = stat.ppid;
 	}
 	throw new Error(
-		`process ${identity.pid} is not the Herdr pane shell ${expected.shellPid} or its descendant`,
+		`process ${identity.pid} is not the Rex block shell ${expected.shellPid} or its descendant`,
 	);
 }
 

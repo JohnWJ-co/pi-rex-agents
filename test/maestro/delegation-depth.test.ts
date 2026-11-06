@@ -31,16 +31,15 @@ describe("delegation depth", () => {
 	});
 
 	it("allows depths up to the maximum and refuses the next one", () => {
-		assert.equal(DEFAULT_MAX_DELEGATION_DEPTH, 3);
+		assert.equal(DEFAULT_MAX_DELEGATION_DEPTH, 1);
 		const at = (depth: number) =>
 			decideDelegation({ kind: "known", depth }, DEFAULT_MAX_DELEGATION_DEPTH);
 		assert.deepEqual(at(0), { allowed: true, childDepth: 1 });
-		assert.deepEqual(at(2), { allowed: true, childDepth: 3 });
-		const refused = at(3);
+		const refused = at(1);
 		assert.equal(refused.allowed, false);
 		if (refused.allowed) return;
 		assert.equal(refused.reason, "max-depth");
-		assert.match(refused.message, /depth 3 and the maximum is 3/);
+		assert.match(refused.message, /depth 1 and the maximum is 1/);
 		assert.match(refused.message, /spawning\.maxDepth/);
 	});
 
@@ -54,9 +53,9 @@ describe("delegation depth", () => {
 });
 
 describe("spawning config", () => {
-	it("defaults to depth 3 and accepts a positive integer", () => {
-		assert.deepEqual(parseSpawningConfig({}), { maxDepth: 3 });
-		assert.deepEqual(parseSpawningConfig({ spawning: {} }), { maxDepth: 3 });
+	it("defaults to depth 1 and accepts a positive integer", () => {
+		assert.deepEqual(parseSpawningConfig({}), { maxDepth: 1 });
+		assert.deepEqual(parseSpawningConfig({ spawning: {} }), { maxDepth: 1 });
 		assert.deepEqual(parseSpawningConfig({ spawning: { maxDepth: 1 } }), {
 			maxDepth: 1,
 		});

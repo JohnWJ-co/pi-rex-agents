@@ -471,7 +471,7 @@ Structured details keep up to 4,000 raw characters in `accept.output`.
 ### Outcome ledger
 
 The host appends one line per model attempt to
-`$PI_CODING_AGENT_DIR/herdr-agents/outcomes.jsonl` (`accept-recheck.ts`
+`$PI_CODING_AGENT_DIR/rex-agents/outcomes.jsonl` (`accept-recheck.ts`
 `appendOutcomeLedger`), unless `outcomeLedger` is `false`. Its keys are `v`,
 `at`, `runId`, `attempt`, `role`, `requestedModel`, `category`, `model`,
 `thinking`, `elapsedSec`, `outcome`, `checkTries`, `verdict`, and `checkHash`

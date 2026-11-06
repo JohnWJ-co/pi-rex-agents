@@ -15,25 +15,28 @@ This tree is the P4 migration worktree. Keep changes scoped to the current check
 - [`docs/p4/rex-facts.md`](docs/p4/rex-facts.md) — measured Rex behavior, especially socket isolation and OSC lifecycle
 - [`maestro/surfaces/rex/rex-cli.ts`](maestro/surfaces/rex/rex-cli.ts) — the only Rex CLI wrapper and argv boundary
 - [`maestro/surfaces/rex/rex-surface-provider.ts`](maestro/surfaces/rex/rex-surface-provider.ts) — Rex surface lifecycle
-- [`src/extension.ts`](src/extension.ts) — Pi composition root
+- [`pi-extension/subagents/index.ts`](pi-extension/subagents/index.ts) — Pi composition root and Rex host guard
 - [`test/integration/rex-harness.ts`](test/integration/rex-harness.ts) and [`test/integration/fake-provider.ts`](test/integration/fake-provider.ts) — deterministic Rex integration fixtures
 - [`.pi/skills/verify-pi-rex-agents/SKILL.md`](.pi/skills/verify-pi-rex-agents/SKILL.md) — verification map and isolated lab
 - [`.pi/skills/run-integration-tests/SKILL.md`](.pi/skills/run-integration-tests/SKILL.md) — integration preflight and cleanup
 
 ## Code map
 
-- `src/extension.ts` — Rex-only Pi composition root; loads the kernel with Rex infrastructure and host notices
+- `pi-extension/subagents/index.ts` — Rex-only Pi composition root; loads the local hard-forked kernel with Rex infrastructure and host notices
+- `pi-extension/subagents/rex-composition.ts` — Rex provider, supervision, worktree and placement composition
+- `pi-extension/subagents/host-notice.ts` — Rex host and leaf system prompt notices
 - `maestro/surfaces/rex/rex-cli.ts` — dependency-free explicit-argv Rex CLI wrapper; every call uses `--autostart=false` and propagates `REX_SERVER`
 - `maestro/surfaces/rex/rex-surface-provider.ts` — block/window creation, Pi command execution, OSC/program status observation, process inspection and cleanup
-- `src/rex-host-api.ts`, `src/rex-wording.ts` — Rex host API proxy and user-facing host text
+- `src/doctor.ts`, `src/p0.ts`, `src/p1.ts`, `src/p2.ts` — doctor and retained integration probes
 - `maestro/runtime/pi-placement.ts` — parent-owned split admission and reservations, preserved with the Pi run registry across reloads
-- `src/infrastructure.ts`, `maestro/surfaces/rex/worktree.ts`, `maestro/surfaces/rex/git.ts` — runtime seams and Rex-managed worktree paths
+- `maestro/surfaces/rex/worktree.ts`, `maestro/surfaces/rex/git.ts` — runtime seams and Rex-managed worktree paths
 - `pi-extension/subagents/` — execution kernel, delivery envelope, controls, persistent specialists and renderers
 - `maestro/core/` — host-neutral seams, lifecycle, routing, wakeups and worktree contracts retained by the fork
 - `maestro/runtime/` — Pi run sessions, delivery, cleanup, worktree operations and supervision
 - `maestro/adapters/pi/` — Pi launch transactions, child protocol, session I/O and process evidence
 - `maestro/adapters/pi/context-tools.ts` — registered compression-provider discovery; the parent appends these tools to fresh, resume, persistent and interactive handoff launch allowlists through the runtime seam
 - `maestro/surfaces/rex/` — the only real SurfaceProvider implementation; `maestro/surfaces/fake/` is test-only
+- `test/smoke-extension.ts` — load-level entry, Rex host guard and host/leaf notice smoke
 - `test/integration/rex-harness.ts` — isolated Rex server, fake-provider configuration, parent launch and observable wait helpers
 - `test/integration/rex-smoke.test.ts` — real parent-to-child Rex smoke lifecycle
 - `test/integration/rex-placement.test.ts` — real split/split/tab placement, close-and-reuse and explicit tab evidence
@@ -72,6 +75,7 @@ For ordinary changes, run:
 
 ```bash
 npm test
+bun test/smoke-extension.ts
 npm run docs:tools:check
 npm run format:check
 npm run lint

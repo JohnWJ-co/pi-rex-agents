@@ -9,7 +9,7 @@
 
 ```bash
 rex new p2-smoke -c "$PWD" --json -- \
-  pi --no-extensions -e "$PWD/src/extension.ts"
+  pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 ```
 
 然后用 `rex send` + `rex send-key enter` 输入命令，读取 PTY 屏幕。

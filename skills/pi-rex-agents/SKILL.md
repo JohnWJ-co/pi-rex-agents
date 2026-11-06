@@ -7,8 +7,7 @@ description: Use when delegating to subagents, supervising child agents, or mana
 
 This session runs inside a Rex block. Rex is the host: a **window** is a tab,
 a **block** is a pane. The `subagent` tool is the only supported way to
-delegate; another multiplexer's CLI or skills (herdr, hc, herdr-core) do not
-apply here, even if they are installed.
+delegate; another multiplexer or its skills do not apply here, even if installed.
 
 ## Launching
 
@@ -22,8 +21,7 @@ apply here, even if they are installed.
   and `/reload` retains registered children and pending reservations. Configure
   `panes.maxPerTab` (integer 1..8) in
   `$PI_CODING_AGENT_DIR/rex-agents/config.json` (default
-  `~/.pi/agent/rex-agents/config.json`). The old `herdr-agents/config.json` is
-  neither read nor migrated.
+  `~/.pi/agent/rex-agents/config.json`). The previous host config path is neither read nor migrated.
 - Worktree children (`worktree: { branch }`) always open in a new tab under
   `~/.pi/rex-agents/worktrees`; the parent checkout's uncommitted changes are
   not copied (the base is committed HEAD).

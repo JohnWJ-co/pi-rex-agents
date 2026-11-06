@@ -9,7 +9,7 @@
     "maxAgents": 3
   },
   "spawning": {
-    "maxDepth": 3
+    "maxDepth": 1
   },
   "supervision": {
     "forcePolling": false,

@@ -69,3 +69,10 @@
 - 不传 `--tools`：`getAllTools()` 42 个（含 compress、acp_status），active 31 个。
 - `--tools read,bash,compress,decompress,search_context,acp_status`：这些工具都注册并激活，模型实际调用 `acp_status` 成功（输出 `ACTIVE SURFACE: pack=lean … host=billion-context-pi 0.1.83`）。
 - 推论：子代理一侧没办法补回白名单外的工具，压缩工具必须由父进程写进 `--tools`。扩展代码改动后，父 pi 必须 `/reload` 才会生效（子代理通过 `-e` 每次重新加载）。
+
+## F12 项目信任前的扩展加载与内核命名隔离（2026-11-06 T4）
+
+- 监督的探针确认：Pi 在判定项目信任前，先按全局配置加载扩展，再按项目配置重新加载。项目过滤项只影响最终的扩展集合，不能阻止全局主 checkout 在同一进程内先执行一次；绝对 source 路径本身正确，Pi 按解析后的绝对路径去重。
+- 上游内核使用 `globalThis[Symbol.for("pi-subagents/runtime")]`。Rex 若共用该槽，可能接管外来的 composition；只有 owner symbol 改名时，则会报 `Previous PiRunSession does not carry its owning composition.`。修正应隔离内核全局槽，保留 owner 校验，无需修改项目或全局配置。
+- Rex runtime 使用 `pi-rex-agents/runtime`，widget/status timer 使用 `pi-rex-agents/widget-interval` / `pi-rex-agents/status-interval`。内核中不再使用 `pi-subagents/` Symbol；正常测试访问统一导入 `SUBAGENT_RUNTIME_KEY`，仅隔离回归保留旧键以模拟外来内核。
+- 本轮默认配置 RPC `get_commands` 验证：无 `Failed to load extension`；`subagent`、`subagents-init`、`worktree` 各出现一次，`sourceInfo.path` 均为 P4 的 `pi-extension/subagents/index.ts`。单测同时确认旧槽中的外来 runtime、子登记表和计时器未被修改或接管。

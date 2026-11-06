@@ -57,6 +57,9 @@ const PINNED_ENV = [
 	"PI_SUBAGENT_ACTIVITY_FILE",
 	"PI_SUBAGENT_TASK_ID",
 	"PI_SUBAGENT_GENERATION_ID",
+	"REX_SESSION",
+	"REX_BLOCK",
+	"REX_SERVER",
 ] as const;
 
 const REPO_ROOT = new URL("../../", import.meta.url);
@@ -123,6 +126,8 @@ export async function captureToolSchemas(): Promise<ToolSchemaSnapshot> {
 	try {
 		for (const key of PINNED_ENV) delete process.env[key];
 		process.env.PI_CODING_AGENT_DIR = agentDir;
+		process.env.REX_SESSION = "session:tool-schema";
+		process.env.REX_BLOCK = "block:tool-schema";
 		for (const scope of ["parent", "child"] as const) {
 			const captured = await captureScope(scope);
 			for (const tool of captured.tools)

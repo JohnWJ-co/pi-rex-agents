@@ -14,11 +14,74 @@
 | T2 | 已完成返工，门禁通过 | `6202306` | 恢复通用测试并迁移 audit-stop 到 Rex harness；Rex provider 已入内核；Herdr/sidebar/Windows 专属路径已删除；保留 `test/verify-lab-guards.test.ts` |
 | T2b | 已完成，门禁通过 | `74be436` | 父端白名单覆盖 fresh/resume/persistent/handoff；真实 acp_status 调用及 block 清理通过 |
 | T3 | 已完成，门禁通过 | `da8f08a22a09e547d6109083a5eef32779e9fa86` | 原生 placement、split 上限 2、Rex 配置隔离；真实集成 11/11 通过 |
-| T4 | 待开始 | | |
+| T4 | 已完成，门禁通过 | 本提交 | 源头 Rex 文案、内核入口和全局命名隔离；默认 RPC、Rex 集成 11/11 与 lab drive 通过 |
 | T5 | 待开始 | | |
 | T6 | 待开始 | | |
 
 ## 日志
+
+### T4 完成：默认配置加载、Rex 集成与 lab 验证通过
+
+按监督定位完成命名隔离，未修改 `.pi/settings.json` 或全局配置，未自行 `/reload`。本轮真实验证由新启动的父 Pi 通过 `--no-extensions -e <当前 checkout>/pi-extension/subagents/index.ts` 加载最新源码，不依赖协调会话的内存版本。项目信任前的全局加载事实、错误机制和隔离约束已记录为 `rex-facts.md` 的 F12。
+
+composition 迁入内核后，依赖规则仅允许 `pi-extension/subagents/index.ts` 和 `rex-composition.ts` 直接组装 Rex surface；其他扩展业务文件仍禁止导入 surface，所有扩展文件仍禁止直接导入 Pi adapter。负向夹具同时覆盖这些边界，没有取消依赖检查。
+
+- 默认配置执行监督指定的 RPC `get_commands` 流程；stdout/stderr 均无 `Failed to load extension`。`subagent`、`subagents-init`、`worktree` 各出现一次，三个 `sourceInfo.path` 全部为 `/Users/qiangwenjun/Documents/project/pi-rex-agents-p4/pi-extension/subagents/index.ts`。证据为 `rpc.jsonl`、`rpc.stderr`、`rpc-evidence.json`。
+- `bash docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t4-namespace.AJpGEW`：**通过，退出码 0**，默认 `MIN_TESTS=1155` 未改。第 1 轮 **1184 tests / 1166 pass / 8 fail / 10 skipped**；暂定新增失败 `launches a frontmatter-only named role without a caller systemPrompt` 在第 2 轮消失，第 2 轮 **1184 tests / 1167 pass / 7 fail / 10 skipped**，最终输出 `OK：没有持续性新增失败`。7 个 raw npm test 失败仍属于基线允许集合，不报告为零失败。
+- `npm run typecheck`、`npm run lint`、`npm run format:check`、`npm run docs:tools:check`、`git diff --check`：全部通过。`node --experimental-strip-types --test test/no-foreign-host.test.ts`：**3 tests / 3 pass / 0 fail / 0 skipped**。`bun test/smoke-extension.ts`：通过，输出 `Rex kernel entry smoke OK`。
+- `npm run test:integration:rex`：**11 tests / 11 pass / 0 fail / 0 skipped**，退出码 0，总耗时 **11231.291792ms**；覆盖真实 report/session/block 清理、split/split/tab、关闭后名额复用、显式 tab 和 Rex surface conformance。没有延长超时、改动状态等待协议或减少断言。
+- `lab.ts doctor`、`up`、`drive`、`down`：全部通过。`evidence.json` 确认 socket endpoint 相符、真实子 session 存在、子 block 出现后消失、父会话继续；报告包含 `REX_SMOKE_CHILD` 且没有 Herdr 字样。before/after 仅保留父 block `block:01a1b031-d585-7c6f-92ae-b06df6562ad5`，during 另有子 block `block:01a1b032-3e59-79c0-9d1f-6e6995354a91`。清理前已把原始 evidence 和父/子 session 复制到日志目录。
+- 重新运行 T3/current pin：132 行 diff；父工具 10 项、子工具 5 项、命令 3 项及 schema 结构、导出、测试表面、renderer 和 shortcut 保持一致。预期差异是 Rex 文案，以及父/子各一个 `before_agent_start` handler（任务卡第 2 步的宿主提示），没有额外结构变化。保留 `pin-t3.json`、`pin-t4.json`、`pin.diff`。
+- `npm pack --dry-run --json`：通过，157 个文件；已检查完整文件清单，包含新入口、composition、host notice 和 Rex 技能，不含已删除的代理/旧入口、本机配置、session 或 evidence。同步配置文档中的默认 `spawning.maxDepth=1`、Rex ledger 路径和入口使用说明。`released.json` 比较用例通过，文件本身、test-gate 脚本和允许集合均未修改。
+
+本轮正式门禁的机械修复：首次完整检查在新隔离回归夹具处被 lint 拒绝，错误为 `anti-slop(no-unsafe-dictionary-type)` 和 `anti-slop(require-safety-comment-for-type-assertion)`。将 `Record<symbol, unknown>` 收窄为明确的 runtime/timer 联合类型，并用属性检查替代未说明的类型断言；保留所有行为断言后重新执行上述完整检查。首次失败日志保存在 `attempt1/`。收尾补写 F12 时，`git diff --check` 报 `docs/p4/rex-facts.md:79: new blank line at EOF.`；删除多余空行后复查通过。没有弱化或跳过门禁。
+
+日志目录：`/tmp/pi-rex-agents-p4-t4-namespace.AJpGEW`。收尾 `rex ls --json` 与 `postflight-final.json` 确认无测试 session、`pira-lab-*` / `pi-integ-*` 根、current-lab marker 或测试进程；当前 session 仅剩原父 block，未操作其他 session 的 block。临时 postflight 脚本首次因 `ps` 输出中的非 UTF-8 字节触发 `UnicodeDecodeError`，修正脚本解码后复查通过，未改仓库代码。`.pi/settings.json` 仍为 `S`（skip-worktree）且内容 SHA-256 与验证前一致，没有根目录空目录或待提交的证据、会话、凭据。只提交 T4；不合并、不推送，不开始 T5。门禁通过后由监督执行 `/reload`。
+
+### T4 继续：按监督实测隔离内核全局状态，不改配置
+
+监督通过探针确认：Pi 在项目信任判定前先按全局配置加载扩展，再按项目配置重新加载；项目过滤项无法阻止全局主 checkout 先执行一次。`.pi/settings.json` 中的绝对 source 正确，Pi 按解析后的绝对路径去重。下方初次预检记录中“过滤配置错误”的判断和修配置建议已由此结论替代。
+
+- `maestro/core/undelivered-children.ts` 的 runtime key 改为 `pi-rex-agents/runtime`；`pi-extension/subagents/state.ts` 的 widget/status timer key 改为 `pi-rex-agents/widget-interval` / `pi-rex-agents/status-interval`。检查其余内核 Symbol，均已采用 Rex 命名；保留 session owner 校验，不接管外来 runtime。
+- `test/test.ts` 的正常 runtime 访问统一导入 `SUBAGENT_RUNTIME_KEY`。新增回归在旧 `pi-subagents/...` 全局槽预置冻结的外来 runtime、子登记表和两个计时器，加载新入口后断言注册成功、使用独立 Rex runtime、外来对象/登记表/计时器均未改变。
+- 针对性 `runtime reload configuration`：**5 tests / 5 pass / 0 fail / 0 skipped**；`npm run typecheck`：通过。接下来执行默认配置 RPC 来源检查与任务卡完整门禁，未自行 `/reload`，未修改本机或全局配置。
+
+### T4 首次入口预检失败记录（原因已由上节监督实测纠正）
+
+本轮仅在 `p4-kernel` 中实现 T4，尚未提交。已清理 T3 遗留的受管 worktree `t3-pane-config` 及其分支；`git worktree list --porcelain` 只剩主 checkout 和当前 P4 worktree，未修改主 checkout 或上游。
+
+实现范围：
+
+- 内核源头文案改为 Rex block/window；工具描述、参数、报告与控制输出直接使用新文案，删除运行时文案代理。删除 `src/extension.ts`、`src/infrastructure.ts`、`src/rex-host-api.ts`、`src/rex-wording.ts`、`src/host-message.ts`、`src/host-message-check.ts`、`src/wording-check.ts`；原 smoke 迁入 `test/smoke-extension.ts`，保留并补充断言。
+- `package.json` 的 `pi.extensions` 已切为 `./pi-extension/subagents/index.ts`；新增 `rex-composition.ts` 组装 Rex provider、worktree 和 supervision，`host-notice.ts` 注册父/子宿主提示。缺少 Rex 环境时不注册工具；默认 delegation depth 为 1，子代理通过内核深度决策拒绝继续派生。
+- 删除 `skills/pi-herdr-agents/SKILL.md`，保留 Rex 技能；新增 `test/no-foreign-host.test.ts`，覆盖字符串、模板片段、转义字符串和 Markdown，并保留扫描范围与防空跑断言。相关文档、schema current 快照、harness 入口和测试期望已同步，未删除测试或弱化断言。
+- T3/current pin 已保存并核对：父工具 10 项、子工具 5 项、命令 3 项的名称、顺序和 schema 结构保持一致；diff 是 pane/workspace/Herdr 到 Rex block/window 的预期文案变化，另有父、子各新增一个 `before_agent_start` handler，用于任务卡第 2 步要求的宿主提示。完整 diff 在本轮日志目录的 `pin.diff`。
+
+已执行的本轮门禁：
+
+- `bash docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t4.EXKQde`：**通过，退出码 0**；默认 `MIN_TESTS=1155` 未改，首轮 **1183 tests / 1166 pass / 7 fail / 10 skipped**，输出 `OK：没有持续性新增失败`。7 项 raw npm test 失败均在允许集合中，不能报告为零失败。
+- `npm run typecheck`、`npm run lint`、`npm run format:check`（155 个文件）、`npm run docs:tools:check`、`git diff --check`：通过。
+- `node --experimental-strip-types --test test/no-foreign-host.test.ts`：**3 tests / 3 pass / 0 fail / 0 skipped**。
+- `bun test/smoke-extension.ts`：通过，输出 `Rex kernel entry smoke OK`，覆盖缺少 Rex 环境、父/子提示、默认叶子策略及原有工具参数断言。
+- `npm pack --dry-run --json`：通过，157 个文件；已核对包含内核入口、composition、宿主提示和 Rex 技能，不含已删入口/代理、旧技能、本机 settings、会话或证据。包清单保存为 `pack.json`。
+- `lab.ts doctor`：通过，Rex `0.0.1793741575-g1b6654`、Pi `1.5.0`、Node `v26.7.0`，无运行中的集成或 live lab。
+- `has no breaking change against the last released schema` 用例通过；`test/fixtures/tool-schema/released.json`、基线脚本及允许集合没有 diff。
+
+监督要求的入口预检命令失败，退出码 1：
+
+```text
+pi -p --no-session --model CBAPI/cn:deepseek-v4.1-flash '只回复 OK'
+Error: Failed to load extension "/Users/qiangwenjun/Documents/project/pi-rex-agents-p4/pi-extension/subagents/index.ts": Failed to load extension: Previous PiRunSession does not carry its owning composition.
+Hint: Start without extensions using "pi -ne".
+```
+
+当时只读定位观察到 `pi list` 列出全局和项目两份 source，并据此错误地判断过滤配置未合并。监督后续实测已纠正：Pi 在项目信任判定前先加载全局扩展，绝对 source 过滤项本身正确。T4 的 owner symbol 已为 `pi-rex-agents/PiRunSession-owner`，但 runtime key 尚与旧内核共用，先前 facade 不带 Rex owner，因而在 `maestro/runtime/pi-run-session.ts` 的既有 ownership 断言处失败。该 ownership 断言保持不变，修正在内核全局 key 的命名隔离。
+
+按监督的“与任务卡冲突时停下”和“不改 `.pi/settings.json`”要求，在此停止：没有改本机或全局配置，没有自行 `/reload`，没有用 `--no-extensions -e` 替代指定的默认 CLI 预检，也没有继续 RPC `get_commands`、`npm run test:integration:rex` 或 lab `up/drive/down`。这些项目尚无 T4 通过证据，不能宣布 T4 完成或提交。
+
+当时提出的“先修正本机过滤配置”建议已撤销。按监督新指令继续完成内核命名隔离，使用默认配置检查 RPC 命令来源，然后执行隔离 Rex 集成与 lab drive；全部门禁通过后由监督执行 `/reload`，本会话不自行 reload。
+
+本轮日志：`/tmp/pi-rex-agents-p4-t4.EXKQde`，主要包括 `run1.log`、`test-gate.log`、`typecheck-final.log`、`lint-final.log`、`format-final.log`、`docs-final.log`、`foreign-final.log`、`smoke-final.log`、`doctor.log`、`pack.json`、`pin-t3.json`、`pin-t4.json`、`pin.diff`、`cli-ok.log`、`pi-list.txt` 和 `rex-postflight.json`。收尾只读检查未发现 `pira-lab-*` / `pi-integ-*` 根、测试 Rex session 或测试进程；`.pi/settings.json` 仍为 `S`（skip-worktree），没有证据/凭据暂存或根目录空目录。不合并、不推送，不开始 T5。
 
 ### T3 完成：修正 F1 状态等待协议，placement 集成通过
 

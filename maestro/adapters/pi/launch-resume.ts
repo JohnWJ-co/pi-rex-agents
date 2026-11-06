@@ -51,7 +51,7 @@ export async function launchResumedPiSubagent(
 	if (policy.owner !== "public") {
 		throw new Error(
 			`Cannot resume ${policy.owner} session through subagent_resume. ` +
-				"Use its retained managed-worktree workspace instead.",
+				"Use its retained managed-worktree window instead.",
 		);
 	}
 	if (policy.persistent) {
@@ -216,7 +216,7 @@ export async function launchResumedPiSubagent(
 					),
 				);
 			throw new AcquisitionUncertainError(
-				`${String(error)}; rollback unconfirmed: ${String(rollback)}; pane retained: ${surface}; no fallback`,
+				`${String(error)}; rollback unconfirmed: ${String(rollback)}; block retained: ${surface}; no fallback`,
 				{
 					kind: "surface-create",
 					placement: "tab",

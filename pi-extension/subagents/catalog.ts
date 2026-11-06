@@ -71,7 +71,7 @@ export const PlacementSchema = Type.Union(
 export const SubagentParams = Type.Object({
 	name: Type.String({
 		description:
-			"Short stable label for the subagent; for a new coordinated group use <task>-<role>[-n] (shown in the widget and pane title)",
+			"Short stable label for the subagent; for a new coordinated group use <task>-<role>[-n] (shown in the widget and block title)",
 	}),
 	task: Type.String({ description: "Task/prompt for the sub-agent" }),
 	agent: Type.Optional(
@@ -117,7 +117,7 @@ export const SubagentParams = Type.Object({
 					branch: Type.String({
 						minLength: 1,
 						description:
-							"New branch name for an isolated Herdr-managed Git worktree",
+							"New branch name for an isolated Rex-managed Git worktree",
 					}),
 					base: Type.Optional(
 						Type.String({
@@ -130,7 +130,7 @@ export const SubagentParams = Type.Object({
 			],
 			{
 				description:
-					"Optional isolated Herdr-managed Git worktree. Omit or pass null to use an ordinary pane in cwd.",
+					"Optional isolated Rex-managed Git worktree. Omit or pass null to use an ordinary block in cwd.",
 			},
 		),
 	),
@@ -187,7 +187,7 @@ export const SubagentParams = Type.Object({
 	interactive: Type.Optional(
 		Type.Boolean({
 			description:
-				"Mark the subagent as interactive (long-running, user drives the conversation in its own pane). When true, the main session is not woken by status transitions (stalled/recovered) for this subagent. If omitted, falls back to the agent's `interactive` frontmatter, otherwise the inverse of `auto-exit` (agents that auto-exit are autonomous and get stall pings; agents that don't are interactive and stay quiet).",
+				"Mark the subagent as interactive (long-running, user drives the conversation in its own block). When true, the main session is not woken by status transitions (stalled/recovered) for this subagent. If omitted, falls back to the agent's `interactive` frontmatter, otherwise the inverse of `auto-exit` (agents that auto-exit are autonomous and get stall pings; agents that don't are interactive and stay quiet).",
 		}),
 	),
 });
@@ -244,7 +244,7 @@ export function discoverAgentCatalog(
 }
 
 export function missingRoleMessage(agentName: string): string {
-	return `Agent "${agentName}" was not found. pi-herdr-agents ships no roles: define it in .pi/agents or the global agents directory, install a role pack that provides it, or omit agent for a bare launch.`;
+	return `Agent "${agentName}" was not found. this host ships no roles: define it in .pi/agents or the global agents directory, install a role pack that provides it, or omit agent for a bare launch.`;
 }
 
 function formatAgentSource(agent: ListedAgentDefinition): string {

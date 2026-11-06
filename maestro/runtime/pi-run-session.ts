@@ -88,7 +88,7 @@ import type {
 	PiWorktreeHandoff,
 } from "./pi-run-session-types.ts";
 
-// pi-herdr-agents extension; no owning session required
+// pi-rex-agents extension; no owning session required
 export function observePiActivity(
 	input: { id: string; activityFile?: string; lifecycle: SubagentLifecycle },
 	observedAt: number,
@@ -107,7 +107,7 @@ export function observePiActivity(
 	};
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 interface PiEntry {
 	record: PiRunRecord;
 	started: PiStartedMetadata;
@@ -116,8 +116,8 @@ interface PiEntry {
 }
 // The previous facade carries its live composition explicitly across module replacement.
 // No module-local lookup can accidentally rediscover an owner.
-const OWNER = Symbol.for("pi-herdr-agents/PiRunSession-owner");
-// pi-herdr-agents extension
+const OWNER = Symbol.for("pi-rex-agents/PiRunSession-owner");
+// pi-rex-agents extension
 interface PiSessionOwner {
 	options: DefaultRunSessionOptions;
 	roles: Role[];
@@ -175,7 +175,7 @@ function resumeResultReader(
 	});
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export function createDefaultRunSession(
 	options: DefaultRunSessionOptions,
 	previous?: PiRunSession,

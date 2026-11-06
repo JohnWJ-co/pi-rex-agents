@@ -643,7 +643,8 @@ export function createWorktreeCleanupOperations(
 		managedRoot?: string;
 	},
 ): WorktreeCleanupOperations {
-	const root = input.managedRoot ?? join(homedir(), ".herdr", "worktrees");
+	const root =
+		input.managedRoot ?? join(homedir(), ".pi", "rex-agents", "worktrees");
 	let canonicalRoot: string;
 	return {
 		managedRoot: () => canonicalRoot ?? realpathWithoutOpening(root),
@@ -699,25 +700,25 @@ export function createWorktreeCleanupOperations(
 				const panes = await provider.listSurfaces({
 					timeoutMs: CLEANUP_TIMEOUT_MS,
 				});
-				if (!panes) throw new Error("Herdr pane snapshot unavailable");
+				if (!panes) throw new Error("Rex block snapshot unavailable");
 				const owned = panes.filter(
 					(pane) => pane.workspaceId === entry.workspaceId,
 				);
 				if (!owned.length)
-					throw new Error("Open workspace has no observable panes");
+					throw new Error("Open window has no observable blocks");
 				for (const pane of owned) {
 					const info = await provider.getProcessInfo(pane.id, {
 						timeoutMs: CLEANUP_TIMEOUT_MS,
 					});
 					if (!info.shellPid || !info.foregroundProcessGroupId)
-						throw new Error(`Process state unknown for pane ${pane.id}`);
-					// Exempt only Herdr's observed idle retained shell, never a runtime
+						throw new Error(`Process state unknown for block ${pane.id}`);
+					// Exempt only Rex's observed idle retained shell, never a runtime
 					// name or a shell running a foreground command.
 					if (info.foregroundProcessGroupId === info.shellPid)
 						idleShellPids.add(info.shellPid);
 					else
 						blockers.push(
-							`Live child or foreground process in pane ${pane.id}`,
+							`Live child or foreground process in block ${pane.id}`,
 						);
 				}
 			}

@@ -244,7 +244,7 @@ export function formatNoProgressAdvisoryLine(
 				? "truncated-turn; observed toolUse stop with no tool call; cause unknown"
 				: "generic no-progress";
 	const options = running.worktree
-		? "interrupt, or retain the workspace and continue there after confirming the previous process exited"
+		? "interrupt, or retain the window and continue there after confirming the previous process exited"
 		: running.persistent
 			? "interrupt, or use subagent_stop then replace with a new persistent specialist"
 			: "interrupt, or after manual termination use subagent_resume or a new spawn";

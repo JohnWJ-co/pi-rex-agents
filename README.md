@@ -2,7 +2,7 @@
 
 Rex 宿主的 Pi 子代理扩展：父 Pi 在 Rex 的当前 block 中运行，`subagent` 工具在 Rex 里创建 block（同 tab）或 window（新 tab），把子 Pi 放到独立 surface 中异步运行，父 Pi 不阻塞。
 
-编排内核作为库复用 `pi-herdr-agents` 的注册、投递、持久化、模型路由和 worktree 逻辑；surface 层、文案和 placement 完全按 Rex 实现。
+编排内核直接以 Rex 为 surface，入口位于 `pi-extension/subagents/index.ts`；注册、投递、持久化、模型路由和 worktree 逻辑都在本仓库内。
 
 ## 当前状态
 
@@ -33,12 +33,12 @@ npm run doctor
 在 **Rex 的交互式 Pi** 中加载：
 
 ```bash
-pi --no-extensions -e /Users/qiangwenjun/Documents/project/pi-rex-agents/src/extension.ts
+pi --no-extensions -e /Users/qiangwenjun/Documents/project/pi-rex-agents/pi-extension/subagents/index.ts
 ```
 
 `--no-extensions` 会关闭其他扩展的自动发现，只加载显式 `-e` 的扩展。长期使用建议把本包装为 Pi 包，并确保 `pi list` 里没有未过滤的 `pi-herdr-agents`（两者注册同名工具，例如 `subagent`）。完整安装与冲突处理见 [docs/install.md](docs/install.md)。
 
-本扩展只在 `REX_SESSION` 与 `REX_BLOCK` 都存在时注册工具；在普通终端里不会生效。子代理进程带 `PI_SUBAGENT_ID`，作为叶子不会注册 `subagent` 工具。
+本扩展只在 `REX_SESSION` 与 `REX_BLOCK` 都存在时注册工具；在普通终端里不会生效。子代理通过 delegation depth 和 `spawning.maxDepth` 受限，默认深度 1，因此默认是叶子。
 
 配置读取 `$PI_CODING_AGENT_DIR/rex-agents/config.json`，默认是 `~/.pi/agent/rex-agents/config.json`。旧的 `herdr-agents/config.json` 不读取、不迁移；新文件不存在时使用默认配置（split、right、`maxPerTab=2`）。详见 [配置说明](docs/configuration.md#configuration-file)。
 
@@ -49,16 +49,9 @@ pi --no-extensions -e /Users/qiangwenjun/Documents/project/pi-rex-agents/src/ext
 测试需要一个 Rex 会话，并且当前 Pi 进程运行在 Rex block 内（`REX_SESSION` / `REX_BLOCK` 已设置）。
 
 ```bash
-# 普通子代理：启动、状态、结果读取、父会话存活
-bun src/p1.ts
-
-# worktree 隔离：创建 -> 子代理运行 -> worktree_list -> worktree_remove
+bun src/p0.ts
 bun src/p1.ts --worktree
-
-# 持久化专家：第一轮 -> subagent_send 第二轮 -> subagent_stop
 bun src/p1.ts --persistent
-
-# P2：cancel / interrupt / resume
 bun src/p2.ts
 ```
 
@@ -68,22 +61,19 @@ bun src/p2.ts
 
 ```bash
 npm run typecheck
-bun src/host-message-check.ts
-bun src/wording-check.ts
+npm run p0
 ```
 
 ## 目录
 
 - `maestro/surfaces/rex/rex-cli.ts`：`rex` CLI 的 argv 封装，不拼接 shell
 - `maestro/surfaces/rex/rex-surface-provider.ts`：Rex `SurfaceProvider`
-- `src/infrastructure.ts`：把 provider 组装成内核的 `PiRunSessionInfrastructure`
+- `pi-extension/subagents/index.ts`：Pi extension 入口和内核 composition root
+- `pi-extension/subagents/rex-composition.ts`：Rex provider、supervision、worktree composition
+- `pi-extension/subagents/host-notice.ts`：Rex system prompt 宿主提示
 - `maestro/runtime/pi-placement.ts`：内核的 split 名额预留队列；原生 placement 沿 launch/resume 链传递
-- `src/rex-host-api.ts`：注册边界的文案包装（描述、命令输出、消息）
-- `src/rex-wording.ts`：上游 Host 文案 → Rex 文案的精确替换
-- `src/extension.ts`：Pi extension 入口 + system prompt 宿主提示
 - `maestro/surfaces/rex/git.ts` / `maestro/surfaces/rex/worktree.ts`：worktree 原语与受管目录
 - `src/p0.ts` / `src/p1.ts` / `src/p2.ts`：P0 / P1 / P2 探针
-- `src/host-message.ts`：投递消息的 Host 文案改写
 - `src/doctor.ts`：Rex / Pi / 包冲突自检
 - `skills/pi-rex-agents/SKILL.md`：模型侧的 Rex 子代理操作说明
 - `docs/`：架构与历史验收记录

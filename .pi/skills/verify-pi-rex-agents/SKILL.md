@@ -25,6 +25,7 @@ For lifecycle, delivery, placement or cleanup changes, run all of:
 
 ```bash
 npm test
+bun test/smoke-extension.ts
 npm run typecheck
 npm run lint
 npm run format:check
@@ -44,7 +45,7 @@ Startup uses `waitForPiReady` (`idle` only); each later turn uses
 `waitForPiTurnSettled` (`done` or `idle`, excluding `working` and `blocked`).
 Keep the existing timeout and require session evidence before checking status (F1).
 
-The smoke test starts a parent Pi with `--no-extensions -e <checkout>/src/extension.ts`, calls the real `subagent` tool through the deterministic provider, checks the `<subagent_report>` delivery and child session, observes a child block appear, and waits for it to disappear.
+The smoke test starts a parent Pi with `--no-extensions -e <checkout>/pi-extension/subagents/index.ts`, calls the real `subagent` tool through the deterministic provider, checks the `<subagent_report>` delivery and child session, observes a child block appear, and waits for it to disappear.
 
 For a manual evidence run:
 

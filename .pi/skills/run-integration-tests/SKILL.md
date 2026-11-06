@@ -12,6 +12,7 @@ echo "REX_SESSION=$REX_SESSION"
 echo "REX_BLOCK=$REX_BLOCK"
 command -v rex
 npm test
+bun test/smoke-extension.ts
 npm pack --dry-run
 ```
 
@@ -32,7 +33,7 @@ Keep the existing timeout and require session evidence before checking status (F
 npm run test:integration:rex
 ```
 
-The test starts `test/integration/fake-provider.ts`, creates a `pira-lab-*` root with a Unix socket no longer than 104 bytes, starts `rex server run --listen ... --state-dir ... --restore=false`, verifies `rex whoami --json` inside a lab block, launches a real parent Pi with `--no-extensions -e <checkout>/src/extension.ts`, and checks report delivery, child session evidence, block creation and cleanup. Wait on session files, OSC/program status, or block state; fixed sleeps are not synchronization.
+The test starts `test/integration/fake-provider.ts`, creates a `pira-lab-*` root with a Unix socket no longer than 104 bytes, starts `rex server run --listen ... --state-dir ... --restore=false`, verifies `rex whoami --json` inside a lab block, launches a real parent Pi with `--no-extensions -e <checkout>/pi-extension/subagents/index.ts`, and checks report delivery, child session evidence, block creation and cleanup. Wait on session files, OSC/program status, or block state; fixed sleeps are not synchronization.
 
 For a manual run and evidence:
 

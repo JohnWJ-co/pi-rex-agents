@@ -22,7 +22,7 @@ export const SKILL_FILE_MAX_BYTES = 64 * 1024;
 /** Largest combined size of all skill files read, and of all injected blocks. */
 export const SKILLS_TOTAL_MAX_BYTES = 256 * 1024;
 
-const MESSAGE_TYPE = "pi-herdr-agents:declared-skills";
+const MESSAGE_TYPE = "pi-rex-agents:declared-skills";
 
 /** The fields of Pi's loaded `Skill` this module reads. */
 interface LoadedSkill {

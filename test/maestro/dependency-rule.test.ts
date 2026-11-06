@@ -188,8 +188,15 @@ function isForbiddenEdge(root: string, reference: ModuleReference) {
 		case "adapters/fake":
 		case "surfaces/fake":
 			return !(target === "core" || isNodeBuiltin(specifier));
-		case "pi-extension":
-			return target === "adapters/pi" || target === "surfaces/rex";
+		case "pi-extension": {
+			const importerPath = toRepoPath(root, reference.file);
+			const isHostComposition =
+				importerPath === "pi-extension/subagents/index.ts" ||
+				importerPath === "pi-extension/subagents/rex-composition.ts";
+			return isHostComposition
+				? target === "adapters/pi"
+				: target === "adapters/pi" || target === "surfaces/rex";
+		}
 		default:
 			return false;
 	}
@@ -305,7 +312,7 @@ describe("maestro dependency rule", () => {
 		});
 	});
 
-	it("pi-extension never imports adapters or surfaces directly", () => {
+	it("pi-extension keeps Rex host composition at the entry boundary", () => {
 		assertNoForbiddenImports(
 			"pi-extension dependency violations",
 			(violation) =>
@@ -443,14 +450,21 @@ describe("maestro dependency rule", () => {
 		withScratchFixture(
 			{
 				"pi-extension/feature/direct.ts":
-					'import "../../maestro/adapters/pi/x.ts";\n',
+					'import "../../maestro/adapters/pi/x.ts";\nimport "../../maestro/surfaces/rex/x.ts";\n',
+				"pi-extension/subagents/index.ts":
+					'import "../../maestro/surfaces/rex/x.ts";\nimport "../../maestro/adapters/pi/x.ts";\n',
+				"pi-extension/subagents/rex-composition.ts":
+					'import "../../maestro/surfaces/rex/x.ts";\n',
 				"maestro/adapters/pi/x.ts": "export {};\n",
+				"maestro/surfaces/rex/x.ts": "export {};\n",
 			},
 			(root) => {
 				assert.deepEqual(
 					collectViolations(root).map((violation) => violation.message),
 					[
 						"pi-extension/feature/direct.ts: forbidden import ../../maestro/adapters/pi/x.ts",
+						"pi-extension/feature/direct.ts: forbidden import ../../maestro/surfaces/rex/x.ts",
+						"pi-extension/subagents/index.ts: forbidden import ../../maestro/adapters/pi/x.ts",
 					],
 				);
 			},

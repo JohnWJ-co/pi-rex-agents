@@ -6,7 +6,7 @@
  */
 import { readFileSync } from "node:fs";
 import { dirname } from "node:path";
-import piRexAgentsExtension from "./extension.ts";
+import piRexAgentsExtension from "../pi-extension/subagents/index.ts";
 import { flattenBlocks, RexCli } from "../maestro/surfaces/rex/rex-cli.ts";
 import { RexSurfaceProvider } from "../maestro/surfaces/rex/rex-surface-provider.ts";
 

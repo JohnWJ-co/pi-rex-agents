@@ -3,7 +3,7 @@
  * The subagents extension owns and writes it; the child protocol extension
  * only reads it, so both agree on one key without importing each other.
  */
-export const SUBAGENT_RUNTIME_KEY = Symbol.for("pi-subagents/runtime");
+export const SUBAGENT_RUNTIME_KEY = Symbol.for("pi-rex-agents/runtime");
 
 interface RegistryRow {
 	persistent?: boolean;

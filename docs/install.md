@@ -10,7 +10,7 @@
 
 ```bash
 cd /Users/qiangwenjun/Documents/project/pi-rex-agents
-pi --no-extensions -e "$PWD/src/extension.ts"
+pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 ```
 
 `--no-extensions` 会关闭自动发现，只加载显式 `-e` 的扩展。这是最稳妥的首次验证方式。
@@ -31,7 +31,7 @@ pi install ./                # 写入个人 ~/.pi/agent/settings.json
 ```json
 {
   "pi": {
-    "extensions": ["./src/extension.ts"],
+    "extensions": ["./pi-extension/subagents/index.ts"],
     "skills": ["./skills"]
   }
 }
@@ -101,6 +101,5 @@ npm run p2          # cancel / interrupt / resume
 
 ```bash
 npm run typecheck
-bun src/host-message-check.ts
-bun src/wording-check.ts
+bun test/smoke-extension.ts
 ```

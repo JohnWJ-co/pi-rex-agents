@@ -198,7 +198,7 @@ async function inspectEntry(
 				(row) => !row.isLinkedWorktree || row.branch !== entry.branch,
 			)
 		)
-			throw new Error("Git and Herdr worktree identity disagree");
+			throw new Error("Git and Rex worktree identity disagree");
 		entry.workspaceId = matches[0]?.workspaceId;
 		for (const { value } of entry.manifest) {
 			if (
@@ -250,7 +250,7 @@ export function formatWorktreeInventory(
 			)
 			.map(
 				(row) =>
-					`${row.branch == null ? "unknown branch" : encodeHostValue(row.branch)} — ${shownPath(row.path)}\nSource: ${row.sourceRepo == null ? "unknown" : shownPath(row.sourceRepo)} · workspace: ${encodeHostValue(row.workspaceId ?? "none")} · manifest: ${row.manifest.length ? row.manifest.map(({ value }) => encodeHostValue(isString(value.state) ? value.state : "unknown")).join(", ") : "absent"}\n${row.classification} · Git: ${row.git ? `${row.git.dirtyFiles} dirty, ${row.git.untrackedFiles} untracked, ${row.git.ignoredFiles} ignored, ${row.git.conflicts} conflicts` : "unknown"}${row.blockers.length ? ` · ${shownList(row.blockers)}` : " · clean"}${row.warnings.length ? `\nWarning: ${shownList(row.warnings)}` : ""}`,
+					`${row.branch == null ? "unknown branch" : encodeHostValue(row.branch)} — ${shownPath(row.path)}\nSource: ${row.sourceRepo == null ? "unknown" : shownPath(row.sourceRepo)} · window: ${encodeHostValue(row.workspaceId ?? "none")} · manifest: ${row.manifest.length ? row.manifest.map(({ value }) => encodeHostValue(isString(value.state) ? value.state : "unknown")).join(", ") : "absent"}\n${row.classification} · Git: ${row.git ? `${row.git.dirtyFiles} dirty, ${row.git.untrackedFiles} untracked, ${row.git.ignoredFiles} ignored, ${row.git.conflicts} conflicts` : "unknown"}${row.blockers.length ? ` · ${shownList(row.blockers)}` : " · clean"}${row.warnings.length ? `\nWarning: ${shownList(row.warnings)}` : ""}`,
 			)
 			.join("\n\n") || "No managed worktrees found."
 	);
@@ -405,7 +405,7 @@ export async function removeContainedWorktree(
 				if (report?.releasedClaims.length)
 					forgetOpenedPrimaryWorkspaceClaims(report.releasedClaims);
 			} catch (error) {
-				warnings.push(`Primary workspace report failed: ${message(error)}`);
+				warnings.push(`Primary window report failed: ${message(error)}`);
 			}
 		}
 		for (const manifest of entry.manifest) {
