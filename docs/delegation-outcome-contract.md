@@ -4,7 +4,7 @@
 - **Status:** v0.1 is implemented. It adds [verdicts](#verdicts) to v0, an
   additive change: a v0 parent can ignore the `accept` request field and the
   `Check:` line.
-- **Reference implementation:** `pi-herdr-agents`
+- **Reference implementation:** `pi-rex-agents`
 - **Decisions:** [ADR-0016](adr/0016-delegation-outcome-contract.md) (the
   contract), [ADR-0017](adr/0017-accept-check.md) (the accept check)
 - **Code anchors:** every `file:line` cites commit `9befa7f`. Anchors for
@@ -59,7 +59,7 @@ agent run, so settlement does not require another `agent_start`.
 | Role | Meaning |
 | --- | --- |
 | Parent | The agent that delegates a task and evaluates the outcome. |
-| Host | The orchestrator that launches the child and delivers its outcome. `pi-herdr-agents` is the reference host. |
+| Host | The orchestrator that launches the child and delivers its outcome. `pi-rex-agents` is the reference host. |
 | Child | The delegated agent. It writes the report text and nothing else in the delivery. |
 
 The host enforces mechanisms. It frames child text, bounds sizes, records
@@ -239,7 +239,7 @@ in any case):
   `<subagent_report` or a newline.
 - When that argument would exceed 1,000 characters, the host omits the path
   form, prints `worktree_remove({ target: "<workspace-id>" })`, and says why.
-- `/worktree remove <id>` and `herdr worktree remove --workspace <id>` appear
+- `/worktree remove <id>` appears
   only for a workspace ID that both read back unchanged
   (`[A-Za-z0-9._:@+-]`, at most 200 characters).
 - `Resume: pi --session <path>` uses `shellArgument`: the bare path when it is a

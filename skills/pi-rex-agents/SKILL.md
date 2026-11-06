@@ -28,6 +28,12 @@ delegate; another multiplexer or its skills do not apply here, even if installed
 - Roles come from `.pi/agents` and `~/.pi/agent/agents`; this host ships no
   role pack. `agent` may be omitted for a bare child.
 
+## Tools and results
+
+- Installed compression-provider tools are appended to an explicit tool allowlist, including `tools: "read,bash"`; explicit deny rules still apply. Without a compression provider, Pi keeps native auto-compaction.
+- The parent reads validated result artifacts and falls back to session JSONL for text. Semantic exit, the wrapper exit code and owned process evidence govern completion; terminal screen text does not.
+- Persistent specialists accept a new task after the previous result arrives. Directory events wake their inbox, with a 5-second polling fallback. A busy specialist rejects a send and keeps no queue.
+
 ## While children run
 
 - Do not poll, sleep, tail logs, or call `subagents_list` to check status.

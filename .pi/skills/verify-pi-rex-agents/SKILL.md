@@ -24,7 +24,7 @@ It checks the Rex and Pi binaries, Node, `REX_SESSION`/`REX_BLOCK`, the working-
 For lifecycle, delivery, placement or cleanup changes, run all of:
 
 ```bash
-npm test
+bash docs/p4/baseline/test-gate.sh
 bun test/smoke-extension.ts
 npm run typecheck
 npm run lint
@@ -75,5 +75,7 @@ For a refactor behavior pin:
 ```bash
 node --experimental-strip-types .pi/skills/verify-pi-rex-agents/scripts/pin.ts > /tmp/pi-rex-pin.json
 ```
+
+The package identity gate (`test/package-manifest.test.js`) must pass with an empty `docs/p4/baseline/expected-identity.txt`. Inspect `npm pack --dry-run`: it may contain only runtime TypeScript, package metadata, README, LICENSE, the example config and `skills/pi-rex-agents/SKILL.md`; tests, migration docs and lab artifacts stay outside the package. Require no extension file over 32 KiB (`find pi-extension/subagents -type f -size +32k -print`) and no empty root directories. Never update `released.json` to accommodate a rename; stop on a breaking schema difference.
 
 Compare a pin made from the intended base checkout with the current tree. A difference is a behavior change and needs review. Keep every extension source file under the repository's established size limit and inspect the final `git diff` and package preview.

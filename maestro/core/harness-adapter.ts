@@ -32,7 +32,7 @@ export interface SpawnOptions {
 	cwd: string;
 	sessionId: string;
 	worktree?: Worktree;
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	/** Unprovisioned launch request. Pi resolves base and writes the ownership manifest before resource acquisition. */
 	worktreeRequest?: WorktreeSpec;
 	placement?: Task["placement"];
@@ -43,22 +43,22 @@ export interface SpawnOptions {
 	surface?: SurfaceHandle;
 	/** Extra environment for the agent process. */
 	env?: Record<string, string>;
-	// pi-herdr-agents extension: carried from Task, see 4.1
+	// pi-rex-agents extension: carried from Task, see 4.1
 	runtime?: Task["runtime"];
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	session?: Task["session"];
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	behavior?: Task["behavior"];
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	tools?: string[];
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	systemPrompt?: string;
 	/** Validated accept check for the child's own loop and the parent re-check. */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	accept?: Task["accept"];
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface ResumeOptions {
 	acquisitionSignal?: AbortSignal;
 	name: string;
@@ -109,7 +109,7 @@ export interface HarnessAdapter {
 	 */
 	exitCode?(handle: AgentHandle): number | undefined;
 
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	resume(opts: ResumeOptions): Promise<AgentHandle>;
 
 	/**
@@ -117,7 +117,7 @@ export interface HarnessAdapter {
 	 * can observe. Driven by wake-ups and sidecar evidence, not polling.
 	 * Rejects on abort.
 	 */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	awaitCompletion(
 		handle: AgentHandle,
 		signal: AbortSignal,

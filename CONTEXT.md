@@ -5,8 +5,8 @@
 **Pi subagent runtime**:
 The single real execution path for fresh and resumed children, coordinated by a
 run session through the Pi harness adapter. `launchPiSubagent()` still owns each
-complete launch transaction; completion uses Pi sidecar evidence first and the
-terminal exit marker as fallback.
+complete launch transaction; completion uses validated result artifacts and session JSONL for text, with
+`.exit`, actual `.exitcode` and owned process evidence for exit.
 _Avoid_: Runtime dispatch, adapter registry, split launch ownership
 
 **Harness adapter**:
@@ -41,13 +41,13 @@ _Avoid_: Runtime authorization, package split, hidden compatibility re-export
 
 **Conformance suite**:
 Shared seam-contract tests applied to an in-memory fake and the real
-implementation. Fake coverage is local; real Pi and Herdr coverage uses the
+implementation. Fake coverage is local; real Pi and Rex coverage uses the
 deterministic integration suite.
 _Avoid_: Second supported harness, fake-only behavior proof, release certification
 
 **Acquisition uncertainty**:
 A resource-creation or command-dispatch request whose remote outcome is not
-proved. Stopping a timed-out Herdr client does not cancel the server request.
+proved. Stopping a timed-out Rex client does not cancel the server request.
 The host blocks model fallback and retains observed identities. An initialized
 child stays owned and supervised until confirmed termination; an ownerless
 failure records only recovery evidence and never invents a handle.
@@ -85,7 +85,7 @@ The accept-check outcome a delivery carries, from the closed set `accepted`,
 _Avoid_: Child claim, open status string, run outcome
 
 **Outcome ledger**:
-The local append-only `herdr-agents/outcomes.jsonl` file with one line per model
+The local append-only `rex-agents/outcomes.jsonl` file with one line per model
 attempt: run, role, models, elapsed time, outcome, and verdict, never task text,
 check output, or environment. It is not the persistent delivery ledger.
 _Avoid_: Ledger (unqualified), delivery ledger, run log
@@ -119,34 +119,18 @@ specialists never count.
 _Avoid_: Manual `subagent_done` for nested children, exit hold, polling for results
 
 **Process identity**:
-A child's Pi process named by immutable kernel facts (PID, start time, boot,
-and PID namespace), recorded by the child at launch and verified by the parent
-against the Herdr pane. Every managed worktree child records it. A worktree
-cancel signals and judges exit only by it. It reads Linux `/proc`.
-_Avoid_: argv match, foreground process, shell visibility
+A child's Pi process recorded beside its session and checked against the owned Rex block before signalling. PID, start and host identity evidence prevent signalling a replacement process. Missing or unverifiable identity leaves termination unconfirmed unless block absence proves it.
+_Avoid_: argv match, terminal text, foreground process as ownership
 
-**Delegated marker**:
-The display-only pane token `piha_delegated_v1=live` that a parent reports on
-a delegated child's pane inside Herdr; there is no setting. It means Herdr reported
-the child's own session file as the pane's agent session within the last 15
-seconds, not that the child is alive when Herdr draws the row. One stable
-source, a 15-second TTL, and increasing sequence numbers bound a leftover
-marker; each renewal first rereads that agent session from Herdr. A
-`/worktree` handoff is never marked.
-_Avoid_: liveness proof, ownership record, security boundary, per-run source, process identity
-
-**Sidebar Focus**:
-The Herdr agent view that the optional `pi-herdr-agents.sidebar` plugin sets
-by default and on request. Hooks re-apply it unless the user chose All. It hides rows whose delegated marker is `live` while their status
-is idle, working, or done, and keeps blocked, unknown, and unmarked rows. All
-clears only this plugin's view and reports a view that another tool owns.
-_Avoid_: hiding processes, notification filter, popup
+**Rex program status**:
+Pi owns the root `program_status` record and its working, blocked, done and idle states. The extension adds an `id=pira` / `app=pira` child record for task identity and result metadata, bounded to 2048 decoded UTF-8 bytes. Completion uses result/session and process-exit evidence, not terminal text or a sidebar marker.
+_Avoid_: extension-owned root, screen sentinel, liveness proof
 
 **Pi startup confirmation**:
 The bounded check that a `/worktree` handoff's Pi is running before its
 workspace is focused: a Pi process in the root pane with the worktree cwd whose
 launch-time environment names the launched session in
-`PI_HERDR_AGENTS_SESSION`. Nothing inside Pi reads that marker.
+`PI_REX_AGENTS_SESSION`. Nothing inside Pi reads that marker.
 _Avoid_: argv match, `--session` visibility, child-context hint
 
 **No-progress advisory**:
@@ -157,20 +141,20 @@ _Avoid_: Hang verdict, automatic recovery, stall replacement
 
 **Legacy external CLI role**:
 An old role definition that contains `cli`. Discovery reports a migration
-diagnostic, and launch fails before Herdr creates a pane or worktree. Remove
+diagnostic, and launch fails before Rex creates a pane or worktree. Remove
 `cli` and `cli-model`, then select the model through Pi provider/model routing.
 _Avoid_: Silent Pi reinterpretation, compatibility adapter
 
 **Pack-neutral host**:
 This package as an execution host that ships no agent roles and no planning or
-review workflows. Its only skill, `pi-herdr-agents`, is a general operating guide for its own
+review workflows. Its only skill, `pi-rex-agents`, is a general operating guide for its own
 control tools. Role packs and project or global definitions supply every
 named role. An empty catalog is valid, and bare launches need no role.
 _Avoid_: Default role set, privileged pack, starter workflow
 
 **Role pack**:
 A separately installed Pi package that registers role definitions through the
-`pi-herdr-subagents:roles:discover:v1` event. Registered packs form the whole
+`pi-rex-subagents:roles:discover:v1` event. Registered packs form the whole
 package layer below global and project definitions; duplicate names across
 packs are disabled. A pack owns its roles' workflows, skills, prerequisites, and
 workflow glossary.
@@ -189,7 +173,7 @@ The number of launches between a top-level session (depth 0) and a session,
 exported as `PI_SUBAGENT_DEPTH=<parent depth + 1>` on every child launch,
 including resumes. A `/worktree` handoff continues the parent's conversation,
 so it keeps the parent's depth and is allowed at the limit. The host refuses
-any child launch whose depth would exceed `spawning.maxDepth` (default 3), for
+any child launch whose depth would exceed `spawning.maxDepth` (default 1), for
 every role. A non-numeric or negative inherited value is an unknown depth and
 refuses launches and handoffs alike; it never resets to 0.
 _Avoid_: Recursion guard, per-role limit, breadth cap
@@ -225,12 +209,9 @@ The append-only evidence record of persistent task dispatch and terminal
 outcomes for one session generation.
 _Avoid_: Work queue, mutable task list, outcome ledger
 
-**Agents tab**:
-An extension-owned Herdr tab grouping delegated child panes in an existing
-checkout workspace. Ownership comes from returned IDs, not its display label.
-The pane cap includes every live pane; overflow creates another tab, not a
-workspace. Separate parent processes own separate groups.
-_Avoid_: Agent workspace, label-based ownership, automatic rearrangement
+**Placement**:
+A split starts a child block beside its parent in the current Rex window (tab). Parent-owned live children and pending reservations consume the default two split slots; overflow and explicit tab placement open a new window. Worktrees always use a new window. Ownership comes from returned IDs.
+_Avoid_: shared global pane cap, label-based ownership, automatic rearrangement
 
 **Retained checkout shell**:
 The interactive shell in a managed worktree's root pane, preserved after the
@@ -245,7 +226,7 @@ _Avoid_: Rebindable checkout, shared worktree ownership
 
 **Worktree inventory**:
 An inspect-only view joining managed checkout discovery, Git registration/state,
-Herdr workspace association, and reachable owned manifests, including orphans.
+Rex workspace association, and reachable owned manifests, including orphans.
 _Avoid_: Session-only resource list, cleanup action
 
 **Cwd containment**:
@@ -256,7 +237,7 @@ _Avoid_: Managed-path containment, manifest ownership authorization
 **Cleanup eligibility**:
 Fresh evidence of cwd containment, registered checkout identity, a named branch,
 no detected process holder, known live child, or persistent lease, and clean Git
-state. Only Herdr-confirmed idle retained shells are exempt from process checks,
+state. Only Rex-confirmed idle retained shells are exempt from process checks,
 never runtimes at the same PID. Ignored files and individual process-visibility
 gaps, including an undetermined cwd, are disclosed, not blockers. Other unknown
 evidence blocks removal.
@@ -274,13 +255,8 @@ remain blockers.
 _Avoid_: Proven unrelated, machine-wide inactivity, bypass permission
 
 **Explicit worktree removal**:
-A parent-requested removal of one named managed checkout and its open worktree
-workspace, with absence verification and retained branch history. Never automatic
-reaping. It never closes the source repository's primary workspace. When this
-process recorded that worktree creation appeared to open that workspace and a
-read taken just before the report still shows it untouched, removal suggests
-the `herdr workspace close` command, to use only if the workspace is unused.
-_Avoid_: Branch deletion, completion cleanup, automatic close of a workspace the user may have used
+A parent-requested removal of one named managed checkout and its owned Rex window, with checkout absence verification and retained branch history. It never reaps on completion or closes the source session. Git-only orphans are removed only after fresh eligibility checks.
+_Avoid_: branch deletion, completion cleanup, primary-session close
 
 **Dirty-state preservation**:
 Explicit opt-in staging and WIP commitment of a worktree's uncommitted and

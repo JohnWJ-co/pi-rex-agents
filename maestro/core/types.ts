@@ -11,7 +11,7 @@ import type { AcceptSpec, ChildAcceptReport } from "./accept.ts";
  *  must be able to project its own richer states onto these five. */
 export type AgentState = "idle" | "working" | "blocked" | "done" | "unknown";
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type ThinkingLevel =
 	| "off"
 	| "minimal"
@@ -43,10 +43,10 @@ export interface Task {
 	placement?: "split" | "tab";
 	timeoutMs?: number;
 	/** Validated accept check; the parent re-check decides the verdict. */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	accept?: AcceptSpec;
 	/** The caller's raw model request, such as `task:<category>`, for the outcome ledger. */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	requestedModel?: string;
 	/**
 	 * Extra environment for the agent process, keyed by variable name.
@@ -55,7 +55,7 @@ export interface Task {
 	 * surface command prefix). Core passes it through untouched.
 	 */
 	env?: Record<string, string>;
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	runtime?: {
 		model: string;
 		thinking: ThinkingLevel;
@@ -63,12 +63,12 @@ export interface Task {
 		 *  provider error; today's launchSubagentWithFallbacks (index.ts:2631). */
 		fallbacks?: { model: string; thinking: ThinkingLevel }[];
 	};
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	session?: {
 		mode: "standalone" | "lineage-only" | "fork";
 		parentSessionId?: string;
 	};
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	behavior?: {
 		persistent?: boolean;
 		autoExit?: boolean;
@@ -78,10 +78,10 @@ export interface Task {
 		denyTools?: string[];
 	};
 	/** Explicit tool allowlist; overrides Role.allowedTools when set. */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	tools?: string[];
 	/** Explicit system prompt; overrides Role.systemPrompt when set. */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	systemPrompt?: string;
 }
 
@@ -102,7 +102,7 @@ export interface Role {
 	systemPrompt: string;
 	/** Harness-level tool allowlist. Empty means "harness default". */
 	allowedTools: string[];
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	defaults?: {
 		model?: string;
 		thinking?: ThinkingLevel;
@@ -118,7 +118,7 @@ export interface Role {
 		cwd?: string;
 	};
 	/** Where the definition came from: project, global, or role pack. */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	source?: string;
 }
 
@@ -129,7 +129,7 @@ export type WorktreeState =
 	| "ready_for_review"
 	| "failed"
 	| "needs_help"
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	| "cancelled"
 	| "removed";
 
@@ -191,10 +191,10 @@ export interface AgentHandle {
 	worktree?: Worktree;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type RunOutcome = "completed" | "failed" | "timeout" | "killed" | "help";
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface CompletionResult {
 	reason: "done" | "ping" | "exitcode" | "error";
 	exitCode: number;
@@ -205,7 +205,7 @@ export interface CompletionResult {
 	accept?: ChildAcceptReport;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface WorktreeHandoff {
 	path: string;
 	branch: string;
@@ -224,11 +224,11 @@ export interface WorktreeHandoff {
 	gitError?: string;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface CompletionEvidence {
 	reason: "done" | "ping" | "exitcode" | "error";
 	/** Required harness exit status from CompletionResult. */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	exitCode: number;
 	ping?: { name: string; message: string };
 	errorMessage?: string;
@@ -238,7 +238,7 @@ export interface CompletionEvidence {
 	accept?: ChildAcceptReport;
 	finalMessage?: { text: string; stopReason?: string; errorMessage?: string };
 	/** Harness session reference; for Pi, the session file path. */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	sessionRef?: string;
 	worktree?: WorktreeHandoff;
 }
@@ -251,10 +251,10 @@ export interface RunResult {
 	output?: string;
 	error?: string;
 	durationMs: number;
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	evidence?: CompletionEvidence;
 	/** Present only for operator cancellation; the outcome is then "killed". */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	cancellation?: RunCancellation;
 }
 
@@ -262,7 +262,7 @@ export interface RunResult {
  * Operator cancellation provenance. A delivered cancellation is always
  * confirmed: unconfirmed termination keeps the run live instead of settling.
  */
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface RunCancellation {
 	/** When the terminal intent was recorded, before any abort or kill. */
 	requestedAt: number;
@@ -273,7 +273,7 @@ export interface RunCancellation {
 	error?: string;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type SurfaceAgentStatus =
 	| "idle"
 	| "working"
@@ -282,7 +282,7 @@ export type SurfaceAgentStatus =
 	| "error"
 	| "unknown";
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type PaneInspection =
 	| {
 			kind: "present";
@@ -293,7 +293,7 @@ export type PaneInspection =
 	| { kind: "missing"; error?: string }
 	| { kind: "unavailable"; error?: string };
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type ProcessState =
 	| { kind: "starting"; startedAt: number }
 	| { kind: "running"; startedAt: number; confirmedAt: number }
@@ -319,9 +319,9 @@ export type ProcessState =
 			exitCode?: number;
 	  };
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type SubagentActivityPhase = "starting" | "active" | "waiting" | "done";
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type SubagentActivityScope =
 	| "agent"
 	| "turn"
@@ -329,7 +329,7 @@ export type SubagentActivityScope =
 	| "streaming"
 	| "tool";
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type SubagentActivityEvent =
 	| "session_start"
 	| "input"
@@ -350,7 +350,7 @@ export type SubagentActivityEvent =
 	| "subagent_done"
 	| "session_shutdown";
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface SubagentActivityState {
 	version: 1;
 	runningChildId: string;
@@ -374,12 +374,12 @@ export interface SubagentActivityState {
 	toolEndedAt?: number;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type ActivityReadResult =
 	| { ok: true; activity: SubagentActivityState }
 	| { ok: false; reason: "missing" | "invalid" | "wrong-id"; error?: string };
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type ActivityDetail =
 	| { kind: "none"; observedAt: number }
 	| {
@@ -391,7 +391,7 @@ export type ActivityDetail =
 			sequence: number;
 	  };
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type TurnState =
 	| { kind: "unknown" }
 	| { kind: "starting"; observedAt: number }
@@ -409,7 +409,7 @@ export type TurnState =
 			previousActivitySequence: number | null;
 	  };
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type ActivityHealth =
 	| { kind: "unseen" }
 	| { kind: "healthy"; observedAt: number }
@@ -420,7 +420,7 @@ export type ActivityHealth =
 			error?: string;
 	  };
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type PaneObservation =
 	| { kind: "unknown" }
 	| { kind: "present"; observedAt: number; agentStatus: SurfaceAgentStatus }
@@ -433,10 +433,10 @@ export type PaneObservation =
 	  }
 	| { kind: "missing"; detectedAt: number; error?: string };
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type CompletionDelivery = "pending" | "delivered" | "suppressed";
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface SubagentLifecycle {
 	process: ProcessState;
 	turn: TurnState;
@@ -450,7 +450,7 @@ export interface SubagentLifecycle {
 	delivery: CompletionDelivery;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface LifecycleProjection {
 	kind:
 		| "starting"

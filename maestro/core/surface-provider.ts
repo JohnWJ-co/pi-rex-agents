@@ -11,7 +11,7 @@ import type {
 } from "./opened-primary-workspace.ts";
 import type { PaneInspection, SurfaceHandle } from "./types.ts";
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type SurfacePlacement =
 	| { kind: "grouped" }
 	| { kind: "split"; direction: "right" | "down" }
@@ -22,10 +22,10 @@ export interface SurfaceInfo {
 	name?: string;
 	cwd?: string;
 	/** Tab or window the surface belongs to. */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	group?: string;
 	/** Provider-native workspace/container id when the provider reports one. */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	workspaceId?: string;
 }
 
@@ -52,7 +52,7 @@ export type UncertainAcquisition =
 
 /** A started mutating request has no proven outcome. Never retry it. */
 export class AcquisitionUncertainError extends Error {
-	readonly code = "PIHA_ACQUISITION_UNCERTAIN";
+	readonly code = "PIRA_ACQUISITION_UNCERTAIN";
 	readonly uncertainty: UncertainAcquisition;
 	constructor(
 		message: string,
@@ -76,7 +76,7 @@ export function isAcquisitionUncertainError(
 ): error is AcquisitionUncertainError {
 	if (
 		!isAcquisitionRecord(error) ||
-		error.code !== "PIHA_ACQUISITION_UNCERTAIN" ||
+		error.code !== "PIRA_ACQUISITION_UNCERTAIN" ||
 		typeof error.name !== "string" ||
 		typeof error.message !== "string" ||
 		(error.stack !== undefined && typeof error.stack !== "string") ||
@@ -126,7 +126,7 @@ export interface CreateSurfaceOptions extends AcquisitionControl {
 	name: string;
 	cwd: string;
 	/** Default: { kind: "grouped" }. */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	placement?: SurfacePlacement;
 }
 
@@ -171,7 +171,7 @@ export class WorktreeProvisioningError extends Error {
 	}
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface WorktreeSurfaceInfo {
 	/** Empty for detached HEAD. */
 	branch: string;
@@ -181,7 +181,7 @@ export interface WorktreeSurfaceInfo {
 	isLinkedWorktree: boolean;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface SurfaceForegroundProcess {
 	pid: number;
 	name?: string;
@@ -190,7 +190,7 @@ export interface SurfaceForegroundProcess {
 	cwd?: string;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface SurfaceProcessInfo {
 	shellPid?: number;
 	foregroundProcessGroupId?: number;
@@ -250,7 +250,7 @@ export interface SurfaceProvider {
 		| Promise<OpenedPrimaryWorkspaceReport | undefined>;
 
 	/** Human-readable hint when isAvailable() is false; today's terminalSetupHint(). */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	setupHint(): string;
 
 	/**
@@ -258,46 +258,46 @@ export interface SurfaceProvider {
 	 * Rejects with a command-dispatch {@link AcquisitionUncertainError} when the
 	 * command may have reached the surface; any other rejection dispatched nothing.
 	 */
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	runScript(
 		surfaceId: string,
 		command: string,
 		options: { scriptPath: string; scriptPreamble: string },
 	): string | Promise<string>;
 
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	inspectSurface(surfaceId: string): Promise<PaneInspection>;
 
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	sendKeys(surfaceId: string, keys: string): void | Promise<void>;
 
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	getProcessInfo(
 		surfaceId: string,
 		opts?: { timeoutMs?: number },
 	): SurfaceProcessInfo | Promise<SurfaceProcessInfo>;
 
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	waitForShellReady(
 		surfaceId: string,
 		opts?: { timeoutMs?: number },
 	): Promise<void>;
 
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	waitForSurfaceAbsence(
 		surfaceId: string,
 		opts?: { timeoutMs?: number },
 	): Promise<void>;
 
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	listWorktreeSurfaces(opts?: {
 		cwd?: string;
 		timeoutMs?: number;
 	}): Promise<WorktreeSurfaceInfo[]>;
 
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	focusWorkspace(workspaceId: string): void | Promise<void>;
 
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	setTitle(target: "tab" | "workspace", title: string): void | Promise<void>;
 }

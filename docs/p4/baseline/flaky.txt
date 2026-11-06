@@ -2,3 +2,5 @@
 all cancelled callers retire Pi auxiliary entries after owned settlement without getters
 public resume provider-error preserves late-read demand and delivery retention
 post-evidence finalization I/O failure after caller cancellation delivers Stage3 ordinary error metadata and eagerly retires
+# 全套并发负载会触发既有 3 秒截止；监督观察 2/3 轮超时，单用例及单文件运行通过，保留原截止。
+quit then a second host load creates a healthy coordinator without resetting the global session

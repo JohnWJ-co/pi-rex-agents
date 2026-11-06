@@ -5,6 +5,7 @@ import {
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
+	realpathSync,
 	rmSync,
 	writeFileSync,
 } from "node:fs";
@@ -2019,7 +2020,7 @@ describe("Pi launch", () => {
 				},
 				createWorktree(name, cwd, branch, base) {
 					assert.equal(name, "Worker");
-					assert.equal(cwd, project);
+					assert.equal(cwd, realpathSync(project));
 					assert.equal(branch, "issue/59-fresh");
 					assert.equal(base, linkedSha);
 					const provisioning = JSON.parse(readFileSync(manifestFile, "utf8"));
@@ -2065,8 +2066,15 @@ describe("Pi launch", () => {
 				readFileSync(join(worktreePath, "linked.txt"), "utf8"),
 				"linked\n",
 			);
+			const commandLines = command.split("\n");
+			assert.equal(
+				commandLines[0],
+				`rm -f -- ${expectedShellQuote(`${running.sessionFile}.exitcode`)} ${expectedShellQuote(`${running.sessionFile}.exit`)}`,
+			);
 			assert.ok(
-				command.startsWith(`cd ${expectedShellQuote(worktreePath)} && `),
+				commandLines[1]?.startsWith(
+					`cd ${expectedShellQuote(worktreePath)} && `,
+				),
 			);
 			const manifest = JSON.parse(readFileSync(manifestFile, "utf8"));
 			assert.equal(manifest.sourceCwd, linkedCwd);
@@ -2134,7 +2142,7 @@ describe("Pi launch", () => {
 				},
 				createWorktree(name, cwd, branch, base) {
 					assert.equal(name, "Handoff");
-					assert.equal(cwd, project);
+					assert.equal(cwd, realpathSync(project));
 					assert.equal(branch, "handoff/59");
 					assert.equal(base, linkedSha);
 					assert.equal(

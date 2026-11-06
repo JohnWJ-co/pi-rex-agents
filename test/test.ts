@@ -40,6 +40,7 @@ import {
 	readFileSync,
 	mkdirSync,
 	readdirSync,
+	realpathSync,
 	renameSync,
 	rmSync,
 	utimesSync,
@@ -1322,10 +1323,11 @@ describe("host adapter migration", () => {
 				task: "bounded",
 				cwd: ".",
 			});
-			assert.equal(f.handle(explicit).cwd, f.projectDir);
+			const explicitCwd = realpathSync(f.projectDir);
+			assert.equal(f.handle(explicit).cwd, explicitCwd);
 			assert.ok(
 				f.commands[1].includes(
-					`PI_CODING_AGENT_DIR='${join(f.projectDir, ".pi", "agent")}'`,
+					`PI_CODING_AGENT_DIR='${join(explicitCwd, ".pi", "agent")}'`,
 				),
 			);
 			await f.finish(explicit);
@@ -1888,7 +1890,9 @@ describe("host adapter migration", () => {
 					f.mock,
 					invoking.ctx,
 				);
-				const expectedCwd = cwd ? join(f.projectDir, cwd) : f.projectDir;
+				const expectedCwd = cwd
+					? realpathSync(join(f.projectDir, cwd))
+					: f.projectDir;
 				assert.equal(f.handle(first).cwd, expectedCwd);
 
 				const reloaded = await import(

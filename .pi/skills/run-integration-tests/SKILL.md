@@ -11,7 +11,7 @@ This package's lifecycle integration suite runs in Rex. Before starting, remain 
 echo "REX_SESSION=$REX_SESSION"
 echo "REX_BLOCK=$REX_BLOCK"
 command -v rex
-npm test
+bash docs/p4/baseline/test-gate.sh
 bun test/smoke-extension.ts
 npm pack --dry-run
 ```
@@ -56,6 +56,8 @@ $L down
 
 Manual `drive` evidence includes `resultFile`, the validated `result` matching
 the report body, and `exitcode: 0`, alongside session and block lifecycle data.
+
+Run `node --experimental-strip-types --test test/no-foreign-host.test.ts` alongside the static gates. Verify the package identity contract with an empty `docs/p4/baseline/expected-identity.txt` and inspect the runtime-only archive; no tests, migration docs, local `.pi` settings or lab evidence may ship.
 
 Report pass, fail, and skip separately. A skipped Rex test is not full verification.
 

@@ -48,8 +48,7 @@ Goals:
   evidence only.
 - Each run attempt appends one line to a local outcome ledger that later routing
   tools can read.
-- The design touches no terminal or pane state. It works on Herdr 1 today and on
-  herdr-core (hc) later.
+- The design touches no terminal or pane state. It runs inside Pi on Rex, independently of terminal state.
 
 Non-goals:
 
@@ -82,7 +81,7 @@ accept: Type.Optional(
 `maxRetries` counts extra child turns after a failed check. With the default of
 1, the child runs the check at most twice. The parent then runs it once more.
 
-The host validates `accept` before Herdr creates anything. In the first version
+The host validates `accept` before Rex creates anything. In the first version
 it rejects `accept` together with `persistent: true` or a non-auto-exit child.
 Fork and worktree launches are allowed.
 
@@ -296,11 +295,10 @@ can finalize at once in one parent process.
 
 ## Compatibility
 
-**Herdr 1 now, hc later.** The child check runs inside the Pi process. The
+**Rex host.** The child check runs inside the Pi process. The
 parent re-check is a local process started from `finalize`. The verdict travels
 in the `.exit` file beside the session, and the ledger is a local file. None of
-these read panes, terminal text, or Herdr state, so a move to hc changes none of
-them.
+these read terminal text or change Rex root status.
 
 **Pack neutrality.** The host ships no check commands and keys no behavior on
 role or pack names. A pack such as pstack writes the command into its
@@ -321,7 +319,7 @@ once they pass `accept`.
   a narrower "child result delivery" entry;
 - `docs/worktree-subagents.md`, because the re-check runs in the worktree after
   handoff capture;
-- `skills/pi-herdr-agents/SKILL.md`, for how to pass a check;
+- `skills/pi-rex-agents/SKILL.md`, for how to pass a check;
 - `docs/troubleshooting.md`, for timeouts and `error` verdicts;
 - `docs/README.md`, which at this commit has no section for proposed design. It
   needs one to list this note.
@@ -357,7 +355,7 @@ Unit cases:
 - The ledger line has exactly the listed keys and contains no task text,
   output, or environment value.
 - Schema validation rejects `accept` with `persistent: true` or a
-  non-auto-exit child before any Herdr call.
+  non-auto-exit child before any Rex call.
 
 One deterministic integration scenario in
 `test/integration/subagent-lifecycle.test.ts`:

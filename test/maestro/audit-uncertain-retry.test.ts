@@ -418,7 +418,7 @@ it("recognizes cross-load structural uncertainty errors without changing Error m
 		assert.equal(error.message, "original message");
 		assert.equal(error.cause, cause);
 		const foreign: unknown = runInNewContext(
-			`Object.assign(new Error("original message", { cause }), { code: "PIHA_ACQUISITION_UNCERTAIN", uncertainty })`,
+			`Object.assign(new Error("original message", { cause }), { code: "PIRA_ACQUISITION_UNCERTAIN", uncertainty })`,
 			{ cause, uncertainty },
 		);
 		assert.equal(foreign instanceof AcquisitionUncertainError, false);
@@ -473,7 +473,7 @@ it("rejects malformed uncertainty variants and optional identity/recovery fields
 	];
 	for (const uncertainty of malformed) {
 		const error = Object.assign(new Error("uncertain"), {
-			code: "PIHA_ACQUISITION_UNCERTAIN",
+			code: "PIRA_ACQUISITION_UNCERTAIN",
 			uncertainty,
 		});
 		assert.equal(
@@ -489,7 +489,7 @@ it("rejects malformed uncertainty variants and optional identity/recovery fields
 		"error",
 		{},
 		{
-			code: "PIHA_ACQUISITION_UNCERTAIN",
+			code: "PIRA_ACQUISITION_UNCERTAIN",
 			message: "uncertain",
 			uncertainty: surface,
 			name: 1,
@@ -507,7 +507,7 @@ it("rejects malformed uncertainty variants and optional identity/recovery fields
 			Object.assign(
 				new Error("uncertain"),
 				{
-					code: "PIHA_ACQUISITION_UNCERTAIN",
+					code: "PIRA_ACQUISITION_UNCERTAIN",
 					uncertainty: surface,
 				},
 				fields,

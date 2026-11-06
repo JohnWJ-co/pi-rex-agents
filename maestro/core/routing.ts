@@ -50,11 +50,11 @@ export interface ModelRegistryAdapter {
 	find(provider: string, modelId: string): RoutingModel | undefined;
 	available(): RoutingModel[];
 	hasConfiguredAuth(model: { provider: string; id: string }): boolean;
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	supportedThinkingLevels(model: RoutingModel): ThinkingLevel[];
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	clampThinkingLevel(model: RoutingModel, level: ThinkingLevel): ThinkingLevel;
-	// pi-herdr-agents extension
+	// pi-rex-agents extension
 	/** Exact `provider/model-id` refs of the session's model scope (`--models` /
 	 * `enabledModels`, narrowed by an inherited {@link MODEL_SCOPE_ENV}).
 	 * Absent means the session is unscoped; empty means no model is in scope. */
@@ -118,7 +118,7 @@ function toRoutingModel(value: any): RoutingModel | undefined {
 	};
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface RoutingRegistrySource {
 	find(provider: string, modelId: string): any;
 	getAvailable?: () => any[];
@@ -126,7 +126,7 @@ export interface RoutingRegistrySource {
 	hasConfiguredAuth?: (model: any) => boolean;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export function createModelRegistryAdapter(
 	registry: RoutingRegistrySource,
 	capabilities: Pick<
@@ -177,7 +177,7 @@ export function createModelRegistryAdapter(
 	};
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 // Scoped sessions (--models / enabledModels) can use only their scoped model
 // set, so every selection path resolves against it: wrapping the registry
 // hides out-of-scope models from task shortlists, exact-ref validation, and
@@ -205,7 +205,7 @@ export function scopeModelRegistryAdapter(
 	};
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 /** The session's model scope, or undefined when the session is unscoped. An
  * empty scope is still a scope: no model passes it. */
 export function modelScopeOf(
@@ -214,7 +214,7 @@ export function modelScopeOf(
 	return registry.scope;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 /**
  * A scoped parent's exact model allowlist, carried to its child as a JSON
  * array of `provider/model-id` refs. Pi reads `--models` as patterns (globs,
@@ -224,7 +224,7 @@ export function modelScopeOf(
  */
 export const MODEL_SCOPE_ENV = "PI_SUBAGENT_MODEL_SCOPE";
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 /** The value a launch exports for {@link MODEL_SCOPE_ENV}; empty when unscoped. */
 export function formatInheritedModelScope(
 	scope: readonly string[] | undefined,
@@ -232,7 +232,7 @@ export function formatInheritedModelScope(
 	return scope ? JSON.stringify(scope) : "";
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 /**
  * Parse an inherited allowlist. Unset or empty means the parent was unscoped.
  * Anything else that is not a JSON array of strings fails closed: an empty
@@ -251,7 +251,7 @@ export function parseInheritedModelScope(
 	return [];
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 /**
  * This session's effective scope: its own resolved scope, narrowed to the
  * allowlist it inherited. An inherited allowlist applies even when the
@@ -273,7 +273,7 @@ function formatScope(scope: readonly string[]): string {
 	return scope.length > 0 ? scope.join(", ") : "none";
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 /** Refuse a model outside a scoped session's model set; unscoped sessions pass. */
 export function assertModelInScope(
 	model: string,

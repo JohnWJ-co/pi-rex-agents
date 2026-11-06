@@ -1,7 +1,7 @@
 /**
  * P2 integration probe: cancel, interrupt and resume against real Rex surfaces.
  *
- * This uses the upstream pi-herdr-agents tools through a fake Pi extension host,
+ * This uses the local pi-rex-agents tools through a fake Pi extension host,
  * but the child processes, Rex blocks and status probes are real.
  */
 import { readFileSync } from "node:fs";

@@ -23,14 +23,14 @@ import type {
 } from "../core/types.ts";
 import { defaultRetainSurface } from "./surface-retention.ts";
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface RuntimeCandidate {
 	model: string;
 	thinking: ThinkingLevel;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type DeliveryDecision = "delivered" | "suppressed";
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface RunObservation {
 	kind:
 		| "local-evidence"
@@ -46,7 +46,7 @@ export interface RunObservation {
 	activity?: SubagentActivityState;
 	activityRead?: ActivityReadResult;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface RunSessionHooks {
 	/** Ownership is registered first; a rejected hook leaves it recoverable. */
 	onSpawned?(handle: AgentHandle, task: Task): void | Promise<void>;
@@ -71,7 +71,7 @@ export interface RunSessionHooks {
 		task: Task,
 	): void | DeliveryDecision | Promise<void | DeliveryDecision>;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface OwnedRunAttempt {
 	handle: AgentHandle;
 	adapter: HarnessAdapter;
@@ -92,7 +92,7 @@ export interface OwnedRunAttempt {
  * Host work after the settle point that an operator cancel may still stop,
  * such as the parent's accept re-check (ADR-0017).
  */
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface FinalizeControl {
 	/**
 	 * Run `work` while `cancel` is still accepted for an already settled natural
@@ -111,7 +111,7 @@ export interface FinalizeControl {
 	 */
 	interruption(): "cancelled" | "suppressed" | undefined;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PreparedRun {
 	/** Captured role and fully validated, stable candidate list. */
 	role: Role;
@@ -128,12 +128,12 @@ export interface PreparedRun {
 		cancelled: AbortSignal,
 	): Promise<OwnedRunAttempt>;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface RunSessionOperations {
 	prepare(task: Task, role: Role): Promise<PreparedRun>;
 	resume?(options: ResumeOptions, task: Task): Promise<OwnedRunAttempt>;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface RunSessionOptions {
 	adapter: HarnessAdapter;
 	surfaceProvider?: SurfaceProvider;
@@ -152,7 +152,7 @@ export interface RunSessionOptions {
  * in-flight acquisition still owns the next attempt; that owner is terminated
  * when it is transferred. `unconfirmed` keeps the run live and retryable.
  */
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface CancelReport {
 	status: "requested" | "confirmed" | "unconfirmed" | "already-terminal";
 	requestedAt?: number;
@@ -160,7 +160,7 @@ export interface CancelReport {
 	/** An earlier cancel already recorded this run's intent. */
 	repeated?: boolean;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface RunSession {
 	spawn(task: Task, prepared?: PreparedRun): Promise<AgentHandle>;
 	/** Joins one owned producer; caller cancellation affects only this wait. */
@@ -186,14 +186,14 @@ export interface RunSession {
 	 */
 	cancel(taskId: string): Promise<CancelReport>;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 interface CancelState extends RunCancellation {
 	/** In-flight owned kill; concurrent cancels and the producer join it. */
 	kill?: Promise<void>;
 	/** Producer wake-ups after a kill settles or the run is suppressed. */
 	waiters: Set<() => void>;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 interface RunEntry {
 	task: Task;
 	prepared?: PreparedRun;
@@ -221,7 +221,7 @@ const CANCELLED_BEFORE_LAUNCH = "Subagent was cancelled before launch.";
 const UNCERTAIN_RETRY_INITIAL_MS = 1_000;
 const UNCERTAIN_RETRY_MAX_MS = 30_000;
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export function createRunSession(options: RunSessionOptions): RunSession {
 	const entries = new Map<string, RunEntry>();
 	// Identity only, never a historical owner/result registry.

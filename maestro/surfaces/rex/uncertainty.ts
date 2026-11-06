@@ -1,10 +1,9 @@
 /**
- * Structural twin of pi-herdr-agents' AcquisitionUncertainError.
+ * Structural twin of the local core AcquisitionUncertainError.
  *
- * The upstream launch boundary checks `code`/`uncertainty` structurally, so
- * the Rex adapter can report an uncertain command dispatch without importing a
- * node_modules TypeScript module at runtime (which Node's type stripper
- * refuses to load outside the extension host).
+ * The launch boundary checks `code`/`uncertainty` structurally so the Rex
+ * adapter can report uncertain dispatch without coupling the CLI surface
+ * implementation to the orchestration core.
  */
 export type RexUncertainty =
 	| {
@@ -15,7 +14,7 @@ export type RexUncertainty =
 	| { kind: "command-dispatch"; surfaceId: string };
 
 export class RexAcquisitionUncertainError extends Error {
-	readonly code = "PIHA_ACQUISITION_UNCERTAIN";
+	readonly code = "PIRA_ACQUISITION_UNCERTAIN";
 	readonly uncertainty: RexUncertainty;
 
 	constructor(

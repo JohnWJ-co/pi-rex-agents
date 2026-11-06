@@ -1,5 +1,5 @@
 /**
- * Rex implementation of pi-herdr-agents' SurfaceProvider seam.
+ * Rex implementation of pi-rex-agents' SurfaceProvider seam.
  *
  * The provider is intentionally a thin adapter over the public `rex` CLI. It
  * never opens Rex's private socket and never assumes another host is present.

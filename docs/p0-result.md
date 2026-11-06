@@ -1,5 +1,7 @@
 # P0 验证记录
 
+> 历史记录：保留 P0–P2 当时的适配层实现与验收证据。当前 hard fork 内核、命名、配置和回传行为以 [README](../README.md) 与 [P4 状态](p4/STATUS.md) 为准。
+
 ## 环境
 
 - macOS

@@ -1,5 +1,7 @@
 # Documentation map
 
+Current runtime guides describe the Rex hard fork. Files under `adr/` and `research/` retain upstream decisions and research context; P0–P2 pages are marked historical. Current behavior is defined by the [README](../README.md), [P4 status](p4/STATUS.md) and runtime contracts.
+
 Use this page to find the authoritative document for a task. Current shipped
 behavior and accepted ADRs govern existing APIs. Historical plans and research
 are evidence, not shipped contracts, when a later ADR supersedes them.

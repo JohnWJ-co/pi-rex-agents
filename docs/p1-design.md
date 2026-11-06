@@ -1,5 +1,7 @@
 # P1 架构定稿：pi-rex-agents
 
+> 历史记录：保留 P0–P2 当时的适配层实现与验收证据。当前 hard fork 内核、命名、配置和回传行为以 [README](../README.md) 与 [P4 状态](p4/STATUS.md) 为准。
+
 ## 目标
 
 在 Rex 中提供与 `pi-herdr-agents` 一致的子代理体验：父 Pi 异步启动子 Pi，子代理运行在独立的 Rex block 中，父代理可以查询、继续对话、停止和恢复；父 Pi 进程不阻塞，父会话在子代理运行期间保持可交互。

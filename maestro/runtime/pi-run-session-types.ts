@@ -38,7 +38,7 @@ import type {
 	DeliveryDecision,
 } from "./run-session.ts";
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiLaunchSnapshot {
 	parent: {
 		cwd: string;
@@ -54,7 +54,7 @@ export interface PiLaunchSnapshot {
 	paneConfig: PaneConfig;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiLaunchInput {
 	task: Task;
 	role: Role;
@@ -77,7 +77,7 @@ export interface PiLaunchInput {
 		cancelled: AbortSignal,
 	): PiAttemptSnapshot | Promise<PiAttemptSnapshot>;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiAttemptSnapshot {
 	task: Task;
 	role: Role;
@@ -91,7 +91,7 @@ export interface PiAttemptSnapshot {
 	snapshot: PiLaunchSnapshot;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiResumeInput {
 	taskId: string;
 	name: string;
@@ -101,18 +101,18 @@ export interface PiResumeInput {
 	autoExit?: boolean;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type PiWorktreeLaunch = WorktreeLaunch;
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type WorktreeHandoffBase = Omit<
 	WorktreeLaunch,
 	"workspaceId" | "paneId"
 >;
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type PiWorktreeHandoff = WorktreeHandoff;
 
 /** Structural view of the adapter's actual mutable child, not a copied registry row. */
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiRunRecord {
 	launchFailure?: string;
 	id: string;
@@ -150,7 +150,7 @@ export interface PiRunRecord {
 	accept?: AcceptSpec;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiStartedMetadata {
 	id: string;
 	name: string;
@@ -166,7 +166,7 @@ export interface PiStartedMetadata {
 	status: "started" | "uncertain";
 	launchFailure?: string;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiCompletedMetadata {
 	run: RunResult;
 	name: string;
@@ -191,7 +191,7 @@ export interface PiCompletedMetadata {
 	policyHash?: string;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiPersistentEvent {
 	version: 1;
 	type: "task-done" | "help-request";
@@ -200,7 +200,7 @@ export interface PiPersistentEvent {
 	at: string;
 	message?: string;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiLedgerEntry {
 	task: string;
 	outcome:
@@ -215,17 +215,17 @@ export interface PiLedgerEntry {
 	policyHash: string;
 	at: string;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type PiSendAcknowledgement =
 	| { id: string; task: string; inbox: string; outcome: "dispatched" }
 	| { error: string; task?: string; outcome?: "rejected-busy" };
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export type PiStopAcknowledgement =
 	| { id: string; name: string; status: "stop_requested" | "stop_pending" }
 	| { error: string; id?: string; name?: string };
 
 /** Narrow I/O for the existing host persistent policy, not a task scheduler. */
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiPersistentIO {
 	/** Raw events only; cursor indexes this array before generation filtering. */
 	readEvents(record: PiRunRecord): PiPersistentEvent[];
@@ -241,11 +241,11 @@ export interface PiPersistentIO {
 	recordStopped(record: PiRunRecord): void;
 }
 /** Run-scoped settlement I/O; only resumed acquisitions supply the late reader. */
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiSettlementIO extends PiPersistentIO {
 	readResumeResult?(): AttributedSummary & { sessionFile: string };
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiPersistentHostOperations {
 	send(
 		record: PiRunRecord,
@@ -260,13 +260,13 @@ export interface PiPersistentHostOperations {
 	drain(record: PiRunRecord, io: PiPersistentIO): void;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiProgressEvidence {
 	updatedAt?: number;
 	classification: "blocked-tool" | "truncated-turn" | "generic-no-progress";
 	lastEntryKind: "assistant" | "tool-result" | "message" | "other" | "none";
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiRunSessionHooks {
 	onSpawned?(
 		record: PiRunRecord,
@@ -281,7 +281,7 @@ export interface PiRunSessionHooks {
 		io: PiSettlementIO,
 	): void | DeliveryDecision | Promise<void | DeliveryDecision>;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiRunSessionInfrastructure {
 	surfaceProvider: SurfaceProvider;
 	/** Stable parent block used to verify the current window for split admission. */
@@ -294,7 +294,7 @@ export interface PiRunSessionInfrastructure {
 	/** The parent accept re-check's command runner; tests inject it. */
 	acceptRunner?: AcceptRunner;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface DefaultRunSessionOptions {
 	/** Test injection consumes the actual Stage 3 seams, not replacement launch logic. */
 	infrastructure?: PiRunSessionInfrastructure;
@@ -309,7 +309,7 @@ export interface DefaultRunSessionOptions {
 	/** Append one outcome-ledger line per model attempt. Default true. */
 	outcomeLedger?: boolean;
 }
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiWorktreeHandoffInput {
 	name: string;
 	task: string;
@@ -319,7 +319,7 @@ export interface PiWorktreeHandoffInput {
 	runtimePlan: ResolvedRuntimePlan;
 }
 
-// pi-herdr-agents extension
+// pi-rex-agents extension
 export interface PiRunSession extends RunSession {
 	handoffWorktree(
 		input: PiWorktreeHandoffInput,

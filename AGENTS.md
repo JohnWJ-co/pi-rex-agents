@@ -39,6 +39,7 @@ This tree is the P4 migration worktree. Keep changes scoped to the current check
 - `maestro/adapters/pi/child/rex-status.ts` — bounded OSC metadata on the pira child record only; Pi owns the root
 - `maestro/adapters/pi/child/inbox.ts` — persistent directory-watch wakeups with five-second reconciliation
 - `maestro/surfaces/rex/` — the only real SurfaceProvider implementation; `maestro/surfaces/fake/` is test-only
+- `test/package-manifest.test.js` — Rex package identity, lockfile, runtime-only archive and documentation contract
 - `test/smoke-extension.ts` — load-level entry, Rex host guard and host/leaf notice smoke
 - `test/integration/rex-harness.ts` — isolated Rex server, fake-provider configuration, parent launch and observable wait helpers
 - `test/integration/rex-smoke.test.ts` — real parent-to-child Rex smoke lifecycle
@@ -75,15 +76,16 @@ Do not make the integration test weaker to accommodate a flaky or unavailable en
 
 ## Verification
 
-For ordinary changes, run:
+For ordinary changes, run the unit suite through the P4 baseline gate in a clean host environment. Keep `expected-identity.txt` empty; the Rex package identity is asserted by `test/package-manifest.test.js`.
 
 ```bash
-npm test
+bash docs/p4/baseline/test-gate.sh
 bun test/smoke-extension.ts
 npm run docs:tools:check
 npm run format:check
 npm run lint
 npm run typecheck
+node --experimental-strip-types --test test/no-foreign-host.test.ts
 npm pack --dry-run
 git diff --check
 ```
@@ -108,7 +110,9 @@ For an end-to-end evidence claim, run `lab.ts up`, `drive`, and `down`, then ins
 ## Before handing off
 
 - inspect `git status --short` and the complete final diff
-- run `npm pack --dry-run` after package or documentation path changes and inspect the file list
+- run `npm pack --dry-run` after package or documentation path changes and inspect the file list: only runtime TypeScript, package metadata, README, LICENSE, `config.json.example` and `skills/pi-rex-agents/SKILL.md` may ship
+- require `find pi-extension/subagents -type f -size +32k -print` to be empty
+- keep `pi-rex-agents extension` markers as change boundaries against upstream 3.7.2; see `docs/UPSTREAM.md`
 - confirm no temporary `pira-lab-*` root, `pi-integ-*` root, Rex server or integration process remains
 - run `rex ls --json` and confirm no test-owned session remains
 - confirm no generated evidence, local config, provider credentials or session artifacts are staged

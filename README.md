@@ -1,107 +1,95 @@
-# pi-rex-agents (P2)
+# pi-rex-agents
 
-Rex 宿主的 Pi 子代理扩展：父 Pi 在 Rex 的当前 block 中运行，`subagent` 工具在 Rex 里创建 block（同 tab）或 window（新 tab），把子 Pi 放到独立 surface 中异步运行，父 Pi 不阻塞。
+`pi-rex-agents` 0.4.0 是 Rex 原生的 Pi 子代理扩展。父 Pi 在当前 block 中继续工作；`subagent` 在同一 tab 的 block 或新 tab 中启动子 Pi，完成后自动把结果送回父会话。
 
-编排内核直接以 Rex 为 surface，入口位于 `pi-extension/subagents/index.ts`；注册、投递、持久化、模型路由和 worktree 逻辑都在本仓库内。
+本仓库包含从上游 3.7.2 hard fork 的执行内核，不依赖 `pi-herdr-agents` npm 包。上游来源、MIT 许可证和人工移植规则见 [UPSTREAM](docs/UPSTREAM.md)。
 
-## 当前状态
+## 安装
 
-P2 已可用：
-
-- 10 个父工具：`subagent`、`subagent_cancel`、`subagent_interrupt`、`subagent_resume`、`subagent_send`、`subagent_stop`、`subagents_list`、`subagents_write_task_models`、`worktree_list`、`worktree_remove`
-- `subagent` / `subagent_resume` 支持 `placement`：
-  - `"split"`（默认）：在当前 tab 的父 block 右侧 `rex split`，最多 `maxPerTab`（默认 2）个子 block
-  - `"tab"`：`rex window new`，在新 tab 打开
-  - split 达到上限（或并发预留已满）后，下一次 split 自动改用新 tab；子 block 关闭后名额释放。内核按本父进程登记且仍在父 window 中存活的子 block 计数，`/reload` 保留登记表和预留队列
-  - `panes.mode` 只接受 `"split"` / `"tab"`，`panes.maxPerTab` 只接受 1..8 的整数；详见 [placement 配置](docs/configuration.md#pane-placement)
-- 会话级宿主提示：每轮把 “你在 Rex 里、子代理用 subagent 工具、placement 语义” 追加到 system prompt；子代理会话则追加“你是叶子、没有 subagent 工具”的提示
-- 工具描述、参数描述、命令输出、投递消息全部使用 Rex 术语
-- Rex 版 `SurfaceProvider`：创建 / 输入 / 捕获 / 状态 / 进程身份 / 关闭 / 枚举 / worktree
-- 通过 Pi 的 extension API 加载；不修改内核源码，只在注册边界包装
-
-P0 的底层验证记录见 [docs/p0-result.md](docs/p0-result.md)，P1 架构见 [docs/p1-design.md](docs/p1-design.md)，P1 实测见 [docs/p1-result.md](docs/p1-result.md)，P2 验收见 [docs/p2-result.md](docs/p2-result.md)，安装说明见 [docs/install.md](docs/install.md)。
-
-## 快速运行
+需要 Node.js 22.6+、Pi 和 Rex，并在 Rex block 内运行 Pi：`REX_SESSION`、`REX_BLOCK` 必须存在。开发检出先运行：
 
 ```bash
-cd /Users/qiangwenjun/Documents/project/pi-rex-agents
-npm install
-npm run typecheck
+cd /absolute/path/to/pi-rex-agents
+npm ci
 npm run doctor
 ```
 
-在 **Rex 的交互式 Pi** 中加载：
+临时加载当前检出：
 
 ```bash
-pi --no-extensions -e /Users/qiangwenjun/Documents/project/pi-rex-agents/pi-extension/subagents/index.ts
+pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 ```
 
-`--no-extensions` 会关闭其他扩展的自动发现，只加载显式 `-e` 的扩展。长期使用建议把本包装为 Pi 包，并确保 `pi list` 里没有未过滤的 `pi-herdr-agents`（两者注册同名工具，例如 `subagent`）。完整安装与冲突处理见 [docs/install.md](docs/install.md)。
+长期使用可运行 `pi install /absolute/path/to/pi-rex-agents`。不要同时加载未过滤的 `pi-herdr-agents`，因为两者注册同名工具。`pi list` 中带 `(filtered)` 的旧包不加载资源。安装、自检和冲突处理详见 [安装说明](docs/install.md)。
 
-本扩展只在 `REX_SESSION` 与 `REX_BLOCK` 都存在时注册工具；在普通终端里不会生效。子代理通过 delegation depth 和 `spawning.maxDepth` 受限，默认深度 1，因此默认是叶子。
+## 使用
 
-配置读取 `$PI_CODING_AGENT_DIR/rex-agents/config.json`，默认是 `~/.pi/agent/rex-agents/config.json`。旧的 `herdr-agents/config.json` 不读取、不迁移；新文件不存在时使用默认配置（split、right、`maxPerTab=2`）。详见 [配置说明](docs/configuration.md#configuration-file)。
+本包提供 `subagent`、`subagent_resume`、`subagent_interrupt`、`subagent_cancel`、`subagent_send`、`subagent_stop`、`subagents_list`、`subagents_write_task_models`、`worktree_list` 和 `worktree_remove`。
 
-子代理会在第一轮前自动启用已安装的上下文压缩工具，即使指定 `tools: "read,bash"`。目前支持 billion-context 的 `compress`、`decompress`、`search_context`、`acp_status` 以及可选的 `acp_rule`；显式的 `deny-tools` 仍然优先。新启动、resume、persistent 和 worktree handoff 都适用。未安装压缩插件时不添加工具，沿用 Pi 原生 auto-compaction，详见 [配置说明](docs/configuration.md#context-compression-tools)。
+- `placement: "split"` 在父 block 旁启动子代理；`placement: "tab"` 在新 tab 启动。Rex 的 window 就是 tab，block 就是 pane。
+- split 默认最多 2 个本父进程管理的子 block；名额已满时使用新 tab。关闭子 block 后释放名额，`/reload` 保留登记和预留状态。用户手动添加的 block 和其他父进程不占此名额。
+- worktree 子代理始终使用新 tab，基于已提交的 Git 状态创建隔离检出。完成后保留窗口、分支和工作区，由父代理审查及清理。
+- 子代理是叶子。父代理负责拆分任务、检查结果、运行验证、整合和清理。本包不附带角色或工作流；角色可以来自项目、个人配置或角色包。
+- 完成、失败和求助消息会自动唤醒父会话。派出后继续独立工作或结束当前轮次，不需要轮询日志或状态。
 
-子代理结束时原子发布结果文件，父进程校验子代理、任务和 generation 身份后读取正文，文件不可用时回退到 session JSONL。启动脚本另写 `.exitcode` 作为进程退出的兜底证据；完成判定不读取终端屏幕。Pi 原生状态显示子代理名，扩展仅追加 `pira` 子记录。持久化专家收到一次任务投递后即可立即发送下一轮，inbox 由目录事件唤醒，另有 5 秒兜底检查。详见 [回传契约](docs/delegation-outcome-contract.md#rex-runtime-evidence)。
+详细参数见 [工具参考](docs/tools.md)，操作指南见 [pi-rex-agents skill](skills/pi-rex-agents/SKILL.md)。
 
-## 集成测试
+## 配置
 
-测试需要一个 Rex 会话，并且当前 Pi 进程运行在 Rex block 内（`REX_SESSION` / `REX_BLOCK` 已设置）。
+读取 `$PI_CODING_AGENT_DIR/rex-agents/config.json`，默认 `~/.pi/agent/rex-agents/config.json`。旧的 `herdr-agents/config.json` 不读取、不迁移；新文件缺失时使用默认值。
 
-```bash
-bun src/p0.ts
-bun src/p1.ts --worktree
-bun src/p1.ts --persistent
-bun src/p2.ts
+```json
+{
+  "panes": {
+    "mode": "split",
+    "split": "right",
+    "maxPerTab": 2
+  }
+}
 ```
 
-默认模型是 `CBAPI/cn:deepseek-v4.1-flash`；P1 测试可通过 `P1_MODEL`、P2 测试可通过 `P2_MODEL` 覆盖，格式为 `provider/model`。
+`panes.mode` 只接受 `"split"` 或 `"tab"`；`panes.maxPerTab` 只接受 1..8 的整数，默认 2。完整配置见 [configuration](docs/configuration.md) 和 [config.json.example](config.json.example)。
 
-不需要 Rex 的检查：
+子代理自动启用已安装的上下文压缩工具，包括 billion-context 的 `compress`、`decompress`、`search_context`、`acp_status` 及可选的 `acp_rule`，即使传入 `tools: "read,bash"`。显式 `deny-tools` 仍优先；fresh、resume、persistent 和 worktree handoff 都适用。没有压缩插件时沿用 Pi 原生 auto-compaction。
 
-```bash
-npm run typecheck
-npm run p0
-```
+## 回传契约
 
-## 目录
-
-- `maestro/surfaces/rex/rex-cli.ts`：`rex` CLI 的 argv 封装，不拼接 shell
-- `maestro/surfaces/rex/rex-surface-provider.ts`：Rex `SurfaceProvider`
-- `pi-extension/subagents/index.ts`：Pi extension 入口和内核 composition root
-- `pi-extension/subagents/rex-composition.ts`：Rex provider、supervision、worktree composition
-- `pi-extension/subagents/host-notice.ts`：Rex system prompt 宿主提示
-- `maestro/runtime/pi-placement.ts`：内核的 split 名额预留队列；原生 placement 沿 launch/resume 链传递
-- `maestro/surfaces/rex/git.ts` / `maestro/surfaces/rex/worktree.ts`：worktree 原语与受管目录
-- `src/p0.ts` / `src/p1.ts` / `src/p2.ts`：P0 / P1 / P2 探针
-- `src/doctor.ts`：Rex / Pi / 包冲突自检
-- `skills/pi-rex-agents/SKILL.md`：模型侧的 Rex 子代理操作说明
-- `docs/`：架构与历史验收记录
-
-## 关键映射
-
-| 概念 / 操作 | Rex |
+| 证据 | 用途 |
 |---|---|
-| tab | `window` |
-| pane | `block` |
-| 同 tab 分屏 | `rex split --focus=false` |
-| 新 tab | `rex window new --focus=false` |
-| 输入 | `rex send` + `rex send-key enter` |
-| 屏幕读取 | `rex capture --format=text --trim` |
-| 状态 | `com.superlogical.terminal.program_status`（OSC 7501） |
-| 进程信息 | `com.superlogical.terminal.process` |
-| worktree | `git worktree add/remove` + Rex window |
+| 原子发布的 `.result.json`；persistent 的每任务结果文件 | 父进程校验 subagentId、taskId、generation 后读取正文 |
+| session JSONL | 结果文件不可用时的正文回退和审计证据 |
+| `.exit` | Pi 内核的语义退出记录 |
+| `.exitcode` | 包装脚本记录进程退出码；子 Pi 被强杀时仍可报告失败 |
+| Rex `program_status` 根记录 | Pi 原生 working / blocked / done / idle 状态 |
+| `id=pira` 子记录 | 扩展追加任务、generation 和结果元数据 |
+
+完成判定不读取终端屏幕。persistent inbox 使用目录事件唤醒，并以 5 秒轮询兜底；收到一轮结果即可立即发送下一轮。完整字段与验收要求见 [P4 回传契约表](docs/p4/plan.md#回传契约依据实测) 和 [运行时证据契约](docs/delegation-outcome-contract.md#rex-runtime-evidence)。
+
+## 评审模型选择
+
+Cross-family independent review requires a reviewer from a different model family than the author. For ordinary review, prefer a different authenticated model family. When no other authenticated model family is available, ordinary review may use a same-family reviewer in a fresh standalone session. Disclose that this review is context-isolated, not cross-family independent. Cross-family verification must not use this fallback.
+
+角色配置和工具权限见 [roles](docs/roles.md)。`read,bash` 中的 Bash 可以修改文件；评审者的权限应与任务一致。
+
+## 验证与开发
+
+```bash
+bash docs/p4/baseline/test-gate.sh
+npm run typecheck
+npm run lint
+npm run format:check
+npm run docs:tools:check
+node --experimental-strip-types --test test/no-foreign-host.test.ts
+bun test/smoke-extension.ts
+npm pack --dry-run
+```
+
+基线门禁在清除 Rex 环境变量的子进程中判定全量 `npm test`，保留调用者的 Rex 环境用于集成验证。在 Rex block 内运行 `npm run test:integration:rex`；它使用隔离 Rex server 和 fake provider，不调用真实模型。真实模型探针为 `npm run p1`、`npm run p1:persistent`，默认 `CBAPI/cn:deepseek-v4.1-flash`。
+
+代码地图和门禁要求见 [AGENTS.md](AGENTS.md)。[P0](docs/p0-result.md)、[P1](docs/p1-result.md)、[P2](docs/p2-result.md) 是历史记录；当前内核行为以代码、本文及 [P4 状态](docs/p4/STATUS.md) 为准。
 
 ## 已知限制
 
-1. **没有 Rex 原生侧栏标记**：Pi 自己的 widget 仍可用（P2 已验证），但不是 Rex 侧栏。
-2. **split 上限按父进程计数**：默认最多 2 个子 block；其他父进程的子 block 和用户手工添加的 block 不占本父进程的名额。worktree 子代理始终使用新 tab。
-3. **进程身份是尽力校验**：Rex 提供 `program_status.owner.pid`、`foreground.pid`、cwd，但没有 pane shell 的强身份；worktree 清理保留上游的脏工作区和进程占用检查，并给出 warning。
-4. **不是 Rex 原生插件**：本包是运行在 Rex 中 Pi 进程内的 Pi extension，不是 Rex 自己的 Lua/插件系统。
-5. **工具名冲突**：不能同时加载未过滤的 `pi-herdr-agents` 与 `pi-rex-agents`，见 [docs/install.md](docs/install.md)。
-
-## P0 / P1 / P2 的边界
-
-P0 只证明 Rex surface 可用；P1 接入真实 `subagent` 工具链；P2 补齐真实 TUI 加载、cancel/interrupt/resume、状态 widget 和 worktree 文案。历史验收记录保留在 `docs/`，描述的是当时的实现；当前行为以本文和代码为准。
+- Rex 原生侧栏标记尚未实现；Pi 自身的状态 widget 可用。
+- 进程与 cwd 的可见性受系统权限限制。worktree 清理会披露无法确定的进程信息，并阻止存在已知占用或脏状态的删除。
+- 与未过滤的 `pi-herdr-agents` 存在工具名冲突，必须禁用其中一个。
