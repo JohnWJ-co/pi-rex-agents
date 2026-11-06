@@ -14,11 +14,35 @@
 | T2 | 已完成返工，门禁通过 | `6202306` | 恢复通用测试并迁移 audit-stop 到 Rex harness；Rex provider 已入内核；Herdr/sidebar/Windows 专属路径已删除；保留 `test/verify-lab-guards.test.ts` |
 | T2b | 已完成，门禁通过 | `74be436` | 父端白名单覆盖 fresh/resume/persistent/handoff；真实 acp_status 调用及 block 清理通过 |
 | T3 | 已完成，门禁通过 | `da8f08a22a09e547d6109083a5eef32779e9fa86` | 原生 placement、split 上限 2、Rex 配置隔离；真实集成 11/11 通过 |
-| T4 | 已完成，门禁通过 | 本提交 | 源头 Rex 文案、内核入口和全局命名隔离；默认 RPC、Rex 集成 11/11 与 lab drive 通过 |
+| T4 | 已完成，环境隔离修正通过 | `ed85215` + 本提交 | 源头 Rex 文案与内核入口完成；补齐 fake infrastructure、显式宿主守卫测试及干净环境门禁 |
 | T5 | 待开始 | | |
 | T6 | 待开始 | | |
 
 ## 日志
+
+### T4 修正：测试套件独立于 Rex 宿主环境
+
+监督在 Rex 外独立运行门禁发现 67 项失败：注册测试直接调用入口，却没有注入 infrastructure；入口在没有 Rex 环境时按产品约定返回。上轮 T4 记录的单测门禁继承了终端的 `REX_SESSION` / `REX_BLOCK`，只能证明当时的 Rex 环境下通过，不能作为干净环境的单测证据。本节结果替代该项验收依据；原始记录保留供追溯。
+
+本次修正：
+
+- `test/helpers/mock-extension-api.ts` 提供 `withMockInfrastructure`，向注册测试注入新的 FakeSurfaceProvider 和 supervision，默认不可启动子代理，宿主环境固定为空对象。`test/test.ts` 的默认入口和 reload helper 统一使用该包装；显式提供的 adapter fixture infrastructure 仍原样传入，没有改动 launch/生命周期断言。
+- 内核入口仅增加可选的 `options.env` 注入，默认仍由 `rexHostContext` 读取当前进程环境。缺少完整 Rex 环境、且没有注入 infrastructure 时不注册工具和命令的产品行为保持不变。
+- 新增两个显式测试：空环境及缺少任一必需变量均无工具、命令或事件注册；完整的注入环境正常注册 10 个工具、3 个命令，并由宿主提示验证使用了注入的 session/block。测试不读取真实 `process.env` 来决定 Rex 宿主输入。
+- `test-gate.sh` 在开头 `unset REX_SESSION REX_BLOCK REX_SERVER`，注释说明防止真实终端掩盖未注入基础设施的测试。保留 `MIN_TESTS=1155`、三轮持续失败判定及原有允许集合。按 AGENTS 的文档同步要求，补充 AGENTS 和两份验证技能中的单元门禁说明；真实集成、lab 等待协议及 evidence shape 未改变。
+
+正式验证（均退出码 0）：
+
+- 在继承真实 Rex 终端环境的父进程中直接执行 `bash docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t4-host-env.lW8ZoI/rex-terminal`：第 1 轮 **1186 tests / 1167 pass / 9 fail / 10 skipped**，第 2 轮 **1186 tests / 1168 pass / 8 fail / 10 skipped**，最终 `OK：没有持续性新增失败`。
+- 再执行 `env -u REX_SESSION -u REX_BLOCK bash docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t4-host-env.lW8ZoI/outside-rex`：第 1 轮 **1186 tests / 1168 pass / 8 fail / 10 skipped**，第 2 轮 **1186 tests / 1167 pass / 9 fail / 10 skipped**，最终 `OK：没有持续性新增失败`。两种入口测试总数完全一致，通过数相差至多 1。
+- 两次门禁第 1 轮的暂定新增失败均为 `fails a fallback explicitly without launching when no live parent context exists`，各自在第 2 轮消失。最终 raw npm test 中仍有基线允许项及间歇性超时失败，不报告为零失败；未新增允许项或跳过测试。
+- `npm run typecheck`、`npm run lint`、`npm run format:check`（155 个文件）、`npm run docs:tools:check`、`bun test/smoke-extension.ts`、`git diff --check`、`bash -n docs/p4/baseline/test-gate.sh`：通过。
+- `npm pack --dry-run --json`：通过，157 个文件；已检查完整清单，包含新入口和 gate 脚本，没有本机 settings、测试 session 或 evidence。
+- 清空全部三个 Rex 环境变量后的针对性测试：**9 tests / 9 pass / 0 fail / 0 skipped**，包括两条新守卫测试、reload 的 5 条回归、`registers /worktree with list and explicit remove usage`、`registers subagent_interrupt in the main session extension`。开发检查首次因新测试的正则 `.*` 不跨宿主提示换行而失败，已改为匹配实际两行完整前缀；格式同步后重跑通过，生产文案及断言范围未放宽。
+
+- 收尾核查：`rex --autostart=false -S "$REX_SERVER" ls --json` 有 6 个现有 session，没有 `pira-lab-*` / `pi-integ-*` 测试 session；临时 lab 根目录、测试 server/provider/runner 及仓库根目录的意外空目录均无残留。进程扫描先匹配到正常宿主 PID 6295，核对其 `--listen` 等于当前 `REX_SERVER` 后排除，保留该宿主服务，未操作其他 session 的 block。
+
+证据目录：`/tmp/pi-rex-agents-p4-t4-host-env.lW8ZoI`，包含两种环境的完整 npm test 日志、门禁摘要、静态检查、smoke、打包预览、收尾核查及逐项退出码。没有派出子代理、执行 `/reload` 或启动真实 Rex lab；本次不声称重新执行生命周期集成。`.pi/settings.json` 保持 skip-worktree，SHA-256 仍为 `71782f9b595246d7655a555dfa7808fda04607c10dd36c6f59f9bd43fcd94a97`；未修改主 checkout、上游、`released.json` 或失败允许集合。只提交 `P4.T4: make the test suite independent of the Rex host environment`，完成后等待审查，不开始 T5，不合并、不推送。
 
 ### T4 完成：默认配置加载、Rex 集成与 lab 验证通过
 

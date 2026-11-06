@@ -84,6 +84,12 @@ npm pack --dry-run
 git diff --check
 ```
 
+For P4 acceptance, judge `npm test` with `bash docs/p4/baseline/test-gate.sh`.
+The gate clears `REX_SESSION`, `REX_BLOCK` and `REX_SERVER` before running tests
+so an inherited Rex host cannot mask missing test infrastructure. Unit fixtures
+must inject deterministic infrastructure; host-guard tests inject environment
+objects. Keep real Rex variables available for the separate integration lab.
+
 For Rex lifecycle, delivery, placement or cleanup changes, also run inside Rex:
 
 ```bash

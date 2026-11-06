@@ -16,6 +16,11 @@ bun test/smoke-extension.ts
 npm pack --dry-run
 ```
 
+For P4 acceptance, judge the unit suite with `bash docs/p4/baseline/test-gate.sh`.
+It clears `REX_SESSION`, `REX_BLOCK` and `REX_SERVER` only in the gate process;
+unit fixtures inject their own infrastructure instead of borrowing this host.
+Keep the real Rex environment in the caller for integration preflight and the lab.
+
 If `REX_SESSION` is unset or `rex` is unavailable, stop and report that the Rex environment is missing. Do not count a skipped test as passing evidence. Run only one integration suite at a time; the suite uses an isolated Rex server but serial execution keeps provider and process resources deterministic.
 
 Run the required deterministic smoke test:

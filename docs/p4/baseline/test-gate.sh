@@ -1,5 +1,8 @@
 #!/bin/bash
 # npm test 门禁。用法（仓库根目录）：docs/p4/baseline/test-gate.sh [日志目录]
+# 始终在干净的宿主环境下判定：继承 Rex 终端变量会掩盖未注入 fake infrastructure
+# 的注册测试回归。单测必须自己提供宿主输入，不能借用运行门禁的真实 Rex session。
+unset REX_SESSION REX_BLOCK REX_SERVER
 # 规则：
 #   1. 跑一次 npm test；tests 总数必须 >= MIN_TESTS（默认 1155，可用环境变量覆盖；T2 删除专属测试、恢复通用测试后按 STATUS.md 记录调整）。
 #   2. 失败集合减去允许集合（inherited ∪ flaky ∪ expected-identity）为空 → 通过。

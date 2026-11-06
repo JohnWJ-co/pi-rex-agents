@@ -34,6 +34,12 @@ git diff --check
 npm run test:integration:rex
 ```
 
+For P4 acceptance, judge the unit suite with `bash docs/p4/baseline/test-gate.sh`.
+It clears `REX_SESSION`, `REX_BLOCK` and `REX_SERVER` in the gate process so
+unit tests must inject deterministic infrastructure. Preserve the caller's real
+Rex environment for the integration suite and manual lab; their evidence shape
+and lifecycle checks are unchanged.
+
 The smoke test must run inside Rex and pass; a skip means the environment was not verified.
 
 The same command includes `rex-placement.test.ts`: a fresh parent loads the

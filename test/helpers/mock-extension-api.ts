@@ -1,4 +1,26 @@
 import { createEventBus } from "@earendil-works/pi-coding-agent";
+import type subagentsExtension from "../../pi-extension/subagents/index.ts";
+import { SupervisionCoordinator } from "../../maestro/core/supervision.ts";
+import { FakeSurfaceProvider } from "../../maestro/surfaces/fake/fake-surface-provider.ts";
+
+/** Registration-only tests never acquire a real host or launch a child. */
+export function withMockInfrastructure(extension: typeof subagentsExtension) {
+	return (...[api, options = {}]: Parameters<typeof subagentsExtension>) => {
+		const provider = new FakeSurfaceProvider();
+		provider.isAvailable = () => false;
+		extension(api, {
+			env: {},
+			...options,
+			infrastructure: options.infrastructure ?? {
+				surfaceProvider: provider,
+				supervision: new SupervisionCoordinator(
+					async () => ({ complete: true, panes: [] }),
+					(id) => provider.inspectSurface(id),
+				),
+			},
+		});
+	};
+}
 
 export function createMockExtensionApi(extensionEvents = createEventBus()) {
 	const registeredTools: Array<any> = [];

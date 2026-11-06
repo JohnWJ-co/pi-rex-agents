@@ -21,7 +21,10 @@ import {
 } from "../pi-extension/subagents/presentation.ts";
 import { buildSubagentToolAllowlist } from "../maestro/adapters/pi/launch-command.ts";
 import "./isolated-agent-dir.ts";
-import { createMockExtensionApi } from "./helpers/mock-extension-api.ts";
+import {
+	createMockExtensionApi,
+	withMockInfrastructure,
+} from "./helpers/mock-extension-api.ts";
 import { SUBAGENT_RUNTIME_KEY } from "../maestro/core/undelivered-children.ts";
 import {
 	ENCODED_TOOL_ERRORS,
@@ -516,6 +519,7 @@ async function persistentFixtureIO(): Promise<PiPersistentIO> {
 const testIO = await persistentFixtureIO();
 const subagentsModule = {
 	...hostModule,
+	default: withMockInfrastructure(hostModule.default),
 	__test__: {
 		...hostModule.__test__,
 		handleSubagentSend: (
@@ -583,7 +587,64 @@ function presentText(
 
 // --- Tests ---
 
-// Keep the real host/adapter/launch/sidecar path; fake only Herdr and starting Pi.
+describe("Rex host registration", () => {
+	it("registers no tools or commands without a complete Rex host or injected infrastructure", () => {
+		for (const env of [
+			{},
+			{ REX_SESSION: "session:registration" },
+			{ REX_BLOCK: "block:registration" },
+		]) {
+			const mock = createMockExtensionApi();
+			hostModule.default(mock.api, { env });
+			assert.deepEqual(mock.registeredTools, []);
+			assert.deepEqual(mock.registeredCommands, []);
+			assert.equal(mock.eventHandlers.size, 0);
+		}
+	});
+
+	it("registers tools, commands and the host notice from an injected Rex environment", async () => {
+		await withFreshSubagentRuntime(async () => {
+			const mock = createMockExtensionApi();
+			try {
+				hostModule.default(mock.api, {
+					env: {
+						REX_SESSION: "session:registration",
+						REX_BLOCK: "block:registration",
+					},
+				});
+				assert.deepEqual(mock.registeredTools.map((tool) => tool.name).sort(), [
+					"subagent",
+					"subagent_cancel",
+					"subagent_interrupt",
+					"subagent_resume",
+					"subagent_send",
+					"subagent_stop",
+					"subagents_list",
+					"subagents_write_task_models",
+					"worktree_list",
+					"worktree_remove",
+				]);
+				assert.deepEqual(
+					mock.registeredCommands.map((command) => command.name).sort(),
+					["subagent", "subagents-init", "worktree"],
+				);
+				const event = { systemPromptOptions: { appendSystemPrompt: "" } };
+				for (const handler of mock.eventHandlers.get("before_agent_start") ??
+					[])
+					await handler(event, {});
+				assert.match(
+					event.systemPromptOptions.appendSystemPrompt,
+					/^\[Rex host\]\nYou are running inside Rex \(session session:registration, block block:registration\)\./,
+				);
+			} finally {
+				for (const handler of mock.eventHandlers.get("session_shutdown") ?? [])
+					await handler({ reason: "quit" }, { ui: { setWidget() {} } });
+			}
+		});
+	});
+});
+
+// Keep the real host/adapter/launch/sidecar path; fake only Rex and starting Pi.
 async function withAdapterHost(run: (f: any) => Promise<void>) {
 	await withIsolatedAgentEnv(async (paths) => {
 		// SAFETY: this process-local extension runtime is owned by index.ts.
@@ -4728,9 +4789,10 @@ describe("runtime reload configuration", () => {
 		Record<symbol, ReloadRuntime | undefined>;
 
 	async function importReloadedSubagents() {
-		return import(
+		const reloaded = await import(
 			`../pi-extension/subagents/index.ts?reload-test-${Date.now()}-${Math.random()}`
 		);
+		return { ...reloaded, default: withMockInfrastructure(reloaded.default) };
 	}
 
 	it("ignores an external runtime and presentation timers in the legacy namespace", async () => {

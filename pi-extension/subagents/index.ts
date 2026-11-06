@@ -293,9 +293,11 @@ export default function subagentsExtension(
 	options: {
 		cleanupOperations?: (ctx: ExtensionContext) => WorktreeCleanupOperations;
 		infrastructure?: PiRunSessionInfrastructure;
+		/** Host detection input; defaults to the current process environment. */
+		env?: NodeJS.ProcessEnv;
 	} = {},
 ) {
-	const rexHost = rexHostContext();
+	const rexHost = rexHostContext(options.env);
 	// Outside Rex the public entry point has no usable host. Tests can inject
 	// their own deterministic infrastructure without acquiring a real surface.
 	const infrastructure =
