@@ -88,6 +88,13 @@
 							{ "type": "null" }
 						]
 					},
+					"placement": {
+						"description": "Where the child runs. \"split\" (default) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. \"tab\" opens the child in a new Rex tab (a Rex window). Worktree children always open in a new tab.",
+						"anyOf": [
+							{ "const": "split", "type": "string" },
+							{ "const": "tab", "type": "string" }
+						]
+					},
 					"fork": {
 						"description": "Override the child session mode for this spawn. `true` forces full-context fork; `false` forces standalone. Omit to inherit the agent frontmatter session-mode.",
 						"type": "boolean"
@@ -182,6 +189,13 @@
 				"type": "object",
 				"required": ["sessionPath"],
 				"properties": {
+					"placement": {
+						"description": "Where the child runs. \"split\" (default) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. \"tab\" opens the child in a new Rex tab (a Rex window). Worktree children always open in a new tab.",
+						"anyOf": [
+							{ "const": "split", "type": "string" },
+							{ "const": "tab", "type": "string" }
+						]
+					},
 					"sessionPath": {
 						"description": "Path to the session .jsonl file to resume",
 						"type": "string"

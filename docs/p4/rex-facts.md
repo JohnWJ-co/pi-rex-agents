@@ -7,6 +7,7 @@
 
 - Pi 交互模式内置 `ProgramStatusReporter`（`dist/modes/interactive/program-status-reporter.js`）。
 - 状态序列：启动 `idle` → 一轮运行 `working` → 结束 `done`（失败 `error`，对话框 `blocked` + `kind`，中断 `idle`）。
+- Harness 分开等待：`waitForPiReady` 只用于启动的 `idle`；一轮的 session 完成证据出现后，`waitForPiTurnSettled` 接受 `done` 或 `idle`，不接受 `working`、`blocked` 或 `error`。不能在每轮结束后继续等待 `idle`。
 - 根记录 `msg` = **会话名**（`--name`），从不包含 prompt 或模型输出。实测 `--name sub-c` → `{"state":"done","app":"pi","msg":"sub-c"}`。
 - 推论：子代理用 `--name <子代理名或 id>` 启动，父进程就能从根记录同时拿到状态和身份；**扩展不得写根记录**（会与 Pi 自己的 reporter 互相覆盖）。
 

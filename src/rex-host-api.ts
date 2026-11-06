@@ -2,10 +2,8 @@
  * The Pi API surface Rex hands to the upstream orchestration kernel.
  *
  * The kernel registers every tool and command through the API object it is
- * given, so this proxy is where Rex adapts the host-facing surface without
- * forking the kernel: tool descriptions and parameters are reworded, the
- * `subagent` tools gain a per-launch `placement`, command output is relabeled,
- * and delivered messages already pass through the host text rewrite.
+ * given. This proxy rewords tool descriptions, command output and messages;
+ * placement parameters and launch policy are owned by the kernel.
  */
 import type {
   AgentToolResult,
@@ -15,20 +13,9 @@ import type {
   ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { rewriteRexHostText } from "./host-message.ts";
-import { childPlacement, resolvePlacement } from "./placement.ts";
 import { rexifyResultDetails, rexifySchema, rexifyText } from "./rex-wording.ts";
 
 type AnyTool = ToolDefinition<any, any, any>;
-
-/** Tools that create a surface and therefore accept a placement. */
-const PLACEMENT_TOOLS = new Set(["subagent", "subagent_resume"]);
-
-const PLACEMENT_PROPERTY = {
-  type: "string",
-  enum: ["split", "tab"],
-  description:
-    'Where the child runs. "split" (default) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. "tab" opens the child in a new Rex tab (a Rex window). Worktree children always open in a new tab.',
-} as const;
 
 function rexifyToolResult(
   result: AgentToolResult<unknown>,
@@ -48,53 +35,22 @@ function rexifyToolResult(
   };
 }
 
-function wrapExecute(tool: AnyTool, withPlacement: boolean): AnyTool["execute"] {
+function wrapExecute(tool: AnyTool): AnyTool["execute"] {
   const original = tool.execute.bind(tool) as (
     ...args: any[]
   ) => Promise<AgentToolResult<unknown>>;
-
-  return (async (toolCallId, params, signal, onUpdate, ctx) => {
-    let launchParams = params;
-    let placement: ReturnType<typeof resolvePlacement>;
-    if (withPlacement && params && typeof params === "object") {
-      const { placement: requested, ...rest } = params as Record<
-        string,
-        unknown
-      >;
-      launchParams = rest as typeof params;
-      placement = resolvePlacement(requested);
-    }
-    const run = () =>
-      original(toolCallId, launchParams, signal, onUpdate, ctx);
-    const result = placement
-      ? await childPlacement.run(placement, run)
-      : await run();
-    return rexifyToolResult(result);
-  }) as AnyTool["execute"];
+  return (async (...args) => rexifyToolResult(await original(...args))) as AnyTool["execute"];
 }
 
 function adaptTool(tool: AnyTool): AnyTool {
-  const parameters = rexifySchema(tool.parameters);
-  const base: AnyTool = {
+  return {
     ...tool,
     description: rexifyText(tool.description),
-    parameters,
+    parameters: rexifySchema(tool.parameters),
     ...(tool.promptSnippet === undefined
       ? {}
       : { promptSnippet: rexifyText(tool.promptSnippet) }),
-  };
-  if (!PLACEMENT_TOOLS.has(tool.name)) {
-    return { ...base, execute: wrapExecute(tool, false) };
-  }
-  const properties = (parameters as { properties?: Record<string, unknown> })
-    .properties;
-  return {
-    ...base,
-    parameters: {
-      ...(parameters as Record<string, unknown>),
-      properties: { ...(properties ?? {}), placement: PLACEMENT_PROPERTY },
-    } as AnyTool["parameters"],
-    execute: wrapExecute(tool, true),
+    execute: wrapExecute(tool),
   };
 }
 

@@ -4571,7 +4571,7 @@ describe("shared subagent configuration path", () => {
 		try {
 			assert.equal(
 				getSubagentsConfigPath(),
-				"/tmp/custom-pi-agent/herdr-agents/config.json",
+				"/tmp/custom-pi-agent/rex-agents/config.json",
 			);
 			assert.match(getSubagentsConfigExamplePath(), /config\.json\.example$/);
 		} finally {
@@ -4621,7 +4621,7 @@ describe("shared subagent configuration path", () => {
 						dirname(getSubagentsConfigPath()),
 						getSubagentsConfigExamplePath(),
 					).mode,
-					"grouped",
+					"split",
 				);
 				assert.equal(
 					loadSupervisionConfig(
@@ -4733,6 +4733,42 @@ describe("runtime reload configuration", () => {
 			`../pi-extension/subagents/index.ts?reload-test-${Date.now()}-${Math.random()}`
 		);
 	}
+
+	it("loads the Rex kernel with defaults despite an untouched legacy grouped config", async () => {
+		const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+		const previousId = process.env.PI_SUBAGENT_ID;
+		// SAFETY: this is the same process-local runtime slot used by reload.
+		const runtimeSlot = globalThis as RuntimeSlot;
+		const beforeRuntime = runtimeSlot[runtimeKey];
+		const dir = createTestDir();
+		const mock = createMockExtensionApi();
+		const legacyPath = join(dir, "herdr-agents", "config.json");
+		const legacy = '{"panes":{"mode":"grouped","maxPerTab":4}}\n';
+		try {
+			process.env.PI_CODING_AGENT_DIR = dir;
+			delete process.env.PI_SUBAGENT_ID;
+			mkdirSync(dirname(legacyPath), { recursive: true });
+			writeFileSync(legacyPath, legacy);
+			const configPath = join(dir, "rex-agents", "config.json");
+			assert.equal(getSubagentsConfigPath(), configPath);
+			assert.deepEqual(
+				loadPaneConfig(dirname(configPath), getSubagentsConfigExamplePath()),
+				{ mode: "split", direction: "right", maxPerTab: 2 },
+			);
+			const reloaded = await importReloadedSubagents();
+			reloaded.default(mock.api);
+			assert.ok(mock.registeredTools.some((tool) => tool.name === "subagent"));
+			assert.equal(readFileSync(legacyPath, "utf8"), legacy);
+			assert.equal(existsSync(configPath), false, "no implicit migration");
+		} finally {
+			for (const handler of mock.eventHandlers.get("session_shutdown") ?? [])
+				await handler({ reason: "quit" }, { ui: { setWidget() {} } });
+			runtimeSlot[runtimeKey] = beforeRuntime;
+			restoreEnvVar("PI_SUBAGENT_ID", previousId);
+			restoreEnvVar("PI_CODING_AGENT_DIR", previousAgentDir);
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
 
 	it("refreshes pane-backed launch operations from the reloaded module config while preserving running children", async () => {
 		const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
@@ -4905,10 +4941,10 @@ describe("runtime reload configuration", () => {
 });
 
 describe("pane configuration", () => {
-	it("defaults to four grouped panes when panes are absent", () => {
+	it("defaults to split with maxPerTab 2 when panes are absent", () => {
 		assert.deepEqual(parsePaneConfig({}), {
-			mode: "grouped",
-			maxPerTab: 4,
+			mode: "split",
+			maxPerTab: 2,
 			direction: "right",
 		});
 	});
@@ -4916,11 +4952,11 @@ describe("pane configuration", () => {
 	it("parses split mode and direction", () => {
 		assert.deepEqual(
 			parsePaneConfig({ panes: { mode: "split", direction: "down" } }),
-			{ mode: "split", direction: "down", maxPerTab: 4 },
+			{ mode: "split", direction: "down", maxPerTab: 2 },
 		);
 	});
 
-	it("loads a strict grouped capacity independently of persistent capacity", () => {
+	it("loads maxPerTab independently of persistent capacity and accepts 1 and 8", () => {
 		withTempDir((dir) => {
 			const config = join(dir, "config.json");
 			writeFileSync(
@@ -4933,11 +4969,19 @@ describe("pane configuration", () => {
 			assert.deepEqual(
 				loadPaneConfig(dirname(config), getSubagentsConfigExamplePath()),
 				{
-					mode: "grouped",
+					mode: "split",
 					direction: "right",
 					maxPerTab: 2,
 				},
 			);
+			for (const maxPerTab of [1, 8]) {
+				writeFileSync(config, JSON.stringify({ panes: { maxPerTab } }));
+				assert.equal(
+					loadPaneConfig(dirname(config), getSubagentsConfigExamplePath())
+						.maxPerTab,
+					maxPerTab,
+				);
+			}
 			for (const maxPerTab of [
 				0,
 				-1,
@@ -4945,13 +4989,14 @@ describe("pane configuration", () => {
 				"4",
 				null,
 				true,
+				9,
 				Number.MAX_SAFE_INTEGER + 1,
 			]) {
 				writeFileSync(config, JSON.stringify({ panes: { maxPerTab } }));
 				assert.throws(
 					() =>
 						loadPaneConfig(dirname(config), getSubagentsConfigExamplePath()),
-					/panes.maxPerTab must be a positive safe integer/,
+					/panes\.maxPerTab must be an integer between 1 and 8/,
 				);
 			}
 		});
@@ -4964,10 +5009,12 @@ describe("pane configuration", () => {
 				/panes must be an object/,
 			);
 		}
-		assert.throws(
-			() => parsePaneConfig({ panes: { mode: "window" } }),
-			/panes\.mode must be "grouped", "tab", or "split"/,
-		);
+		for (const mode of ["window", "grouped"]) {
+			assert.throws(
+				() => parsePaneConfig({ panes: { mode } }),
+				/panes\.mode must be "split" or "tab"/,
+			);
+		}
 		assert.throws(
 			() => parsePaneConfig({ panes: { direction: "left" } }),
 			/panes\.direction must be "right" or "down"/,
@@ -4988,7 +5035,7 @@ describe("pane configuration", () => {
 
 			assert.deepEqual(loadPaneConfig(dir, examplePath), {
 				mode: "split",
-				maxPerTab: 4,
+				maxPerTab: 2,
 				direction: "down",
 			});
 		});
@@ -5213,7 +5260,7 @@ describe("model configuration", () => {
 			);
 			assert.equal(
 				loadPaneConfig(dirname(configPath), examplePath).mode,
-				"grouped",
+				"split",
 			);
 			assert.equal(
 				loadSupervisionConfig(dirname(configPath), examplePath).forcePolling,
@@ -16161,7 +16208,7 @@ describe("tool error boundary", () => {
 		withIsolatedAgentEnv(async (paths) => {
 			const mock = createMockExtensionApi();
 			subagentsModule.default(mock.api);
-			const config = join(paths.globalDir, "herdr-agents", "config.json");
+			const config = join(paths.globalDir, "rex-agents", "config.json");
 			mkdirSync(dirname(config), { recursive: true });
 			writeFileSync(
 				config,

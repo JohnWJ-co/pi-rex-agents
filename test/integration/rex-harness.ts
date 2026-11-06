@@ -287,6 +287,29 @@ export async function waitForPiReady(
 	);
 }
 
+/** Wait for a completed or interrupted turn (F1); startup readiness stays idle-only. */
+export async function waitForPiTurnSettled(
+	lab: RexLab,
+	timeoutMs = PI_TIMEOUT,
+): Promise<void> {
+	await waitFor(
+		async () => {
+			const status = await lab.cli.programStatus(
+				lab.sessionId,
+				lab.parentBlockId,
+			);
+			return status.records.some(
+				(record) =>
+					record.app === "pi" &&
+					(record.state === "done" || record.state === "idle"),
+			)
+				? true
+				: undefined;
+		},
+		{ timeoutMs, description: "parent Pi turn settled status" },
+	);
+}
+
 export function readSession(path: string): RexSessionEntry[] {
 	if (!existsSync(path)) return [];
 	return readFileSync(path, "utf8")

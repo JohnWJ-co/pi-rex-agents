@@ -84,7 +84,7 @@ export default function piRexAgentsExtension(pi: ExtensionAPI): void {
   });
 
   // Every tool and command the kernel registers passes through this proxy:
-  // Rex wording, the per-launch placement parameter, and message rewriting.
+  // Rex wording and message rewriting; the kernel owns launch parameters.
   const hostApi = createRexHostApi(pi);
 
   subagentsExtension(hostApi, {

@@ -92,9 +92,12 @@ export async function launchResumedPiSubagent(
 		);
 	}
 	request.acquisitionSignal?.throwIfAborted();
-	const surface = await operations.createPane(request.name, cwd, {
-		signal: request.acquisitionSignal,
-	});
+	const surface = await operations.createPane(
+		request.name,
+		cwd,
+		{ signal: request.acquisitionSignal },
+		request.placement,
+	);
 	let running: PiRunningChild | undefined;
 	try {
 		request.acquisitionSignal?.throwIfAborted();

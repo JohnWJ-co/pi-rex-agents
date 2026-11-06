@@ -16,9 +16,9 @@
     "hangWarningMinutes": 15
   },
   "panes": {
-    "mode": "grouped",
+    "mode": "split",
     "direction": "right",
-    "maxPerTab": 4
+    "maxPerTab": 2
   },
   "guidelines": {
     "launchRoster": true

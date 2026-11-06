@@ -40,7 +40,7 @@
 
 ## 配置
 
-- 路径：`~/.pi/agent/rex-agents/config.json`（内核自带的 `config.json` 机制，不另读 `settings.json`）。
+- 路径：`~/.pi/agent/rex-agents/config.json`（内核自带的 `config.json` 机制，不另读 `settings.json`）。配置路径隔离提前在 T3 完成；不读取、不迁移旧的 `herdr-agents/config.json`，其余命名收尾仍属 T6。
 - `panes.mode`：`"split" | "tab"`，默认 `"split"`（删除 `grouped`）。`panes.maxPerTab`：默认 **2**，只接受 1..8 的整数；非法值走内核现有的报错路径。`/reload` 生效。
 - split 计数归内核 placement reservation 负责，按"父 block 所在 window 中仍然存活的本父进程子 block"计数，`/reload` 后计数不归零。
 
@@ -52,7 +52,7 @@
 | [T1](tasks/T1-rex-harness.md) | Rex lab、Rex 集成 harness、AGENTS.md、验证技能、doctor | lab 自检、1 条端到端冒烟 |
 | [T2](tasks/T2-rex-surface.md) | Rex provider 入内核，删除 Herdr/sidebar/Windows | conformance（fake + lab）、集成套件 |
 | [T2b](tasks/T2b-context-tools.md) | 子代理自动带上已安装的压缩工具（billion-context），没装时依赖 Pi 原生压缩 | 单测、真实子代理调用 acp_status |
-| [T3](tasks/T3-placement-config.md) | placement 原生参数、maxPerTab=2、split 计数下沉 | schema 契约、placement 集成用例 |
+| [T3](tasks/T3-placement-config.md) | placement 原生参数、maxPerTab=2、split 计数下沉、配置路径隔离 | schema 契约、placement 集成用例 |
 | [T4](tasks/T4-wording-entry.md) | 源头文案、删除替换层、入口切换、宿主提示 | no-foreign-host、pin 对比 |
 | [T5](tasks/T5-return-contract.md) | result 文件、`.exitcode`、`--name`、OSC 子记录、inbox fs.watch | 回传单测、集成套件、真实模型冒烟 |
 | [T6](tasks/T6-finalize.md) | 命名/路径/文档/打包收尾 | 全部门禁、`npm pack --dry-run` |

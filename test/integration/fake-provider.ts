@@ -26,6 +26,8 @@ interface ToolCallArguments {
 	task?: string;
 	agent?: string;
 	model?: string;
+	thinking?: "off";
+	placement?: "split" | "tab";
 	cwd?: string;
 	systemPrompt?: string;
 	fork?: boolean;
@@ -341,10 +343,13 @@ function markerText(source: string): string | undefined {
 	return source.match(/(?:Return|return) exactly ([A-Za-z0-9_]+)/)?.[1];
 }
 
-async function waitForIntegrationGate(source: string): Promise<void> {
+async function waitForIntegrationGate(
+	source: string,
+	timeoutMs = 30_000,
+): Promise<void> {
 	const path = source.match(/INTEGRATION_WAIT_FOR_FILE:\s*(\S+)/)?.[1];
 	if (!path) return;
-	const deadline = Date.now() + 30_000;
+	const deadline = Date.now() + timeoutMs;
 	while (!existsSync(path) && Date.now() < deadline) {
 		await new Promise((resolve) => setTimeout(resolve, 25));
 	}
@@ -606,7 +611,42 @@ function acceptScenarioResponse(request: ChatRequest): ResponsePlan | null {
 	return { text: `ACCEPT_CHILD_ANSWER_${id}` };
 }
 
+async function placementScenarioResponse(
+	request: ChatRequest,
+): Promise<ResponsePlan | null> {
+	const user = lastUserText(request);
+	const child = user.match(/INTEGRATION_PLACEMENT_CHILD:([a-z0-9]+):(\d+)/);
+	if (child && !toolNames(request).has("subagent")) {
+		await waitForIntegrationGate(user, 120_000);
+		return { text: `PLACEMENT_CHILD_${child[1]}_${child[2]}` };
+	}
+	const stage = user.match(
+		/INTEGRATION_PLACEMENT:([a-z0-9]+):(start|reuse|tab)\s+GATE:(\S+)/,
+	);
+	if (!stage || !toolNames(request).has("subagent")) return null;
+	const [, id, mode, gate] = stage;
+	if (request.messages?.at(-1)?.role === "tool")
+		return { text: `PLACEMENT_READY_${id}_${mode}` };
+	const numbers = mode === "start" ? [1, 2, 3] : [mode === "reuse" ? 4 : 5];
+	return {
+		toolCalls: numbers.map((number) => ({
+			name: "subagent",
+			arguments: {
+				name: `Placement-${id}-${number}`,
+				agent: "test-echo",
+				model: TEST_MODEL,
+				thinking: "off",
+				fork: false,
+				placement: mode === "tab" ? "tab" : "split",
+				task: `INTEGRATION_PLACEMENT_CHILD:${id}:${number} INTEGRATION_WAIT_FOR_FILE: ${gate}`,
+			},
+		})),
+	};
+}
+
 async function planResponse(request: ChatRequest): Promise<ResponsePlan> {
+	const placementScenario = await placementScenarioResponse(request);
+	if (placementScenario) return placementScenario;
 	const names = toolNames(request);
 	const source = requestText(request);
 	const user = lastUserText(request);

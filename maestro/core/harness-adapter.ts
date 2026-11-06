@@ -35,6 +35,7 @@ export interface SpawnOptions {
 	// pi-herdr-agents extension
 	/** Unprovisioned launch request. Pi resolves base and writes the ownership manifest before resource acquisition. */
 	worktreeRequest?: WorktreeSpec;
+	placement?: Task["placement"];
 	interactive?: boolean;
 	timeoutMs?: number;
 	/** When set, run the agent's command through this multiplexer surface
@@ -63,6 +64,7 @@ export interface ResumeOptions {
 	name: string;
 	/** Harness session reference to resume; for Pi, the session file path. */
 	sessionId: string;
+	placement?: Task["placement"];
 	message?: string;
 	tools?: string[];
 	autoExit?: boolean;

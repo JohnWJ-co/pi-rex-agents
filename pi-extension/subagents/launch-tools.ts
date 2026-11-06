@@ -15,6 +15,7 @@ import {
 } from "./state.ts";
 import {
 	SubagentParams,
+	PlacementSchema,
 	discoverAgentCatalog,
 	missingRoleMessage,
 	formatVisibleAgentDefinitions,
@@ -453,6 +454,7 @@ export function registerResumeTool(
 				"DO NOT fabricate or assume results. After resuming, either end your turn or work on other independent tasks; the harness will wake you when the result is ready. " +
 				"Use when a sub-agent was cancelled or needs follow-up work.",
 			parameters: Type.Object({
+				placement: Type.Optional(PlacementSchema),
 				sessionPath: Type.String({
 					description: "Path to the session .jsonl file to resume",
 				}),
@@ -544,6 +546,7 @@ export function registerResumeTool(
 					sessionPath: params.sessionPath,
 					message: params.message,
 					autoExit: params.autoExit,
+					placement: params.placement,
 				});
 				const started = session.getStarted(controlTaskId)!;
 				const id = started.id;

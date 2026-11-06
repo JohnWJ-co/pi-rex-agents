@@ -19,6 +19,15 @@ If `REX_SESSION` is unset or `rex` is unavailable, stop and report that the Rex 
 
 Run the required deterministic smoke test:
 
+The same command includes `rex-placement.test.ts`: a fresh parent loads the
+current checkout with `-e`, then checks split/split/tab, close-and-reuse and
+explicit tab using real child blocks and session evidence. The default split
+limit is 2; reload/resume reservation adoption is also covered by unit tests.
+A skipped placement test is not passing placement evidence.
+Startup uses `waitForPiReady` (`idle` only); each later turn uses
+`waitForPiTurnSettled` (`done` or `idle`, excluding `working` and `blocked`).
+Keep the existing timeout and require session evidence before checking status (F1).
+
 ```bash
 npm run test:integration:rex
 ```

@@ -41,6 +41,7 @@ type Sidecar =
 interface Fixture {
 	dir: string;
 	provider: FakeSurfaceProvider;
+	operations: ReturnType<typeof launchOperationsFromSurface>;
 	options: DefaultRunSessionOptions;
 	session: runtime.PiRunSession;
 	settled: PiCompletedMetadata[];
@@ -133,6 +134,7 @@ async function fixture(
 	const f: Fixture = {
 		dir,
 		provider,
+		operations,
 		options,
 		session,
 		settled,
@@ -415,7 +417,7 @@ function worktreeSession(f: Fixture) {
 	f.options.infrastructure!.worktreeOperations = worktreeOps;
 	const session = runtime.createDefaultRunSession(f.options);
 	const pane = f.provider.createSurface({ name: "worktree", cwd: tree });
-	const operations = f.options.infrastructure!.launchOperations;
+	const { operations } = f;
 	operations.createWorktree = (_name, _cwd, branch) => ({
 		path: tree,
 		branch,
@@ -498,7 +500,7 @@ test("a confirmed cancel while the check's pipes drain wins: skipped, cancelled 
 	fixture(async (f) => {
 		const { session, pane, states } = worktreeSession(f);
 		// No identity to wait for: the gone pane alone confirms termination.
-		delete f.options.infrastructure!.launchOperations.captureProcessIdentity;
+		delete f.operations.captureProcessIdentity;
 		const started = join(f.dir, "shell-started");
 		// The shell exits 0 at once; its background job keeps the pipes open.
 		const input = f.input({ run: `echo $$ > ${started}; sleep 10 & exit 0` });

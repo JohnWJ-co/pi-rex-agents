@@ -118,7 +118,7 @@ test("host config paths use Pi's public agent-directory resolver", () => {
 			assert.equal(getAgentConfigDir(), getAgentDir(), String(value));
 			assert.equal(
 				getSubagentsConfigPath(),
-				join(getAgentDir(), "herdr-agents", "config.json"),
+				join(getAgentDir(), "rex-agents", "config.json"),
 			);
 		}
 	} finally {

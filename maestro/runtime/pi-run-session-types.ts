@@ -96,6 +96,7 @@ export interface PiResumeInput {
 	taskId: string;
 	name: string;
 	sessionPath: string;
+	placement?: Task["placement"];
 	message?: string;
 	autoExit?: boolean;
 }
@@ -283,7 +284,9 @@ export interface PiRunSessionHooks {
 // pi-herdr-agents extension
 export interface PiRunSessionInfrastructure {
 	surfaceProvider: SurfaceProvider;
-	launchOperations: PiLaunchOperations;
+	/** Stable parent block used to verify the current window for split admission. */
+	parentSurfaceId?: string;
+	launchOperations?: PiLaunchOperations;
 	worktreeOperations?: WorktreeOperations;
 	supervision: SupervisionCoordinator;
 	/** Kernel process-identity probe for worktree cancel; tests inject it. */

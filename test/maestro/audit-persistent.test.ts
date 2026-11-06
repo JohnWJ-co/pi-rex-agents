@@ -462,7 +462,7 @@ async function hostFixture(t: TestContext) {
 			restoreEnv();
 		}
 	});
-	const configDir = join(process.env.PI_CODING_AGENT_DIR!, "herdr-agents");
+	const configDir = join(process.env.PI_CODING_AGENT_DIR!, "rex-agents");
 	mkdirSync(configDir, { recursive: true });
 	writeFileSync(
 		join(configDir, "config.json"),

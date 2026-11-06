@@ -4,14 +4,15 @@ This page is the reference for the durable `config.json` settings, task-model pr
 
 ## Configuration file
 
-The durable user configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`,
-defaulting to `~/.pi/agent/herdr-agents/config.json`. The directory name is a
-compatibility path retained until the T6 configuration-path rename; the host
-uses Pi's public agent-directory resolver. an empty `PI_CODING_AGENT_DIR` uses the default,
+The durable user configuration is `$PI_CODING_AGENT_DIR/rex-agents/config.json`,
+defaulting to `~/.pi/agent/rex-agents/config.json`. The host uses Pi's public
+agent-directory resolver. An empty `PI_CODING_AGENT_DIR` uses the default,
 and a leading `~` expands as it does in Pi. It is not read from the
 installed package root, so npm and git package upgrades do not overwrite it.
 Create it by copying the installed package's `config.json.example`, or run
-`/subagents-init` to seed and draft model task preferences.
+`/subagents-init` to seed and draft model task preferences. The former
+`herdr-agents/config.json` is neither read nor migrated. Without a Rex config,
+panes default to split, right, and `maxPerTab: 2`.
 
 ```json
 {
@@ -32,9 +33,9 @@ Create it by copying the installed package's `config.json.example`, or run
     "hangWarningMinutes": 15
   },
   "panes": {
-    "mode": "grouped",
+    "mode": "split",
     "direction": "right",
-    "maxPerTab": 4
+    "maxPerTab": 2
   },
   "guidelines": {
     "launchRoster": true
@@ -449,20 +450,15 @@ isolated Rex tree, not parent-model latency; raw samples are written to
 
 ## Pane placement
 
-`panes.mode` defaults to `"grouped"` when omitted. Ordinary public `subagent` and `subagent_resume` launches, including bare forks, fill extension-owned `Agents`, `Agents 2`, etc. tabs in the target checkout's existing workspace. `panes.maxPerTab` is a positive safe integer, defaults to `4`, and counts all live panes in each owned tab, including user-added panes and retained shells. Overlapping launches in one parent respect this cap. It is independent of `persistent.maxAgents`.
+`panes.mode` accepts `"split"` (default) or `"tab"`. The default configuration is `{ "mode": "split", "direction": "right", "maxPerTab": 2 }`. `panes.maxPerTab` must be an integer from 1 through 8; zero, fractions, values above 8, and non-numbers raise `invalidPaneConfig`. The old `"grouped"` mode is invalid. `panes.direction` accepts `"right"` (default) or `"down"` for splits.
 
-Checkout matching uses Rex's canonical `worktree.checkout_path` and includes descendant directories. Shell working directories do not establish workspace ownership. If no checkout matches (including non-Git directories), placement uses the caller's workspace; overflow never creates a workspace. A reviewer with `cwd` set to a managed checkout joins that workspace without creating another worktree. Resume placement uses the saved session's cwd.
+The native `placement` argument on `subagent` and `subagent_resume` overrides `panes.mode` for that call. `"split"` opens a block beside the parent in its current Rex window while capacity remains, then overflows into a new tab. `"tab"` always opens a new Rex window. Worktree children always open a new tab and do not consume split capacity. Resume uses the saved session cwd with the same placement policy.
 
-Explicit `panes.mode: "tab"` preserves one new tab per ordinary child in the caller's workspace. Explicit `"split"` preserves splits of the stable parent pane. `panes.direction` is `"right"` (default) or `"down"` and applies to grouped and legacy splits. `maxPerTab` does not affect these legacy modes. Managed worktrees retain their separate workspaces.
+The kernel counts only this parent's registered child blocks that `provider.listSurfaces()` confirms are still live in the parent block's current window. Other parents' children, user-created blocks, worktree blocks, closed blocks and children in other windows do not occupy these slots. Closing a split child releases a slot on the next inventory read. The limit is independent of `persistent.maxAgents`.
 
-A process-local queue serializes placement inspection, creation, and ownership
-recording across reloads. It does not hold other launches through Git checkout or
-Pi startup. A split with an uncertain outcome makes its tab unavailable for later
-placement in that process, because the server might still create the pane.
-Unknown new tabs are never adopted by label. Queue cancellation or expiry
-prevents the queued launch from issuing a later mutation.
+One parent-owned queue serializes inspection and surface creation. A successful split reserves its slot until the child enters the registry, so overlapping launches cannot exceed the cap during Pi startup. A create with an uncertain reply and an observed block ID retains that reservation until registration or confirmed disappearance. A queued acquisition checks cancellation before issuing a mutation. If the parent window cannot be verified, the launch uses a new tab.
 
-Ownership is tracked by returned pane/tab/workspace IDs, never labels. Separate parent processes own separate groups; `/reload` preserves a parent's in-memory ownership, but a full restart does not adopt old tabs. Placement never moves existing panes or renames user tabs. Background launches preserve focus; Rex may resize sibling panes when splitting or closing. User-added panes are never closed by automatic tab cleanup. An owned tab remains reusable while user panes remain, even after all child panes close.
+`/reload` adopts both the existing registry and the reservation queue; it does not reset capacity. A full process restart does not adopt another process's children. IDs establish ownership, never labels. Placement preserves focus and does not move existing blocks. See [Rex surface placement](rex-surface.md) for the kernel boundary.
 
 Run `/reload` after changing role, model, or pane settings.
 

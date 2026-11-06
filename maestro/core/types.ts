@@ -39,6 +39,8 @@ export interface Task {
 	cwd: string;
 	/** When set, the task runs inside an isolated git worktree. */
 	worktree?: WorktreeSpec;
+	/** Per-launch ordinary child placement; worktrees always open a new window. */
+	placement?: "split" | "tab";
 	timeoutMs?: number;
 	/** Validated accept check; the parent re-check decides the verdict. */
 	// pi-herdr-agents extension

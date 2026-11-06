@@ -60,6 +60,7 @@ type SubagentSessionMode = "standalone" | "lineage-only" | "fork";
 
 export interface FreshPiLaunchRequest {
 	kind: "fresh";
+	placement?: "split" | "tab";
 	acquisitionSignal?: AbortSignal;
 	id?: string;
 	name: string;
@@ -108,6 +109,7 @@ export interface FreshPiLaunchRequest {
 
 export interface ResumePiLaunchRequest {
 	kind: "resume";
+	placement?: "split" | "tab";
 	acquisitionSignal?: AbortSignal;
 	id?: string;
 	name: string;
@@ -452,9 +454,12 @@ async function prepareLaunchSurface(
 		return {
 			surface:
 				request.surface ??
-				(await operations.createPane(request.name, resolved.sourceCwd, {
-					signal: request.acquisitionSignal,
-				})),
+				(await operations.createPane(
+					request.name,
+					resolved.sourceCwd,
+					{ signal: request.acquisitionSignal },
+					request.placement,
+				)),
 			targetCwd: resolved.sourceCwd,
 			effectiveAgentDir: resolved.localAgentDir ?? resolved.agentDir,
 			localAgentDir: resolved.localAgentDir,

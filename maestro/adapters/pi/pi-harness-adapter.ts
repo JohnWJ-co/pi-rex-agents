@@ -208,6 +208,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 			agent: resolved ? resolved.agent : opts.role.name,
 			cwd,
 			worktree: opts.worktreeRequest,
+			placement: opts.placement,
 			accept: opts.accept,
 			// An omitted override must not force lineage-only/default fork to standalone.
 			fork: opts.session
@@ -268,6 +269,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 			acquisitionSignal: opts.acquisitionSignal,
 			name: opts.name,
 			sessionFile: opts.sessionId,
+			placement: opts.placement,
 			message: opts.message,
 			parent: this.options.parent,
 			modelScope: this.options.modelRegistry.scope,

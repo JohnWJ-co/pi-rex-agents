@@ -3,7 +3,7 @@
 规则：
 - 只在 `/Users/qiangwenjun/Documents/project/pi-rex-agents-p4`（分支 `p4-kernel`）中工作，绝不修改主 checkout `/Users/qiangwenjun/Documents/project/pi-rex-agents`，也不修改上游 `/Users/qiangwenjun/Documents/project/pi-herdr-agents`。
 - 按 T0→T6 顺序执行。每个任务完成后：更新本文件（完成项、门禁结果、提交 hash、偏差说明），然后提交。
-- 门禁失败时停止，不要跳过或弱化门禁；在本文件写明失败的命令、输出摘要、你的判断和建议，然后结束本轮等待指示。
+- 门禁失败若由本任务改动直接造成且修法机械（类型收窄、import、格式、同步新行为的测试期望），可修复后继续，并在本文件记录。原因不明、需要弱化或跳过断言、涉及删除测试、涉及 `released.json` 或与任务卡冲突时，记录失败命令、输出摘要、判断与建议，停止等待指示。不得弱化门禁。
 - 真实 Rex 测试结束后清理所有自己创建的 block/window/lab，不要动用户的其他 block。
 - 不合并、不推送、不改 `released.json`（T3 需要用户确认的情况除外）。
 
@@ -12,13 +12,132 @@
 | T0 | 已完成，门禁通过 | `41af43a2c17ae86ec7c5e57b3c1989c6b71147a8` | 完整复制范围已修正；test-gate 最终通过，1452 个测试已加载 |
 | T1 | 已完成，门禁通过 | `15cdafc` | Rex lab、集成 harness、验证技能和 AGENTS.md 已完成；test-gate 与真实 Rex smoke 通过 |
 | T2 | 已完成返工，门禁通过 | `6202306` | 恢复通用测试并迁移 audit-stop 到 Rex harness；Rex provider 已入内核；Herdr/sidebar/Windows 专属路径已删除；保留 `test/verify-lab-guards.test.ts` |
-| T2b | 已完成，门禁通过 | 本提交（P4.T2b） | 父端白名单覆盖 fresh/resume/persistent/handoff；真实 acp_status 调用及 block 清理通过 |
-| T3 | 待开始 | | |
+| T2b | 已完成，门禁通过 | `74be436` | 父端白名单覆盖 fresh/resume/persistent/handoff；真实 acp_status 调用及 block 清理通过 |
+| T3 | 已完成，门禁通过 | 本次 T3 提交，提交后补记 hash | 原生 placement、split 上限 2、Rex 配置隔离；真实集成 11/11 通过 |
 | T4 | 待开始 | | |
 | T5 | 待开始 | | |
 | T6 | 待开始 | | |
 
 ## 日志
+
+### T3 完成：修正 F1 状态等待协议，placement 集成通过
+
+监督确认上轮超时源于 harness 对 F1 的误读：启动和中断使用 `idle`，正常一轮结束使用 `done`。新增 `test/integration/rex-harness.ts` 的 `waitForPiTurnSettled`，只接受 Pi 的 `done` 或 `idle`，`working`、`blocked`、`error` 均不满足；placement 的 `launchStage` 先读该轮 session 标记，再调用新 helper。`waitForPiReady` 保持原来的启动 `idle` 语义，默认 `PI_TIMEOUT=120_000` 未变。没有延长超时、跳过检查或降低拓扑/报告/会话/清理断言。同步了 F1、AGENTS 和两个验证技能，以下失败日志保留为历史。
+
+本次修正后验证：
+
+- `npm run test:integration:rex`：**11 tests / 11 pass / 0 fail / 0 skipped**，退出码 0，总耗时 10840.607625ms。placement 用例耗时 3261.392791ms，另外覆盖原有 real smoke 和 9 项 RexSurfaceProvider conformance。
+- 拓扑实证：父 window `window:01a1afc1-82ee-78b2-a4d8-94daef442bfa`；第 1、2 个子 block 位于父 window，第 3 个位于 `window:01a1afc1-88e7-7a41-ae4c-ebbd7d8c9631`；关闭第 1 个后，第 4 个重新进入父 window；关闭第 2 个后，显式 tab 的第 5 个仍进入新 window `window:01a1afc1-8ca3-79bc-bb0a-3417428b415a`。第 3、4、5 个都有真实报告和子 session，最终子 block 全部消失。
+- 通过 `startParentPi` 的 `--no-extensions -e <当前 checkout>/src/extension.ts` 加载新代码，没有依赖本协调会话的 `/reload` 状态。
+- 重新运行 `npm run typecheck`、`npm run lint`、`npm run format:check`、`npm run docs:tools:check`、`git diff --check`：全部通过。
+- `lab.ts doctor`：通过，集成开始前无并行套件和 live lab。`npm pack --dry-run --json`：通过，164 个文件，已检查完整清单；含内核 reservation 和 Rex surface 文档，不含旧 `src/placement.ts`、本地 settings、会话、证据或凭据。
+- test-gate 沿用上一轮通过的单元门禁：`bash docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t3-verified-gate.JFFyee`，默认 `MIN_TESTS=1155`，两轮均加载 1180 项、无持续新增失败。本次之后只修正集成 harness/用例及说明，单元覆盖代码未变。`released.json` 比较无 breaking，未修改基线和允许集合。
+- 本轮日志与收尾证据：`/tmp/pi-rex-agents-p4-t3-protocol-check.V58QTZ` 中的 `integration.log`、`integration.exitcode`、`typecheck.log`、`lint.log`、`format.log`、`docs.log`、`diff.log`、`pack.json`、`postflight.json`。上一轮 test-gate 与失败集成日志继续保留，便于追溯。
+
+T3 实现和交接：
+
+- placement 已成为 `subagent` / `subagent_resume` 的原生参数，显式沿 launch/resume 链传递；split 名额由内核的父进程 reservation 和登记表维护，默认 2，覆盖并发、关闭后复用、reload 和 resume。宿主 ALS、参数注入和 split 计数已删除。
+- 配置隔离为 `$PI_CODING_AGENT_DIR/rex-agents/config.json`；缺省 split/right/2，`maxPerTab` 只接受 1..8 的整数。不读取、不迁移旧 Herdr 配置，并覆盖旧路径存在 grouped 配置的加载回归。
+- 已逐文件核对 `t3-build` 的 `24ec41242faeaa872f0f9706984dab605a264507` 并人工纳入当前 T3 工作区：`maestro/core/config/pane-config.ts` 和 `config.json.example` 与该提交完全一致；`test/test.ts` 保留其全部修改，再加 Rex 配置隔离回归。没有 merge 或 cherry-pick。受管 worktree 仍保留，管理清单标记其 source 为主 checkout、位于当前 cwd 清理范围外；未绕过管理工具删除。
+- postflight 确认无 `pira-lab-*` / `pi-integ-*` 根、测试进程或测试 Rex session；原 session 只剩父 block。`.pi/settings.json` 仍为 `S`（skip-worktree），`released.json` 和基线没有 diff，无根目录空目录或待提交证据/凭据。
+- 未派遣被禁用的 `gpt-6-astra`，未修改主 checkout、上游或旧用户配置；不合并、不推送。仅提交 T3，完成后停止，不开始 T4。
+
+### T3 续跑：静态门禁通过，placement 集成超时后停止
+
+按监督放宽后的规则完成两处机械同步：accept-recheck 夹具返回确定存在的 operations；RunSession 转发测试增加显式 `placement: "tab"` 的输入和完整对象期望。补跑 wording 检查后，将 placement 的表示断言同步为原生 TypeBox union，并恢复模拟工具的完整描述；生产文案映射没有改动，没有新增非空断言、删除用例或降低断言要求。
+
+本轮正式门禁结果：
+
+- `npm run typecheck`、`npm run lint`、`npm run docs:tools:check`、`npm run format:check`（151 个文件）、`git diff --check`：通过。`bun src/wording-check.ts` 机械同步后通过，输出 `rex host surface OK`。
+- `bash docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t3-verified-gate.JFFyee`：通过，保持默认 `MIN_TESTS=1155`。两轮均为 **1180 tests / 1161 pass / 9 fail / 10 skipped**；第 1 轮两个暂定新增失败没有持续，最终输出 `OK：没有持续性新增失败`，退出码 0。raw npm test 仍有允许集合中的失败，不能描述为零失败。
+- released/current 契约用例 `has no breaking change against the last released schema` 通过；新增 placement 为兼容扩展。`test/fixtures/tool-schema/released.json`、基线脚本和允许集合均未修改。
+- `node --experimental-strip-types .pi/skills/verify-pi-rex-agents/scripts/lab.ts doctor`：通过，Rex `0.0.1793741575-g1b6654`、Pi `1.5.0`、Node `v26.7.0`，无已有 lab 或运行中的集成。
+- `npm pack --dry-run --json`：通过，164 个文件。包含 `maestro/runtime/pi-placement.ts`、`docs/rex-surface.md`；不含已删除的 `src/placement.ts`、本地 settings、会话、证据或凭据。
+- **`npm run test:integration:rex` 失败，退出码 1：11 tests / 10 pass / 1 fail / 0 skipped。** 原有 real smoke 和 9 项 RexSurfaceProvider conformance 均通过；新增 placement 用例失败，不能报告为 placement 验收通过。
+
+placement 失败原文：
+
+```text
+places split, split, tab and reuses a closed child slot through real parent tools (122285.245833ms)
+Error: Timed out waiting for parent Pi idle status
+    at waitFor (test/integration/rex-harness.ts:179:8)
+    at async waitForPiReady (test/integration/rex-harness.ts:274:2)
+    at async launchStage (test/integration/rex-placement.test.ts:70:5)
+    at async TestContext.<anonymous> (test/integration/rex-placement.test.ts:80:4)
+```
+
+- fresh parent 通过 `--no-extensions -e <当前 checkout>/src/extension.ts` 加载新代码。第一轮 start 已读到 `PLACEMENT_READY`，随后等父 Pi 的 idle OSC 状态在 120 秒后超时；尚未执行 split/split/tab 的拓扑断言，也没有得出关闭后复用的结论。
+- 当前原因未明，不能据此判定 reservation 错误或修改状态断言。按监督最新规则停止：不延长超时、不跳过或删除断言、不重试集成、不提交 T3，等待下一步定位指令。没有自行 `/reload` 或调用本会话的旧 subagent 路径，也未再派遣 `gpt-6-astra`。
+- 静态门禁、test-gate 两轮日志、失败集成日志、doctor、pack 与收尾证据保存在 `/tmp/pi-rex-agents-p4-t3-verified-gate.JFFyee`；主要文件为 `test-gate.log`、`run1.log`、`run2.log`、`integration.log`、`integration.exitcode`、`postflight.json`。此前三轮 RunSession 期望遗漏的失败日志仍保留于 `/tmp/pi-rex-agents-p4-t3-final-gate.WLP4Ul`。
+
+清理与范围：afterEach 已释放等待文件并销毁隔离 lab。只读 postflight 确认无 `pira-lab-*` / `pi-integ-*` 临时根、测试进程或测试 Rex session；本 session 只剩原父 block `block:01a1af49-22e2-7bfe-b2e6-2984426ea5df`，未操作其他 session。`.pi/settings.json` 仍为 `S`（skip-worktree），受保护文件没有 diff，没有暂存文件或根目录空目录。未修改主 checkout、上游或旧用户配置，没有合并、推送或 T3 提交。变更保留在 `p4-kernel` 工作区，不开始 T4。
+
+### T3 继续：按监督放宽停止规则修复夹具并继续门禁
+
+- 补跑 `bun src/wording-check.ts` 发现其旧检查仍要求宿主注入的 `enum`；已同步为原生 TypeBox union 的 `anyOf.const`，继续严格断言 split/tab 两个值。另恢复模拟工具的完整描述，使夹具继续覆盖已有的精确文案映射；没有修改生产文案映射或减少断言。修复后检查退出码 0。
+
+监督授权机械修复后继续：accept-recheck 夹具现在返回显式非可选 operations，两处调用直接使用该属性；没有新增 `!` 断言、删除测试或放宽断言。以下失败记录保留为历史。
+
+- typecheck 已通过。test-gate 首次续跑三轮均加载 1180 项（分别 1162/1160/1161 pass，8/10/9 fail，10 skipped），唯一持续新增失败是 `resolves roles, merges env and forwards launch input without acquiring infrastructure`：完整对象断言缺少新增的 `placement`。已同步为输入显式 `tab` 并校验完整转发，保留所有既有断言后重跑；原始日志位于 `/tmp/pi-rex-agents-p4-t3-final-gate.WLP4Ul`。
+
+### T3 继续：可选 launchOperations 已修复，测试夹具类型检查失败后停止
+
+按监督指令修复了上一轮的基础设施契约：
+
+- `maestro/runtime/pi-run-session-types.ts` 将 `launchOperations` 改为可选注入；`maestro/runtime/pi-run-session.ts` 的 worktree 缺省链改用 `options.infrastructure?.launchOperations?.worktree ??`。`src/infrastructure.ts` 不构造 launch operations，继续交由内核按 pane snapshot 构造。
+- `test/maestro/pi-run-session.test.ts` 新增不注入 `launchOperations` 的回归：从缺省 Rex 配置加载 split/right/2，并发启动三个子代理，验证 split/split/tab。针对性命令 `node --experimental-strip-types --test --test-name-pattern='without injected launch operations' test/maestro/pi-run-session.test.ts`：**1 passed、0 failed、0 skipped**。
+- 三个修改文件已执行 Biome format；没有修改既有测试的断言、基线脚本或 `MIN_TESTS=1155`。
+
+重新启动正式门禁，首项 `npm run typecheck` **失败，退出码 2**：
+
+```text
+test/maestro/accept-recheck.test.ts(419,2): error TS18048: 'operations' is possibly 'undefined'.
+test/maestro/accept-recheck.test.ts(501,10): error TS2532: Object is possibly 'undefined'.
+```
+
+- 原因：`PiRunSessionInfrastructure.launchOperations` 现在可选，而 accept-recheck 的两处测试仍直接使用 `f.options.infrastructure!.launchOperations`。该夹具在第 95 行明确注入 operations，因此是测试夹具的类型收窄遗漏，不能归为基线或 flaky。生产代码原先缺少属性的 TS2741 已消除。
+- 建议后续从夹具返回确定存在的 operations，或在两处访问前增加明确的存在性断言，再完整重跑门禁。本轮按顶部规则停止，没有继续修复或重试。
+- `test-gate`、lint、`docs:tools:check`、format:check、doctor、placement/Rex 集成、pack dry-run 均未执行；runner 遇首个失败立即退出。没有得出 released/current 比较结论，`released.json` 未修改。
+- 日志与退出码：`/tmp/pi-rex-agents-p4-t3-optional-gate.xlmRzq/typecheck.log`、`typecheck.exitcode`、`exitcode`；runner 与只读 postflight 证据位于同一目录。
+
+收尾：本轮没有派出子代理、没有自行 `/reload`、没有启动 lab 或集成。`rex ls --json` 无测试会话，临时目录无 `pira-lab-*` / `pi-integ-*`，无测试进程或 lab server 残留；仅保留既有 Rex 主服务器。`.pi/settings.json` 保持 `S`（skip-worktree），无暂存改动、无根目录空目录。没有修改主 checkout、上游或旧用户配置，没有合并、推送或 T3 提交；不开始 T4。
+
+### T3：原生 placement 与配置隔离已实现，typecheck 失败后停止
+
+当前实现均保留在 `p4-kernel` 未提交工作区；没有合并或推送，不开始 T4。
+
+- `subagent` / `subagent_resume` 的 catalog 与 TypeBox schema 原生加入 `placement`，经 task、run session、Pi adapter、fresh/resume launch 传到 `createPane`。删除 `src/placement.ts`、宿主 infrastructure split 计数和 API proxy 参数注入，保留文案代理到 T4。
+- 新增 `maestro/runtime/pi-placement.ts`：按本父进程登记、仍存活且在父 window 内的普通子 block 计数；队列覆盖 inventory 和 create，并预留等待注册的 split，超额转 tab。run-session owner 在 reload 时保留 registry 和 reservation；worktree 保持独立 tab。
+- `PaneMode` 仅保留 split/tab，默认 split/right/2；`maxPerTab` 校验整数 1..8。已核对 `t3-pane-config` 的 `24ec412` 配置改动后按文件应用，没有合并整个 worktree。
+- 按监督追加要求提前隔离配置：`pi-extension/subagents/config-path.ts` 改读 `$PI_CODING_AGENT_DIR/rex-agents/config.json`；不读取、不迁移旧 `herdr-agents/config.json`。新增旧路径含 grouped 配置仍可加载内核的回归测试。plan、任务卡及路径文档同步；其余改名留 T6，outcome ledger 路径不在本轮改动中。
+- 新增 `test/integration/rex-placement.test.ts`，通过 fresh parent Pi 的 `-e <checkout>/src/extension.ts` 加载当前代码，检查 split/split/tab、关闭后复用、显式 tab、报告与子 session 及清理；已加入 `test:integration:rex`。本轮尚未执行该真实集成用例。
+- 同步 README、配置、worktree、Rex surface 文档、代码地图和两项验证技能。`npm run docs:tools` 已重新生成文档与 `current.json`；`released.json` 没有修改。
+
+正式门禁前的开发检查：
+
+- 配置与 reload 针对性测试：14 passed、0 failed、0 skipped；配置路径 resolver 相关 15 项通过。
+- 初次运行 placement/run-session/adapter/accept/persistent 五组针对性测试：141 tests / 135 pass / 6 fail / 0 skipped。6 个失败均来自本轮误将 ledger 测试夹具改到新目录；恢复 ledger 夹具及文档原路径后，`test/maestro/accept-recheck.test.ts` + `test/maestro/pi-placement.test.ts` 共 16 passed、0 failed、0 skipped。没有删除或放宽断言。
+- 在本 worktree 执行监督指定命令 `pi -p --no-session --model CBAPI/cn:deepseek-v4.1-flash "只回复 OK"`：退出码 0，返回 `OK`，没有扩展加载错误；同时有本机模型 scope 的既有 warning：`No models match pattern "ds/*"`、`"stepfun/*"`、`"MIMO/*"`。随后已通知监督可 reload；没有自行 `/reload`，也没有在未收到确认时用本会话工具进行真实子代理验证。
+- `t3-test`、`t3-test-2` 的早先启动失败，监督已定位为新校验读取旧 grouped 配置，**与模型无关**。用户禁止任何 provider 的 `gpt-6-astra` 后未再派遣；后续测试子代理应优先使用 `CBAPI/cn:deepseek-v4.1-flash`。
+
+正式门禁：
+
+- 第一项 `npm run typecheck`：**失败，退出码 2**。完整输出保存在 `/tmp/pi-rex-agents-p4-t3-gate.DsemUt/typecheck.log`，原文：
+
+```text
+src/infrastructure.ts(27,3): error TS2741: Property 'launchOperations' is missing in type '{ surfaceProvider: RexSurfaceProvider; worktreeOperations: WorktreeOperations; supervision: SupervisionCoordinator; }' but required in type 'PiRunSessionInfrastructure'.
+```
+
+- 原因：删除宿主层 launch wrapper 后，`createRexInfrastructure()` 只返回 provider、worktree 和 supervision；`maestro/runtime/pi-run-session-types.ts` 的 `PiRunSessionInfrastructure.launchOperations` 仍是必填。内核 `launchOperations(snapshot)` 已有缺省构造分支，但类型契约没有同步。这是本轮确定性回归，不能归为基线或 flaky。
+- 建议下一轮将 `launchOperations` 明确为可选注入，由内核根据 snapshot 构造默认 operations，再完整重跑门禁；本轮只记录建议，没有继续修改或重试。
+- 按顶部停止规则，未执行后续 lint、format:check、docs:tools:check、test-gate、doctor、Rex 集成、pack dry-run。`npm run docs:tools` 的生成成功不等于契约检查通过；尚未得到 released/current 比较结论。未修改 test-gate 或默认 `MIN_TESTS=1155`。
+
+收尾：
+
+- 本轮没有启动 placement lab；`rex ls --json` 无测试会话，系统临时目录无 `pira-lab-*` / `pi-integ-*`，无集成或 lab 进程残留；只保留既有 Rex 主服务器。检查结果保存在同一门禁目录的 `postflight.json`。
+- `t3-build` 完成后保留的 block `block:01a1af84-e09c-7d59-a556-a527e7252d78` 已按明确 ID 关闭；复查本 session 只剩父 block `block:01a1af49-22e2-7bfe-b2e6-2984426ea5df`。前后快照保存在门禁目录的 `parent-blocks.json` / `parent-blocks-after.json`。未修改其他 session。
+- `t3-pane-config` worktree 保留在 `/Users/qiangwenjun/.pi/rex-agents/worktrees/pi-rex-agents/t3-pane-config`；管理器报告 source repo 在当前 cwd containment 之外，因此未删除。没有修改该 worktree、主 checkout 或上游 checkout。
+- `.pi/settings.json` 保持 `S`（skip-worktree），未修改、未暂存；`released.json` 未修改；无暂存改动、无根目录空目录。T3 不提交，按规则停止等待下一步指示。
 
 ### T2b 完成：按 F11 统一父端白名单，真实压缩工具验证通过
 

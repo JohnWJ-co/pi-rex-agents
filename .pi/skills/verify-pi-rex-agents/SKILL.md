@@ -33,7 +33,18 @@ git diff --check
 npm run test:integration:rex
 ```
 
-The smoke test must run inside Rex and pass; a skip means the environment was not verified. It starts a parent Pi with `--no-extensions -e <checkout>/src/extension.ts`, calls the real `subagent` tool through the deterministic provider, checks the `<subagent_report>` delivery and child session, observes a child block appear, and waits for it to disappear.
+The smoke test must run inside Rex and pass; a skip means the environment was not verified.
+
+The same command includes `rex-placement.test.ts`: a fresh parent loads the
+current checkout with `-e`, then checks split/split/tab, close-and-reuse and
+explicit tab using real child blocks and session evidence. The default split
+limit is 2; reload/resume reservation adoption is also covered by unit tests.
+A skipped placement test is not passing placement evidence.
+Startup uses `waitForPiReady` (`idle` only); each later turn uses
+`waitForPiTurnSettled` (`done` or `idle`, excluding `working` and `blocked`).
+Keep the existing timeout and require session evidence before checking status (F1).
+
+The smoke test starts a parent Pi with `--no-extensions -e <checkout>/src/extension.ts`, calls the real `subagent` tool through the deterministic provider, checks the `<subagent_report>` delivery and child session, observes a child block appear, and waits for it to disappear.
 
 For a manual evidence run:
 

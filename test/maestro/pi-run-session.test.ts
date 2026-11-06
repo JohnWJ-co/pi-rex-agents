@@ -26,6 +26,7 @@ import type {
 } from "../../maestro/runtime/pi-run-session-types.ts";
 import { FakeSurfaceProvider } from "../../maestro/surfaces/fake/fake-surface-provider.ts";
 import { launchOperationsFromSurface } from "../../maestro/adapters/pi/launch-operations.ts";
+import { loadPaneConfig } from "../../maestro/core/config/pane-config.ts";
 import { discoverAgentCatalog } from "../../maestro/core/roles/discovery.ts";
 import {
 	appendPersistentTaskEvent,
@@ -1588,6 +1589,123 @@ for (const rejection of [false, true])
 			assert.equal(closes, 1);
 			assert.equal(f.settled.length, 1);
 		}));
+
+test("without injected launch operations Rex config defaults enforce a two-child split cap", () =>
+	fixture(async (f) => {
+		const configDir = join(f.dir, "rex-agents");
+		const paneConfig = loadPaneConfig(configDir, f.options.configExamplePath);
+		assert.equal(existsSync(join(configDir, "config.json")), false);
+		assert.deepEqual(paneConfig, {
+			mode: "split",
+			direction: "right",
+			maxPerTab: 2,
+		});
+		const parent = f.provider.createSurface({
+			name: "parent",
+			cwd: f.dir,
+			placement: { kind: "split", direction: "right" },
+		});
+		const list = f.provider.listSurfaces.bind(f.provider);
+		f.provider.listSurfaces = () =>
+			list().map((surface) => ({ ...surface, workspaceId: surface.group }));
+		const session = runtime.createDefaultRunSession({
+			...f.options,
+			configDir,
+			infrastructure: {
+				surfaceProvider: f.provider,
+				supervision: f.options.infrastructure!.supervision,
+				parentSurfaceId: parent,
+			},
+			getLaunchSnapshot: () => ({
+				...f.options.getLaunchSnapshot(),
+				paneConfig,
+			}),
+		});
+		try {
+			const children = await Promise.all(
+				["default-one", "default-two", "default-three"].map((id) =>
+					session.spawnPi(f.input(id)),
+				),
+			);
+			const group = (id: string) =>
+				f.provider.listSurfaces().find((surface) => surface.id === id)
+					?.workspaceId;
+			assert.ok(group(parent));
+			assert.equal(group(children[0].surfaceId!), group(parent));
+			assert.equal(group(children[1].surfaceId!), group(parent));
+			assert.notEqual(group(children[2].surfaceId!), group(parent));
+		} finally {
+			await session.shutdown("quit");
+		}
+	}));
+
+test("Pi split capacity survives facade reload and resume uses the same reservation", () =>
+	fixture(async (f) => {
+		const parent = f.provider.createSurface({
+			name: "parent",
+			cwd: f.dir,
+			placement: { kind: "split", direction: "right" },
+		});
+		const list = f.provider.listSurfaces.bind(f.provider);
+		f.provider.listSurfaces = () =>
+			list().map((surface) => ({
+				...surface,
+				workspaceId: surface.group,
+			}));
+		const options: DefaultRunSessionOptions = {
+			...f.options,
+			infrastructure: { ...f.options.infrastructure!, parentSurfaceId: parent },
+			getLaunchSnapshot: () => ({
+				...f.options.getLaunchSnapshot(),
+				paneConfig: { mode: "split", direction: "right", maxPerTab: 2 },
+			}),
+		};
+		const original = runtime.createDefaultRunSession(options);
+		let current = original;
+		const group = (id: string) =>
+			f.provider.listSurfaces().find((s) => s.id === id)?.workspaceId;
+		try {
+			const one = f.input("placement-one"),
+				two = f.input("placement-two");
+			const [first, second] = await Promise.all([
+				original.spawnPi(one),
+				original.spawnPi(two),
+			]);
+			assert.equal(group(first.surfaceId!), group(parent));
+			assert.equal(group(second.surfaceId!), group(parent));
+			current = runtime.createDefaultRunSession(options, original);
+			assert.equal(
+				current.getRecord(one.task.id),
+				original.getRecord(one.task.id),
+			);
+			const three = f.input("placement-three");
+			three.task.placement = "split";
+			const third = await current.spawnPi(three);
+			assert.notEqual(group(third.surfaceId!), group(parent));
+			const record = current.getRecord(one.task.id)!;
+			f.complete(record);
+			await current.supervise(first, one.task);
+			const fourth = await current.spawnPi(f.input("placement-four"));
+			assert.equal(group(fourth.surfaceId!), group(parent));
+			const resumedTab = await current.resumePi({
+				taskId: "placement-resume-tab",
+				name: "resume-tab",
+				sessionPath: record.sessionFile,
+				placement: "tab",
+			});
+			assert.notEqual(group(resumedTab.surfaceId!), group(parent));
+			// A resumed default split obeys the same full parent-window cap.
+			const resumedFull = await current.resumePi({
+				taskId: "placement-resume-full",
+				name: "resume-full",
+				sessionPath: record.sessionFile,
+				placement: "split",
+			});
+			assert.notEqual(group(resumedFull.surfaceId!), group(parent));
+		} finally {
+			await current.shutdown("quit");
+		}
+	}));
 
 test("new launches capture one snapshot per invocation while adopted handles retain their old context", () =>
 	fixture(async (f) => {

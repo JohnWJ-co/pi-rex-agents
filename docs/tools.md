@@ -163,6 +163,7 @@ subagent({
 | `worktree` | object \| null | no | Optional isolated Herdr-managed Git worktree. Omit or pass null to use an ordinary pane in cwd. |
 | `worktree.branch` | string | yes | New branch name for an isolated Herdr-managed Git worktree |
 | `worktree.base` | string | no | Git revision to branch from. Defaults to the source checkout's committed HEAD. |
+| `placement` | `"split"` \| `"tab"` | no | Where the child runs. "split" (default) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. "tab" opens the child in a new Rex tab (a Rex window). Worktree children always open in a new tab. |
 | `fork` | boolean | no | Override the child session mode for this spawn. `true` forces full-context fork; `false` forces standalone. Omit to inherit the agent frontmatter session-mode. |
 | `persistent` | boolean | no | Keep this stable specialist session alive between turn-based tasks. Persistent agents accept follow-up work only through subagent_send. |
 | `accept` | object | no | Optional accept check. The delivery carries `Check: \<verdict>` from the closed set accepted, rejected, error, skipped, none. Only auto-exit, non-persistent children support it. |
@@ -512,6 +513,7 @@ Registered in: parent, child sessions.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
+| `placement` | `"split"` \| `"tab"` | no | Where the child runs. "split" (default) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. "tab" opens the child in a new Rex tab (a Rex window). Worktree children always open in a new tab. |
 | `sessionPath` | string | yes | Path to the session .jsonl file to resume |
 | `name` | string | no | Display name for the terminal tab. Default: 'Resume' |
 | `message` | string | no | Optional message to send after resuming (e.g. follow-up instructions) |

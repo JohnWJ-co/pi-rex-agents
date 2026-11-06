@@ -311,6 +311,7 @@ export function createRunSession(options: RunSessionOptions): RunSession {
 			tools: task.tools,
 			systemPrompt: task.systemPrompt,
 			worktreeRequest: task.worktree,
+			placement: task.placement,
 			runtime: candidate
 				? { model: candidate.model, thinking: candidate.thinking }
 				: undefined,

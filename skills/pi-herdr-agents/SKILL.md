@@ -248,8 +248,9 @@ initialized submodules). Ignored files are neither blockers nor preserved by
 
 ## Configuration
 
-Durable config: `$PI_CODING_AGENT_DIR/herdr-agents/config.json` (default
-`~/.pi/agent/herdr-agents/config.json`); never the package root. Copy the
+Durable config: `$PI_CODING_AGENT_DIR/rex-agents/config.json` (default
+`~/.pi/agent/rex-agents/config.json`); never the package root. The old
+`herdr-agents/config.json` is neither read nor migrated. Copy the
 package's `config.json.example` or run `/subagents-init`. Run `/reload` after
 changes. Without a real file, only non-model settings fall back to the example.
 

@@ -108,6 +108,7 @@ export function createLaunchPlanner({
 				role: params.agent ?? "",
 				cwd: options.origin.cwd,
 				worktree: params.worktree ?? undefined,
+				placement: params.placement,
 				accept: params.accept ? normalizeAcceptSpec(params.accept) : undefined,
 				requestedModel: params.model,
 				session: { mode: resolveEffectiveSessionMode(params, agentDefs) },

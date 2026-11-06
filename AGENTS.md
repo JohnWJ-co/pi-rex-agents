@@ -25,7 +25,8 @@ This tree is the P4 migration worktree. Keep changes scoped to the current check
 - `src/extension.ts` — Rex-only Pi composition root; loads the kernel with Rex infrastructure and host notices
 - `maestro/surfaces/rex/rex-cli.ts` — dependency-free explicit-argv Rex CLI wrapper; every call uses `--autostart=false` and propagates `REX_SERVER`
 - `maestro/surfaces/rex/rex-surface-provider.ts` — block/window creation, Pi command execution, OSC/program status observation, process inspection and cleanup
-- `src/rex-host-api.ts`, `src/rex-wording.ts`, `src/placement.ts` — Rex host API proxy, user-facing host text and placement policy
+- `src/rex-host-api.ts`, `src/rex-wording.ts` — Rex host API proxy and user-facing host text
+- `maestro/runtime/pi-placement.ts` — parent-owned split admission and reservations, preserved with the Pi run registry across reloads
 - `src/infrastructure.ts`, `maestro/surfaces/rex/worktree.ts`, `maestro/surfaces/rex/git.ts` — runtime seams and Rex-managed worktree paths
 - `pi-extension/subagents/` — execution kernel, delivery envelope, controls, persistent specialists and renderers
 - `maestro/core/` — host-neutral seams, lifecycle, routing, wakeups and worktree contracts retained by the fork
@@ -35,6 +36,7 @@ This tree is the P4 migration worktree. Keep changes scoped to the current check
 - `maestro/surfaces/rex/` — the only real SurfaceProvider implementation; `maestro/surfaces/fake/` is test-only
 - `test/integration/rex-harness.ts` — isolated Rex server, fake-provider configuration, parent launch and observable wait helpers
 - `test/integration/rex-smoke.test.ts` — real parent-to-child Rex smoke lifecycle
+- `test/integration/rex-placement.test.ts` — real split/split/tab placement, close-and-reuse and explicit tab evidence
 - `test/integration/fake-provider.ts` — deterministic HTTP provider used by integration tests
 - `.pi/skills/verify-pi-rex-agents/scripts/lab.ts` — manual doctor/up/drive/down evidence lab
 - `.pi/skills/verify-pi-rex-agents/scripts/pin.ts` — registration behavior pin
@@ -47,7 +49,7 @@ Update this map when moving or adding a major seam.
 - The isolated lab starts `rex server run --listen unix://<root>/s --state-dir <root>/state --restore=false` under a `mkdtemp(join(tmpdir(), "pira-lab-"))` root. Refuse socket endpoints longer than 104 bytes.
 - The first lab check runs `rex whoami --json` inside the lab block and requires the endpoint to equal the lab socket.
 - Children are launched through the real `subagent` tool. A completed delegation must provide the report envelope, the child session evidence and the child block lifecycle evidence.
-- Synchronization waits for observable files, session entries, OSC/program status or Rex block changes. Fixed sleeps are not synchronization.
+- Synchronization waits for observable files, session entries, OSC/program status or Rex block changes. Fixed sleeps are not synchronization. `waitForPiReady` requires startup `idle`; after a turn, use `waitForPiTurnSettled` for `done` or `idle`, never `working` or `blocked` (F1).
 - The extension is Rex-only. A child is a leaf and must not register or invoke another delegation path.
 - The parent owns review, integration, publication and cleanup. Do not switch the parent checkout, push branches, or remove unrelated Rex sessions.
 

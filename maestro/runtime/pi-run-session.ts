@@ -58,6 +58,10 @@ import {
 	type OwnedRunAttempt,
 	type PreparedRun,
 } from "./run-session.ts";
+import {
+	createPiPlacementReservation,
+	type PiPlacementReservation,
+} from "./pi-placement.ts";
 import { createPiPersistentIO } from "./pi-persistent-io.ts";
 import {
 	appendOutcomeLedger,
@@ -127,6 +131,7 @@ interface PiSessionOwner {
 		"surfaceProvider" | "supervision" | "processProbe" | "acceptRunner"
 	>;
 	worktreeOperations: WorktreeOperations;
+	placement?: PiPlacementReservation;
 	/** Owns this composition's parent re-checks; a quit terminates them. */
 	acceptChecks?: AcceptCheckOwner;
 }
@@ -167,15 +172,6 @@ function resumeResultReader(
 			summarySource: errorProvenance(errorSource),
 		}),
 		sessionFile,
-	});
-}
-
-function createLaunchSurfaceProvider(
-	_snapshot: PiLaunchSnapshot,
-): RexSurfaceProvider {
-	return new RexSurfaceProvider({
-		sessionId: process.env.REX_SESSION ?? "",
-		anchorBlockId: process.env.REX_BLOCK,
 	});
 }
 
@@ -398,12 +394,14 @@ export function createDefaultRunSession(
 				prompt: input.message ?? "resumed session",
 				role: "",
 				cwd: process.cwd(),
+				placement: input.placement,
 			};
 			try {
 				return await kernel.resume({
 					task,
 					name: input.name,
 					sessionId: input.sessionPath,
+					placement: input.placement,
 					message: input.message,
 					autoExit: input.autoExit,
 				});
@@ -421,13 +419,22 @@ export function createDefaultRunSession(
 			resumePi,
 			worktreeOperations:
 				options.infrastructure?.worktreeOperations ??
-				options.infrastructure?.launchOperations.worktree ??
+				options.infrastructure?.launchOperations?.worktree ??
 				createWorktreeOperations(),
 		};
 	}
 	// Replacements must invoke the original kernel's invocation closure, which
 	// reads this shared current binding, not the old facade's options.
 	if (adopted) resumePi = state.resumePi;
+	// Adopt the reservation owner too; registry recovery must not reset the cap.
+	state.placement ??= createPiPlacementReservation(
+		state.infrastructure.surfaceProvider,
+		state.options.infrastructure?.parentSurfaceId ?? process.env.REX_BLOCK,
+		() =>
+			[...state.entries.values()]
+				.filter((entry) => !entry.record.worktree)
+				.map((entry) => entry.record.surface),
+	);
 	// The Rex provider exposes child state through Pi's OSC status reporter.
 	const acceptChecks = (state.acceptChecks ??= {
 		label: "parent run session",
@@ -476,12 +483,22 @@ export function createDefaultRunSession(
 		state.options.hooks.onObserved?.(child, observation);
 	}
 	function launchOperations(snapshot: PiLaunchSnapshot): PiLaunchOperations {
+		const operations =
+			state.options.infrastructure?.launchOperations ??
+			launchOperationsFromSurface(
+				state.infrastructure.surfaceProvider,
+				snapshot.paneConfig,
+			);
 		return {
-			...(state.options.infrastructure?.launchOperations ??
-				launchOperationsFromSurface(
-					createLaunchSurfaceProvider(snapshot),
+			...operations,
+			createPane(name, cwd, control, placement) {
+				return state.placement!.acquire(
 					snapshot.paneConfig,
-				)),
+					placement,
+					(chosen) => operations.createPane(name, cwd, control, chosen),
+					control,
+				);
+			},
 			worktree: state.worktreeOperations,
 		};
 	}
@@ -545,7 +562,10 @@ export function createDefaultRunSession(
 		};
 		if (suppressed)
 			child.lifecycle = markDelivery(child.lifecycle, "suppressed");
-		else state.entries.set(task.id, entry);
+		else {
+			state.entries.set(task.id, entry);
+			state.placement!.registered(child.surface);
+		}
 		return {
 			handle,
 			adapter: owner,
@@ -820,6 +840,7 @@ export function createDefaultRunSession(
 							: current.task.systemPrompt,
 						surface: input.surface,
 						worktreeRequest: input.task.worktree,
+						placement: current.task.placement,
 						accept: input.task.accept,
 						runtime: { model: plan.model, thinking: plan.thinking },
 						resolvedLaunch: { ...current.resolved, runtimePlan: plan },

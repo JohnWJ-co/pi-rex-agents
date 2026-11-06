@@ -38,7 +38,7 @@ import {
 import type { SpawnOptions } from "../../maestro/core/harness-adapter.ts";
 
 const paneConfig = {
-	mode: "grouped",
+	mode: "split",
 	direction: "right",
 	maxPerTab: 4,
 } as const;

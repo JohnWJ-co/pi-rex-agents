@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isPlainObject, isString } from "./type-guards.ts";
 
-export type PaneMode = "grouped" | "tab" | "split";
+export type PaneMode = "split" | "tab";
 export type PaneDirection = "right" | "down";
 
 export interface PaneConfig {
@@ -17,12 +17,6 @@ type SplitPaneCreator = (
 	direction: PaneDirection,
 	cwd?: string,
 ) => string;
-type GroupedPaneCreator = (
-	name: string,
-	cwd: string,
-	maxPerTab: number,
-	direction: PaneDirection,
-) => string;
 
 function invalidPaneConfig(source: string, message: string): never {
 	throw new Error(`Invalid subagent pane config in ${source}: ${message}`);
@@ -36,7 +30,7 @@ export function parsePaneConfig(
 		invalidPaneConfig(source, "root must be an object");
 	}
 	if (!Object.hasOwn(rawConfig, "panes")) {
-		return { mode: "grouped", direction: "right", maxPerTab: 4 };
+		return { mode: "split", direction: "right", maxPerTab: 2 };
 	}
 	if (!isPlainObject(rawConfig.panes)) {
 		invalidPaneConfig(source, "panes must be an object");
@@ -52,18 +46,13 @@ export function parsePaneConfig(
 		);
 	}
 
-	let mode: PaneMode = "grouped";
+	let mode: PaneMode = "split";
 	if (Object.hasOwn(rawConfig.panes, "mode")) {
 		if (
 			!isString(rawConfig.panes.mode) ||
-			(rawConfig.panes.mode !== "grouped" &&
-				rawConfig.panes.mode !== "tab" &&
-				rawConfig.panes.mode !== "split")
+			(rawConfig.panes.mode !== "split" && rawConfig.panes.mode !== "tab")
 		) {
-			invalidPaneConfig(
-				source,
-				'panes.mode must be "grouped", "tab", or "split"',
-			);
+			invalidPaneConfig(source, 'panes.mode must be "split" or "tab"');
 		}
 		mode = rawConfig.panes.mode;
 	}
@@ -82,11 +71,11 @@ export function parsePaneConfig(
 
 	const maxPerTab = Object.hasOwn(rawConfig.panes, "maxPerTab")
 		? rawConfig.panes.maxPerTab
-		: 4;
-	if (!Number.isSafeInteger(maxPerTab) || maxPerTab < 1) {
+		: 2;
+	if (!Number.isSafeInteger(maxPerTab) || maxPerTab < 1 || maxPerTab > 8) {
 		invalidPaneConfig(
 			source,
-			"panes.maxPerTab must be a positive safe integer",
+			"panes.maxPerTab must be an integer between 1 and 8",
 		);
 	}
 	return { mode, direction, maxPerTab };
@@ -149,15 +138,7 @@ export function createSubagentPaneFactory(
 	config: PaneConfig,
 	createTab: PaneCreator,
 	createSplit: SplitPaneCreator,
-	createGrouped?: GroupedPaneCreator,
 ): PaneCreator {
-	if (config.mode === "grouped") {
-		return (name, cwd = process.cwd()) => {
-			if (!createGrouped)
-				throw new Error("Grouped pane creation is unavailable");
-			return createGrouped(name, cwd, config.maxPerTab, config.direction);
-		};
-	}
 	return config.mode === "split"
 		? (name, cwd) => createSplit(name, config.direction, cwd)
 		: createTab;

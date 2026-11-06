@@ -8,8 +8,9 @@
 import assert from "node:assert/strict";
 import piRexAgentsExtension from "./extension.ts";
 import { createRexHostApi } from "./rex-host-api.ts";
-import { createRexInfrastructure, REX_PANE_CONFIG } from "./infrastructure.ts";
-import { childPlacement } from "./placement.ts";
+import { createRexInfrastructure } from "./infrastructure.ts";
+import { parsePaneConfig } from "../maestro/core/config/pane-config.ts";
+import { launchOperationsFromSurface } from "../maestro/adapters/pi/launch-operations.ts";
 import { RexSurfaceProvider } from "../maestro/surfaces/rex/rex-surface-provider.ts";
 import { rexifyText } from "./rex-wording.ts";
 
@@ -97,7 +98,11 @@ for (const name of ["subagent", "subagent_resume"]) {
   const tool = host.tools.find((candidate) => candidate.name === name);
   assert.ok(tool, `${name} is registered`);
   const placement = tool.parameters?.properties?.placement;
-  assert.deepEqual(placement?.enum, ["split", "tab"], `${name} exposes placement`);
+  assert.deepEqual(
+    placement?.anyOf?.map((choice: { const: string }) => choice.const),
+    ["split", "tab"],
+    `${name} exposes placement`,
+  );
 }
 
 // ── The host notice reaches the system prompt ──────────────────────────────
@@ -130,161 +135,57 @@ assert.match(childEvent.systemPromptOptions.appendSystemPrompt, /\[Rex child\]/)
 assert.match(childEvent.systemPromptOptions.appendSystemPrompt, /leaf/);
 delete process.env.PI_SUBAGENT_ID;
 
-// ── Placement reaches the provider ────────────────────────────────────────
+// ── Explicit placement reaches the provider without host policy ───────────
 class FakeProvider {
   readonly name = "rex";
   readonly placements: unknown[] = [];
-  isAvailable() {
-    return true;
-  }
   async createSurface(options: any) {
     this.placements.push(options.placement);
     return "block:fake";
-  }
-  async listSurfaces() {
-    return [];
-  }
-  async inspectSurface() {
-    return {
-      kind: "missing",
-      present: "missing",
-      agentStatus: "unknown",
-      observedAt: Date.now(),
-    };
   }
 }
 
 const provider = new FakeProvider();
 const infrastructure = createRexInfrastructure(provider as never);
-
-await infrastructure.launchOperations.createPane("default", "/tmp");
-await childPlacement.run("tab", () =>
-  infrastructure.launchOperations.createPane("tabbed", "/tmp"),
-);
-await childPlacement.run("split", () =>
-  infrastructure.launchOperations.createPane("split", "/tmp"),
-);
+assert.equal(infrastructure.launchOperations, undefined, "the kernel owns launch placement");
+const operations = launchOperationsFromSurface(provider as never, parsePaneConfig({}));
+await operations.createPane("default", "/tmp");
+await operations.createPane("tabbed", "/tmp", undefined, "tab");
+await operations.createPane("split", "/tmp", undefined, "split");
 assert.deepEqual(provider.placements, [
   { kind: "split", direction: "right" },
   { kind: "tab" },
   { kind: "split", direction: "right" },
 ]);
 
-// ── maxPerTab caps splits and grouped maps to the same capped split ───────
-class CapProvider {
-  readonly name = "rex";
-  readonly placements: any[] = [];
-  private next = 0;
-  private readonly live = new Set<string>();
-  async createSurface(options: any) {
-    this.placements.push(options.placement);
-    const id = `block:${++this.next}`;
-    this.live.add(id);
-    return id;
-  }
-  async listSurfaces() {
-    return [...this.live].map((id) => ({ id }));
-  }
-  async closeSurface(id: string) {
-    this.live.delete(id);
-  }
-  async waitForSurfaceAbsence() {}
-  async inspectSurface() {
-    return {
-      kind: "missing",
-      present: "missing",
-      agentStatus: "unknown",
-      observedAt: Date.now(),
-    };
-  }
-}
-
-const capped = new CapProvider();
-const cappedInfrastructure = createRexInfrastructure(capped as never, {
-  mode: "split",
-  direction: "right",
-  maxPerTab: 2,
-});
-const first = await cappedInfrastructure.launchOperations.createPane("a", "/tmp");
-await cappedInfrastructure.launchOperations.createPane("b", "/tmp");
-await cappedInfrastructure.launchOperations.createPane("c", "/tmp");
-assert.deepEqual(
-  capped.placements.map((placement) => placement.kind),
-  ["split", "split", "tab"],
-  "the third split opens a new tab",
-);
-
-// A closed child frees its slot.
-await cappedInfrastructure.launchOperations.closePane(first);
-await cappedInfrastructure.launchOperations.createPane("d", "/tmp");
-assert.equal(capped.placements[3].kind, "split", "closing a child frees capacity");
-
-// Explicit "split" obeys the same cap.
-await childPlacement.run("split", () =>
-  cappedInfrastructure.launchOperations.createPane("e", "/tmp"),
-);
-assert.equal(capped.placements[4].kind, "tab", "an explicit split is capped too");
-
-// Concurrent launches reserve their slots instead of overshooting.
-const concurrent = new CapProvider();
-const concurrentInfrastructure = createRexInfrastructure(concurrent as never, {
-  mode: "split",
-  direction: "right",
-  maxPerTab: 2,
-});
-await Promise.all(
-  ["a", "b", "c", "d"].map((name) =>
-    concurrentInfrastructure.launchOperations.createPane(name, "/tmp"),
-  ),
-);
-const concurrentKinds = concurrent.placements.map((placement) => placement.kind);
-assert.equal(concurrentKinds.filter((kind) => kind === "split").length, 2);
-assert.equal(concurrentKinds.filter((kind) => kind === "tab").length, 2);
-
-// Upstream's grouped mode becomes the same capped split in Rex.
-const grouped = new CapProvider();
-const groupedInfrastructure = createRexInfrastructure(grouped as never, {
-  mode: "grouped",
-  direction: "right",
-  maxPerTab: 2,
-});
-for (const name of ["a", "b", "c"]) {
-  await groupedInfrastructure.launchOperations.createPane(name, "/tmp");
-}
-assert.deepEqual(
-  grouped.placements.map((placement) => placement.kind),
-  ["split", "split", "tab"],
-  "grouped splits up to the cap, then opens a tab",
-);
-
-// ── The tool wrapper strips placement and scopes it for the launch ─────────
+// ── The wording proxy preserves native placement parameters ──────────────
 const toolHost = makeFakePi();
 const toolApi = createRexHostApi(toolHost.pi);
-let observedPlacement: unknown = "untouched";
 let seenParams: any;
+const parameters = {
+  type: "object",
+  properties: {
+    name: { type: "string" },
+    placement: { type: "string", enum: ["split", "tab"] },
+  },
+};
 toolApi.registerTool({
   name: "subagent",
   label: "Subagent",
   description:
     "Spawn a sub-agent in a dedicated terminal herdr pane, or in an isolated Herdr-managed Git worktree when worktree is provided. ",
-  parameters: { type: "object", properties: { name: { type: "string" } } },
+  parameters,
   async execute(_id: string, params: any) {
     seenParams = { ...params };
-    observedPlacement = childPlacement.getStore() ?? "none";
     return { content: [{ type: "text", text: "ok" }] };
   },
 } as any);
 
 const wrapped = toolHost.tools[0];
-assert.deepEqual(
-  wrapped.parameters.properties.placement.enum,
-  ["split", "tab"],
-  "placement parameter is added",
-);
+assert.deepEqual(wrapped.parameters, parameters, "native schema passes through the proxy");
 assert.doesNotMatch(wrapped.description, /herdr/i);
 await wrapped.execute("call-1", { name: "child", placement: "tab" }, undefined, undefined, {});
-assert.equal(seenParams.placement, undefined, "placement is not forwarded upstream");
-assert.equal(observedPlacement, "tab", "placement is scoped to the launch");
+assert.equal(seenParams.placement, "tab", "placement reaches the kernel unchanged");
 
 // ── Command output and messages use Rex labels ────────────────────────────
 const commandHost = makeFakePi();

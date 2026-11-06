@@ -17,7 +17,13 @@ apply here, even if they are installed.
 - Placement: `placement: "split"` (default) opens a block beside you in the
   current Rex tab. `placement: "tab"` opens the child in a new Rex tab (a new
   window). Use `"tab"` when the user asks for a new tab/window; never create
-  it by hand with the `rex` CLI.
+  it by hand with the `rex` CLI. The default limit is 2 live children in the
+  parent window; further splits use a new tab. Closing a child frees its slot,
+  and `/reload` retains registered children and pending reservations. Configure
+  `panes.maxPerTab` (integer 1..8) in
+  `$PI_CODING_AGENT_DIR/rex-agents/config.json` (default
+  `~/.pi/agent/rex-agents/config.json`). The old `herdr-agents/config.json` is
+  neither read nor migrated.
 - Worktree children (`worktree: { branch }`) always open in a new tab under
   `~/.pi/rex-agents/worktrees`; the parent checkout's uncommitted changes are
   not copied (the base is committed HEAD).

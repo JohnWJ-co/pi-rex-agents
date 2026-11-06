@@ -1,4 +1,4 @@
-import type { PaneConfig } from "../../core/config/pane-config.ts";
+import type { PaneConfig, PaneMode } from "../../core/config/pane-config.ts";
 import type {
 	SurfaceProvider,
 	AcquisitionControl,
@@ -40,6 +40,7 @@ export interface PiLaunchOperations {
 		name: string,
 		cwd?: string,
 		control?: AcquisitionControl,
+		placement?: PaneMode,
 	): MaybePromise<string>;
 	createWorktree(
 		name: string,
@@ -75,12 +76,11 @@ export interface PiLaunchOperations {
 	): Promise<PiProcessIdentity>;
 }
 
-function placementFromPaneConfig(config: PaneConfig) {
-	if (config.mode === "split") {
+function placementFromPaneConfig(config: PaneConfig, requested?: PaneMode) {
+	if ((requested ?? config.mode) === "split") {
 		return { kind: "split" as const, direction: config.direction };
 	}
-	if (config.mode === "tab") return { kind: "tab" as const };
-	return { kind: "grouped" as const };
+	return { kind: "tab" as const };
 }
 
 function worktreeSurfaceForLaunch(
@@ -260,11 +260,11 @@ export function launchOperationsFromSurface(
 ): PiLaunchOperations {
 	return {
 		worktree,
-		createPane(name, cwd, control) {
+		createPane(name, cwd, control, placement) {
 			return provider.createSurface({
 				name,
 				cwd: cwd ?? process.cwd(),
-				placement: placementFromPaneConfig(config),
+				placement: placementFromPaneConfig(config, placement),
 				signal: control?.signal,
 			});
 		},

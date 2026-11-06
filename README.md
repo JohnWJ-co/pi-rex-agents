@@ -10,9 +10,10 @@ P2 已可用：
 
 - 10 个父工具：`subagent`、`subagent_cancel`、`subagent_interrupt`、`subagent_resume`、`subagent_send`、`subagent_stop`、`subagents_list`、`subagents_write_task_models`、`worktree_list`、`worktree_remove`
 - `subagent` / `subagent_resume` 支持 `placement`：
-  - `"split"`（默认）：在当前 tab 的父 block 右侧 `rex split`，最多 `maxPerTab`（默认 4）个子 block
+  - `"split"`（默认）：在当前 tab 的父 block 右侧 `rex split`，最多 `maxPerTab`（默认 2）个子 block
   - `"tab"`：`rex window new`，在新 tab 打开
-  - split 达到上限（或并发预留已满）后，下一次 split 自动改用新 tab；子 block 关闭后名额释放
+  - split 达到上限（或并发预留已满）后，下一次 split 自动改用新 tab；子 block 关闭后名额释放。内核按本父进程登记且仍在父 window 中存活的子 block 计数，`/reload` 保留登记表和预留队列
+  - `panes.mode` 只接受 `"split"` / `"tab"`，`panes.maxPerTab` 只接受 1..8 的整数；详见 [placement 配置](docs/configuration.md#pane-placement)
 - 会话级宿主提示：每轮把 “你在 Rex 里、子代理用 subagent 工具、placement 语义” 追加到 system prompt；子代理会话则追加“你是叶子、没有 subagent 工具”的提示
 - 工具描述、参数描述、命令输出、投递消息全部使用 Rex 术语
 - Rex 版 `SurfaceProvider`：创建 / 输入 / 捕获 / 状态 / 进程身份 / 关闭 / 枚举 / worktree
@@ -38,6 +39,8 @@ pi --no-extensions -e /Users/qiangwenjun/Documents/project/pi-rex-agents/src/ext
 `--no-extensions` 会关闭其他扩展的自动发现，只加载显式 `-e` 的扩展。长期使用建议把本包装为 Pi 包，并确保 `pi list` 里没有未过滤的 `pi-herdr-agents`（两者注册同名工具，例如 `subagent`）。完整安装与冲突处理见 [docs/install.md](docs/install.md)。
 
 本扩展只在 `REX_SESSION` 与 `REX_BLOCK` 都存在时注册工具；在普通终端里不会生效。子代理进程带 `PI_SUBAGENT_ID`，作为叶子不会注册 `subagent` 工具。
+
+配置读取 `$PI_CODING_AGENT_DIR/rex-agents/config.json`，默认是 `~/.pi/agent/rex-agents/config.json`。旧的 `herdr-agents/config.json` 不读取、不迁移；新文件不存在时使用默认配置（split、right、`maxPerTab=2`）。详见 [配置说明](docs/configuration.md#configuration-file)。
 
 子代理会在第一轮前自动启用已安装的上下文压缩工具，即使指定 `tools: "read,bash"`。目前支持 billion-context 的 `compress`、`decompress`、`search_context`、`acp_status` 以及可选的 `acp_rule`；显式的 `deny-tools` 仍然优先。新启动、resume、persistent 和 worktree handoff 都适用。未安装压缩插件时不添加工具，沿用 Pi 原生 auto-compaction，详见 [配置说明](docs/configuration.md#context-compression-tools)。
 
@@ -73,9 +76,9 @@ bun src/wording-check.ts
 
 - `maestro/surfaces/rex/rex-cli.ts`：`rex` CLI 的 argv 封装，不拼接 shell
 - `maestro/surfaces/rex/rex-surface-provider.ts`：Rex `SurfaceProvider`
-- `src/infrastructure.ts`：把 provider 组装成内核的 `PiRunSessionInfrastructure`，`createPane` 按本次 launch 的 placement 选择 split / tab
-- `src/placement.ts`：per-launch placement 的 AsyncLocalStorage
-- `src/rex-host-api.ts`：注册边界包装（工具参数、描述、命令输出、消息）
+- `src/infrastructure.ts`：把 provider 组装成内核的 `PiRunSessionInfrastructure`
+- `maestro/runtime/pi-placement.ts`：内核的 split 名额预留队列；原生 placement 沿 launch/resume 链传递
+- `src/rex-host-api.ts`：注册边界的文案包装（描述、命令输出、消息）
 - `src/rex-wording.ts`：上游 Host 文案 → Rex 文案的精确替换
 - `src/extension.ts`：Pi extension 入口 + system prompt 宿主提示
 - `maestro/surfaces/rex/git.ts` / `maestro/surfaces/rex/worktree.ts`：worktree 原语与受管目录
@@ -102,7 +105,7 @@ bun src/wording-check.ts
 ## 已知限制
 
 1. **没有 Rex 原生侧栏标记**：Pi 自己的 widget 仍可用（P2 已验证），但不是 Rex 侧栏。
-2. **grouped 按 capped split 实现**：Rex 没有 Herdr 那种独立 agents tab，`grouped` 现在与 split 共用同一路径——当前 tab 到 `maxPerTab` 后开新 tab；provider 被直接以 `kind: "grouped"` 调用时仍会新开 window。
+2. **split 上限按父进程计数**：默认最多 2 个子 block；其他父进程的子 block 和用户手工添加的 block 不占本父进程的名额。worktree 子代理始终使用新 tab。
 3. **进程身份是尽力校验**：Rex 提供 `program_status.owner.pid`、`foreground.pid`、cwd，但没有 pane shell 的强身份；worktree 清理保留上游的脏工作区和进程占用检查，并给出 warning。
 4. **持久化专家的第二轮有短暂 settle 窗口**：集成测试在 `subagents_list` 显示 idle 后等待 2 秒再发送；适配层暂不修改上游行为。
 5. **不是 Rex 原生插件**：本包是运行在 Rex 中 Pi 进程内的 Pi extension，不是 Rex 自己的 Lua/插件系统。

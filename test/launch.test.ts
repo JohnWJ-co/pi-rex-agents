@@ -318,10 +318,10 @@ describe("session model scope", () => {
 });
 
 describe("Pi launch", () => {
-	it("launchOperationsFromSurface maps createPane to the provider's grouped placement", async () => {
+	it("launchOperationsFromSurface maps createPane to the provider's split placement", async () => {
 		const provider = new FakeSurfaceProvider();
 		const operations = launchOperationsFromSurface(provider, {
-			mode: "grouped",
+			mode: "split",
 			direction: "right",
 			maxPerTab: 4,
 		});
@@ -353,7 +353,7 @@ describe("Pi launch", () => {
 				},
 			});
 			const operations = launchOperationsFromSurface(provider, {
-				mode: "grouped",
+				mode: "split",
 				direction: "right",
 				maxPerTab: 4,
 			});
@@ -392,7 +392,7 @@ describe("Pi launch", () => {
 			providerWithOverrides(provider, {
 				getProcessInfo: async () => processInfo,
 			}),
-			{ mode: "grouped", direction: "right", maxPerTab: 4 },
+			{ mode: "split", direction: "right", maxPerTab: 4 },
 		);
 		assert.ok(operations.waitForPiReady);
 		await operations.waitForPiReady(
@@ -420,7 +420,7 @@ describe("Pi launch", () => {
 					return processInfo;
 				},
 			}),
-			{ mode: "grouped", direction: "right", maxPerTab: 4 },
+			{ mode: "split", direction: "right", maxPerTab: 4 },
 		);
 		let readsAfterAnswer = 0;
 		const clock = mock.method(performance, "now", () =>
@@ -621,7 +621,7 @@ describe("Pi launch", () => {
 						});
 					},
 				}),
-				{ mode: "grouped", direction: "right", maxPerTab: 4 },
+				{ mode: "split", direction: "right", maxPerTab: 4 },
 				createWorktreeOperations(),
 			);
 

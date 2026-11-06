@@ -283,6 +283,7 @@ describe("RunSession preparation and default owners", () => {
 			tools: ["bash"],
 			systemPrompt: "override",
 			worktree: { branch: "change", base: "main" },
+			placement: "tab",
 			runtime: candidates[0],
 		});
 		const handle = await f.session.spawn(t);
@@ -301,6 +302,7 @@ describe("RunSession preparation and default owners", () => {
 				tools: ["bash"],
 				systemPrompt: "override",
 				worktreeRequest: t.worktree,
+				placement: "tab",
 				runtime: candidates[0],
 			},
 		]);
