@@ -42,6 +42,8 @@ export class FileWakeRegistry {
 		const entry: WakeEntry = {
 			filenames: new Set([
 				`${basename(sessionFile)}.exit`,
+				`${basename(sessionFile)}.exitcode`,
+				`${basename(sessionFile)}.result.json`,
 				`${basename(sessionFile)}.tasks`,
 			]),
 			wake,

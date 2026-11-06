@@ -281,10 +281,10 @@ async function persistentSpecialistResponse(
 		!state.taskTwoSent &&
 		/1 tasks completed/.test(source)
 	) {
+		const followupGate = source.match(/PERSISTENT_FOLLOWUP_GATE:\s*(\S+)/)?.[1];
+		if (followupGate) await waitForQaFile(followupGate);
 		state.taskTwoSent = true;
-		// Allow the extension's one-second lifecycle poll to observe idle before
-		// the parent attempts the follow-up dispatch.
-		await new Promise((resolve) => setTimeout(resolve, 2_000));
+		// Task delivery has established idle; dispatch the next inbox immediately.
 		return {
 			toolCalls: [
 				subagentSendCall(

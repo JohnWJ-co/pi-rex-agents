@@ -94,6 +94,7 @@ export interface RexSessionEntry {
 		name?: string;
 		sessionFile?: string;
 		error?: string;
+		exitCode?: number;
 	};
 	message?: { role?: string; content?: unknown };
 }
@@ -267,6 +268,22 @@ export async function waitForBlock(
 			return predicate(blockIds) ? blockIds : undefined;
 		},
 		{ timeoutMs, description },
+	);
+}
+
+/** Observe a specific root/child record without synchronizing through terminal text. */
+export async function waitForProgramStatus(
+	lab: RexLab,
+	blockId: string,
+	predicate: (record: RexProgramStatusRecord) => boolean,
+	description: string,
+): Promise<RexProgramStatusRecord> {
+	return waitFor(
+		async () => {
+			const status = await lab.cli.programStatus(lab.sessionId, blockId);
+			return status.records.find(predicate);
+		},
+		{ description },
 	);
 }
 

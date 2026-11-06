@@ -69,6 +69,17 @@ extensions. Without an installed provider, no tools or compaction settings
 are changed: Pi uses its native auto-compaction. Additional providers belong
 in `maestro/adapters/pi/context-tools.ts`.
 
+## Child session evidence
+
+The kernel passes each child's display name with `--name`, so Pi's root OSC
+record identifies the child. No additional configuration is needed. The child
+publishes a versioned result JSON beside its session; the launch wrapper writes
+`.exitcode` after process exit. The parent validates the result's subagent,
+task and generation identity and falls back to session JSONL when unavailable.
+Persistent inbox changes wake through a directory watch with a 5-second
+reconciliation; the next task can be sent immediately after delivery. See the
+[return contract](delegation-outcome-contract.md#rex-runtime-evidence).
+
 ## Model preferences
 
 The copyable example is model-neutral, so it works without requiring credentials

@@ -541,7 +541,8 @@ export class PiHarnessAdapter implements HarnessAdapter {
 					return waitForCompletion(controller.signal, {
 						intervalMs: 1000,
 						sessionFile: child.sessionFile,
-						requireProcessExit: child.persistent || !!child.launchFailure,
+						requireProcessExit:
+							!child.interactive || child.persistent || !!child.launchFailure,
 						inspectProcess: () =>
 							child.processIdentity
 								? judgeProcessIdentity(
@@ -550,11 +551,6 @@ export class PiHarnessAdapter implements HarnessAdapter {
 									).kind
 								: "unknown",
 						waitForNextCheck: registration.wait,
-						readTerminalTail: async () =>
-							// A caller-provided terminal can contain an earlier run's marker.
-							child.launchFailure && !child.ownsSurface && !child.worktree
-								? ""
-								: this.options.surface.readScreen(child.surface, 5),
 						inspectPane: registration.inspectPane,
 						onLocalEvidence: () =>
 							this.options.onObservation?.(child, "local-evidence"),

@@ -7,10 +7,9 @@ import {
 } from "../../core/accept.ts";
 
 const ABORT_MESSAGE = "Aborted while waiting for subagent to finish";
-const TERMINAL_SENTINEL = /__SUBAGENT_DONE_(\d+)__/;
 
 export interface CompletionResult {
-	reason: "done" | "ping" | "sentinel" | "error";
+	reason: "done" | "ping" | "exitcode" | "error";
 	exitCode: number;
 	ping?: { name: string; message: string };
 	errorMessage?: string;
@@ -22,7 +21,8 @@ export interface CompletionResult {
 
 export interface CompletionOptions {
 	intervalMs: number;
-	readTerminalTail: () => Promise<string>;
+	/** Legacy diagnostic callback; completion never reads terminal contents. */
+	readTerminalTail?: () => Promise<string>;
 	inspectPane?: () => Promise<import("../../core/types.ts").PaneInspection>;
 	/** Bounded artifact grace after explicit pane disappearance. Default: 500ms. */
 	paneDisappearanceGraceMs?: number;
@@ -108,22 +108,46 @@ function readExitSidecar(
 	}
 }
 
-function terminalExitCode(screen: string): number | null {
-	const match = screen.match(TERMINAL_SENTINEL);
-	return match ? Number.parseInt(match[1], 10) : null;
+function readExitCode(sessionFile: string | undefined): number | null {
+	if (!sessionFile) return null;
+	try {
+		const raw = readFileSync(`${sessionFile}.exitcode`, "utf8").trim();
+		if (!/^\d{1,3}$/.test(raw)) return null;
+		const code = Number(raw);
+		return code <= 255 ? code : null;
+	} catch {
+		return null;
+	}
 }
 
 function completionArtifact(
 	options: CompletionOptions,
 ): CompletionResult | null {
-	return readExitSidecar(options.sessionFile, !options.requireProcessExit);
+	const sidecar = readExitSidecar(
+		options.sessionFile,
+		!options.requireProcessExit,
+	);
+	if (sidecar) return sidecar;
+	const exitCode = readExitCode(options.sessionFile);
+	if (
+		exitCode !== null &&
+		(!options.requireProcessExit || options.inspectProcess?.() !== "alive")
+	)
+		return { reason: "exitcode", exitCode };
+	return null;
 }
 
 async function waitForDelayedSidecar(
 	signal: AbortSignal,
 	options: CompletionOptions,
 ): Promise<CompletionResult | null> {
-	const immediate = completionArtifact(options);
+	// Pi can exit before its wrapper publishes .exitcode. Keep the existing
+	// bounded grace before falling back to the pre-shutdown semantic sidecar.
+	const readPublishedCompletion = () =>
+		options.requireProcessExit && readExitCode(options.sessionFile) === null
+			? null
+			: completionArtifact(options);
+	const immediate = readPublishedCompletion();
 	if (immediate) return immediate;
 
 	const graceMs = Math.max(0, options.paneDisappearanceGraceMs ?? 500);
@@ -131,10 +155,10 @@ async function waitForDelayedSidecar(
 	while (Date.now() < deadline) {
 		const remaining = deadline - Date.now();
 		await abortableDelay(Math.min(25, remaining), signal);
-		const result = completionArtifact(options);
+		const result = readPublishedCompletion();
 		if (result) return result;
 	}
-	return null;
+	return completionArtifact(options);
 }
 
 function abortableDelay(
@@ -177,9 +201,10 @@ async function detectCompletion(
 ): Promise<CompletionResult> {
 	const startedAt = Date.now();
 
-	// Coordinated supervision waits for its first shared epoch; legacy callers
-	// retain the immediate terminal probe.
+	// Coordinated supervision waits for its first shared epoch before remote
+	// inspection; local completion artifacts are checked on every wake.
 	let reconcile = !options.waitForNextCheck;
+	let observedAgent = false;
 	for (;;) {
 		if (signal.aborted) throw new Error(ABORT_MESSAGE);
 
@@ -192,6 +217,20 @@ async function detectCompletion(
 		);
 		if (sidecarResult && !options.requireProcessExit) return sidecarResult;
 		options.onLocalEvidence?.();
+
+		const exitCode = readExitCode(options.sessionFile);
+		if (
+			exitCode !== null &&
+			(!options.requireProcessExit || options.inspectProcess?.() !== "alive")
+		) {
+			options.onLocalEvidence?.();
+			const completion =
+				completionArtifact(options) ??
+				(exitCode !== 0 ? await waitForDelayedSidecar(signal, options) : null);
+			if (options.requireProcessExit && options.inspectProcess?.() === "alive")
+				continue;
+			return completion ?? { reason: "exitcode", exitCode };
+		}
 
 		if (options.requireProcessExit && options.inspectProcess?.() === "exited") {
 			const completion = await waitForDelayedSidecar(signal, options);
@@ -206,39 +245,6 @@ async function detectCompletion(
 			);
 		}
 
-		if (reconcile)
-			try {
-				const exitCode = terminalExitCode(await options.readTerminalTail());
-				if (
-					exitCode !== null &&
-					(!options.requireProcessExit ||
-						options.inspectProcess?.() !== "alive")
-				) {
-					// The shell sentinel can become readable while the child publishes its
-					// authoritative semantic record. Always recheck after the asynchronous
-					// terminal read; a zero exit can race a ping or error just like a failure.
-					options.onLocalEvidence?.();
-					const racedCompletion = completionArtifact(options);
-					if (racedCompletion) return racedCompletion;
-					if (exitCode !== 0) {
-						const delayedCompletion = await waitForDelayedSidecar(
-							signal,
-							options,
-						);
-						if (
-							options.requireProcessExit &&
-							options.inspectProcess?.() === "alive"
-						)
-							continue;
-						if (delayedCompletion) return delayedCompletion;
-					}
-					return { reason: "sentinel", exitCode };
-				}
-			} catch {
-				// Terminal reads are only sentinel/output probes; Herdr status is polled
-				// independently below, even when terminal reads succeed.
-			}
-
 		if (reconcile && options.inspectPane) {
 			let inspection: import("../../core/types.ts").PaneInspection;
 			try {
@@ -248,8 +254,21 @@ async function detectCompletion(
 			}
 			const observedAt = Date.now();
 			options.onPaneInspection?.(inspection, observedAt);
+			const agentExitedWithShell =
+				options.requireProcessExit &&
+				observedAgent &&
+				inspection.kind === "present" &&
+				inspection.agent === "shell";
 			if (
-				inspection.kind === "missing" &&
+				inspection.kind === "present" &&
+				inspection.agent !== undefined &&
+				inspection.agent !== "shell"
+			)
+				observedAgent = true;
+			const paneDisappeared =
+				inspection.kind === "missing" || agentExitedWithShell;
+			if (
+				paneDisappeared &&
 				(!options.requireProcessExit || options.inspectProcess?.() !== "alive")
 			) {
 				// Drain concurrent persistent events before accepting pane fallback.
@@ -266,8 +285,9 @@ async function detectCompletion(
 				return {
 					reason: "error",
 					exitCode: 1,
-					errorMessage:
-						"Subagent block disappeared before completion evidence was recorded.",
+					errorMessage: agentExitedWithShell
+						? "Subagent process exited before completion evidence was recorded."
+						: "Subagent block disappeared before completion evidence was recorded.",
 					errorSource: "host",
 				};
 			}

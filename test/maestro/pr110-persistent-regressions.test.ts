@@ -255,7 +255,7 @@ async function finalizingSession(t: TestContext) {
 		`${live.sessionFile}.exit`,
 		JSON.stringify({ type: "error", errorMessage: "process exited" }),
 	);
-	provider.appendScreen(live.surface, "__SUBAGENT_DONE_1__");
+	writeFileSync(`${live.sessionFile}.exitcode`, "1\n");
 	outcome = session.supervise(handle, task);
 	await captureEntered.promise;
 	return { session, record: live, taskId: task.id };

@@ -775,6 +775,10 @@ async function withAdapterHost(run: (f: any) => Promise<void>) {
 			} = { type: "done" },
 		) {
 			writeFileSync(`${child.sessionFile}.exit`, JSON.stringify(result));
+			writeFileSync(
+				`${child.sessionFile}.exitcode`,
+				result.type === "error" ? "1\n" : "0\n",
+			);
 			// Observe this actual attempt, not the logical producer that may continue
 			// through another candidate. The real adapter/coordinator still reads it.
 			// Persistent shell evidence waits for the shared reconciliation cadence,
@@ -1143,6 +1147,7 @@ describe("host adapter migration", () => {
 								errorMessage: "real provider evidence",
 							}),
 						);
+						writeFileSync(`${child.sessionFile}.exitcode`, "1\n");
 						const deadline = Date.now() + 3000;
 						while (session.getTask(controlTaskId)) {
 							assert.ok(Date.now() < deadline);
@@ -1464,7 +1469,7 @@ describe("host adapter migration", () => {
 			);
 			child.stopState = "requested";
 			// Stopping Pi produces shell exit evidence independently of its sidecar.
-			f.surface.appendScreen(child.surface, "__SUBAGENT_DONE_0__");
+			writeFileSync(`${child.sessionFile}.exitcode`, "0\n");
 			await f.finish(child);
 			assert.equal(f.registrations(), 1);
 			assert.equal(f.closed.length, 1);
@@ -2416,6 +2421,7 @@ describe("host adapter migration", () => {
 					};
 					if (boundary === "adapter") corrupt();
 					writeFileSync(`${path}.exit`, JSON.stringify({ type: "done" }));
+					writeFileSync(`${path}.exitcode`, "0\n");
 					const deadline = Date.now() + 3000;
 					while (session.getTask(control)) {
 						assert.ok(Date.now() < deadline);
@@ -2555,7 +2561,7 @@ describe("host adapter migration", () => {
 				});
 				try {
 					if (scenario === "suppressed") session.suppress(control);
-					else
+					else {
 						writeFileSync(
 							`${path}.exit`,
 							JSON.stringify(
@@ -2566,6 +2572,11 @@ describe("host adapter migration", () => {
 										: { type: "done" },
 							),
 						);
+						writeFileSync(
+							`${path}.exitcode`,
+							scenario === "provider-error" ? "1\n" : "0\n",
+						);
+					}
 					const deadline = Date.now() + 3000;
 					while (session.getTask(control)) {
 						assert.ok(Date.now() < deadline);
@@ -8050,6 +8061,89 @@ describe("subagent-done.ts", () => {
 		}
 	});
 
+	for (const nextBoundary of ["agent_start", "turn_start"] as const)
+		it(
+			nextBoundary === "agent_start"
+				? "does not settle the next inbox with the previous explicit-done turn"
+				: "settles a queued persistent follow-up without another agent_start",
+			async () => {
+				const dir = createTestDir();
+				const sessionFile = join(dir, "persistent-immediate.jsonl");
+				const keys = [
+					"PI_SUBAGENT_PERSISTENT",
+					"PI_SUBAGENT_SESSION",
+					"PI_SUBAGENT_TASK_ID",
+					"PI_SUBAGENT_GENERATION_ID",
+					"PI_SUBAGENT_ID",
+					"PI_SUBAGENT_AUTO_EXIT",
+				] as const;
+				const previous = keys.map((key) => process.env[key]);
+				const values = ["1", sessionFile, "first", "generation", "child", "0"];
+				keys.forEach((key, index) => {
+					process.env[key] = values[index];
+				});
+				const { api, eventHandlers, registeredTools, sentUserMessages } =
+					createMockExtensionApi();
+				let text = "first result";
+				const messages = () => [
+					{
+						role: "assistant",
+						stopReason: "stop",
+						content: [{ type: "text", text }],
+					},
+				];
+				const ctx = {
+					ui: { setWidget() {} },
+					shutdown() {},
+					sessionManager: {
+						getBranch: () =>
+							messages().map((message) => ({ type: "message", message })),
+					},
+				};
+				const emit = async (event: string, payload = {}) => {
+					for (const handler of eventHandlers.get(event) ?? [])
+						await handler(payload, ctx);
+				};
+				try {
+					subagentDoneExtension(api);
+					await emit("session_start");
+					await emit("agent_start");
+					writePersistentTaskInbox(sessionFile, 1, {
+						task: "second",
+						message: "second input",
+					});
+					const done = registeredTools.find(
+						(tool) => tool.name === "subagent_done",
+					);
+					assert.ok(done);
+					await done.execute("done", {}, undefined, () => {}, ctx);
+					assert.deepEqual(sentUserMessages, ["second input"]);
+					await emit("agent_end", { messages: messages() });
+					await emit("agent_settled");
+					assert.deepEqual(
+						readPersistentTaskEvents(sessionFile).map((event) => event.task),
+						["first"],
+					);
+					await emit(nextBoundary, { turnIndex: 1 });
+					text = "second result";
+					await emit("agent_end", { messages: messages() });
+					await emit("agent_settled");
+					assert.deepEqual(
+						readPersistentTaskEvents(sessionFile).map((event) => event.task),
+						["first", "second"],
+					);
+					assert.match(
+						readFileSync(`${sessionFile}.result.second.json`, "utf8"),
+						/second result/,
+					);
+				} finally {
+					await emit("session_shutdown", { reason: "exit" });
+					keys.forEach((key, index) => restoreEnvVar(key, previous[index]));
+					rmSync(dir, { recursive: true, force: true });
+				}
+			},
+		);
+
 	it("restarts persistent inbox polling after reload when the initial task is already done", async () => {
 		const dir = createTestDir();
 		const previousPersistent = process.env.PI_SUBAGENT_PERSISTENT;
@@ -8075,7 +8169,13 @@ describe("subagent-done.ts", () => {
 			const { api, eventHandlers, sentUserMessages } = createMockExtensionApi();
 			subagentDoneExtension(api);
 			shutdown = eventHandlers.get("session_shutdown")?.[0];
-			await new Promise((resolve) => setTimeout(resolve, 1_100));
+			eventHandlers.get("session_start")?.[0](
+				{},
+				{
+					ui: { setWidget() {} },
+					shutdown() {},
+				},
+			);
 			assert.deepEqual(sentUserMessages, ["next"]);
 		} finally {
 			shutdown?.({ reason: "reload" });
@@ -8263,7 +8363,13 @@ describe("subagent-done.ts", () => {
 				createMockExtensionApi();
 			subagentDoneExtension(api);
 			shutdown = eventHandlers.get("session_shutdown")?.[0];
-			await new Promise((resolve) => setTimeout(resolve, 1_100));
+			eventHandlers.get("session_start")?.[0](
+				{},
+				{
+					ui: { setWidget() {} },
+					shutdown() {},
+				},
+			);
 			assert.deepEqual(sentUserMessages, []);
 
 			const done = registeredTools.find(
@@ -8271,7 +8377,6 @@ describe("subagent-done.ts", () => {
 			);
 			assert.ok(done);
 			await done.execute("call", {}, undefined, undefined, {});
-			await new Promise((resolve) => setTimeout(resolve, 1_100));
 			assert.deepEqual(sentUserMessages, ["next"]);
 		} finally {
 			shutdown?.({ reason: "reload" });
@@ -9768,6 +9873,11 @@ describe("no-progress advisories", () => {
 });
 
 describe("completion.ts", () => {
+	function completionSession(t: TestContext): string {
+		const dir = mkdtempSync(join(tmpdir(), "completion-artifact-"));
+		t.after(() => rmSync(dir, { recursive: true, force: true }));
+		return join(dir, "child.jsonl");
+	}
 	it("decodes ping payloads", () => {
 		assert.deepEqual(
 			interpretExitSidecar({
@@ -9850,47 +9960,47 @@ describe("completion.ts", () => {
 		}
 	});
 
-	it("returns the terminal sentinel exit code", async () => {
+	it("returns the shell exitcode without a sidecar or terminal reads", async (t) => {
+		const sessionFile = completionSession(t);
+		writeFileSync(`${sessionFile}.exitcode`, "17\n");
 		const result = await waitForCompletion(new AbortController().signal, {
 			intervalMs: 1,
-			readTerminalTail: async () => "output\n__SUBAGENT_DONE_17__\n",
+			sessionFile,
+			readTerminalTail: async () => {
+				throw new Error("terminal must not be read");
+			},
 		});
-		assert.deepEqual(result, { reason: "sentinel", exitCode: 17 });
+		assert.deepEqual(result, { reason: "exitcode", exitCode: 17 });
 	});
 
-	it("prefers an error sidecar published during the terminal read", async () => {
-		const dir = mkdtempSync(join(tmpdir(), "completion-sentinel-race-"));
-		const sessionFile = join(dir, "child.jsonl");
-		try {
-			const result = await waitForCompletion(new AbortController().signal, {
-				intervalMs: 1,
-				sessionFile,
-				readTerminalTail: async () => {
-					await Promise.resolve();
-					writeFileSync(
-						`${sessionFile}.exit`,
-						JSON.stringify({
-							type: "error",
-							errorMessage: "account/model rejected",
-							stopReason: "error",
-						}),
-					);
-					return "output\n__SUBAGENT_DONE_1__\n";
-				},
-			});
-			assert.deepEqual(result, {
-				reason: "error",
-				exitCode: 1,
-				errorMessage: "account/model rejected",
-				errorSource: "child",
-			});
-			assert.equal(existsSync(`${sessionFile}.exit`), false);
-		} finally {
-			rmSync(dir, { recursive: true, force: true });
-		}
+	it("prefers an error sidecar published during pane inspection", async (t) => {
+		const sessionFile = completionSession(t);
+		const result = await waitForCompletion(new AbortController().signal, {
+			intervalMs: 1,
+			sessionFile,
+			inspectPane: async () => {
+				writeFileSync(`${sessionFile}.exitcode`, "1\n");
+				writeFileSync(
+					`${sessionFile}.exit`,
+					JSON.stringify({
+						type: "error",
+						errorMessage: "account/model rejected",
+						stopReason: "error",
+					}),
+				);
+				return { kind: "present", observedAt: 0, agentStatus: "done" };
+			},
+		});
+		assert.deepEqual(result, {
+			reason: "error",
+			exitCode: 1,
+			errorMessage: "account/model rejected",
+			errorSource: "child",
+		});
+		assert.equal(existsSync(`${sessionFile}.exit`), false);
 	});
 
-	it("prefers semantic sidecars published during a zero-exit terminal read", async () => {
+	it("prefers semantic sidecars published with a zero exitcode", async (t) => {
 		for (const [payload, expected] of [
 			[
 				{ type: "ping", name: "Scout", message: "need input" },
@@ -9910,41 +10020,118 @@ describe("completion.ts", () => {
 				},
 			],
 		] as const) {
-			const dir = mkdtempSync(join(tmpdir(), "completion-zero-race-"));
-			const sessionFile = join(dir, "child.jsonl");
-			try {
-				const result = await waitForCompletion(new AbortController().signal, {
-					intervalMs: 1,
-					sessionFile,
-					readTerminalTail: async () => {
-						writeFileSync(`${sessionFile}.exit`, JSON.stringify(payload));
-						return "__SUBAGENT_DONE_0__";
-					},
-				});
-				assert.deepEqual(result, expected);
-			} finally {
-				rmSync(dir, { recursive: true, force: true });
-			}
+			const sessionFile = completionSession(t);
+			const result = await waitForCompletion(new AbortController().signal, {
+				intervalMs: 1,
+				sessionFile,
+				inspectPane: async () => {
+					writeFileSync(`${sessionFile}.exit`, JSON.stringify(payload));
+					writeFileSync(`${sessionFile}.exitcode`, "0\n");
+					return { kind: "present", observedAt: 0, agentStatus: "done" };
+				},
+			});
+			assert.deepEqual(result, expected);
 		}
 	});
 
-	it("retries transient terminal read failures and reports ticks", async () => {
+	it("retries transient pane inspection failures and reports ticks", async (t) => {
+		const sessionFile = completionSession(t);
 		let reads = 0;
 		let ticks = 0;
 		const result = await waitForCompletion(new AbortController().signal, {
 			intervalMs: 1,
-			readTerminalTail: async () => {
+			sessionFile,
+			inspectPane: async () => {
 				reads += 1;
 				if (reads === 1) throw new Error("pane temporarily unavailable");
-				return "__SUBAGENT_DONE_0__";
+				writeFileSync(`${sessionFile}.exitcode`, "0\n");
+				return { kind: "present", observedAt: 0, agentStatus: "done" };
 			},
 			onTick: () => {
 				ticks += 1;
 			},
 		});
-		assert.deepEqual(result, { reason: "sentinel", exitCode: 0 });
+		assert.deepEqual(result, { reason: "exitcode", exitCode: 0 });
 		assert.equal(reads, 2);
-		assert.equal(ticks, 1);
+		assert.equal(ticks, 2);
+	});
+
+	it("waits for the wrapper exitcode after Pi exits with a semantic sidecar", async (t) => {
+		const sessionFile = completionSession(t);
+		writeFileSync(`${sessionFile}.exit`, JSON.stringify({ type: "done" }));
+		const timer = setTimeout(() => {
+			writeFileSync(`${sessionFile}.exitcode`, "0\n");
+		}, 30);
+		t.after(() => clearTimeout(timer));
+		const result = await waitForCompletion(new AbortController().signal, {
+			intervalMs: 1,
+			sessionFile,
+			requireProcessExit: true,
+			inspectProcess: () => "exited",
+		});
+		assert.equal(existsSync(`${sessionFile}.exitcode`), true);
+		assert.deepEqual(result, { reason: "done", exitCode: 0 });
+	});
+
+	it("returns the exitcode published as the idle shell appears", async (t) => {
+		const sessionFile = completionSession(t);
+		let inspections = 0;
+		const result = await waitForCompletion(new AbortController().signal, {
+			intervalMs: 1,
+			sessionFile,
+			requireProcessExit: true,
+			inspectPane: async () => {
+				if (++inspections === 2)
+					writeFileSync(`${sessionFile}.exitcode`, "137\n");
+				return inspections === 1
+					? {
+							kind: "present",
+							agent: "pi",
+							observedAt: 0,
+							agentStatus: "working",
+						}
+					: {
+							kind: "present",
+							agent: "shell",
+							observedAt: 1,
+							agentStatus: "idle",
+						};
+			},
+			paneDisappearanceGraceMs: 0,
+		});
+		assert.deepEqual(result, { reason: "exitcode", exitCode: 137 });
+	});
+
+	it("reports a killed Pi when Rex leaves its idle shell behind", async (t) => {
+		const sessionFile = completionSession(t);
+		let inspections = 0;
+		const result = await waitForCompletion(new AbortController().signal, {
+			intervalMs: 1,
+			sessionFile,
+			requireProcessExit: true,
+			inspectPane: async () =>
+				++inspections === 1
+					? {
+							kind: "present",
+							agent: "pi",
+							observedAt: 0,
+							agentStatus: "working",
+						}
+					: {
+							kind: "present",
+							agent: "shell",
+							observedAt: 1,
+							agentStatus: "idle",
+						},
+			paneDisappearanceGraceMs: 0,
+		});
+		assert.deepEqual(result, {
+			reason: "error",
+			exitCode: 1,
+			errorMessage:
+				"Subagent process exited before completion evidence was recorded.",
+			errorSource: "host",
+		});
 	});
 
 	it("returns a failure when the pane explicitly disappears", async () => {
@@ -9965,99 +10152,82 @@ describe("completion.ts", () => {
 		});
 	});
 
-	it("lets a sidecar win the pane-disappearance race", async () => {
-		const dir = mkdtempSync(join(tmpdir(), "completion-race-"));
-		const sessionFile = join(dir, "child.jsonl");
-		try {
-			const result = await waitForCompletion(new AbortController().signal, {
-				intervalMs: 1,
-				sessionFile,
-				readTerminalTail: async () => "",
-				inspectPane: async () => {
-					writeFileSync(
-						`${sessionFile}.exit`,
-						JSON.stringify({ type: "done" }),
-					);
-					return { kind: "missing", error: "pane_not_found" };
-				},
-			});
-			assert.deepEqual(result, { reason: "done", exitCode: 0 });
-		} finally {
-			rmSync(dir, { recursive: true, force: true });
-		}
+	it("lets a sidecar win the pane-disappearance race", async (t) => {
+		const sessionFile = completionSession(t);
+		const result = await waitForCompletion(new AbortController().signal, {
+			intervalMs: 1,
+			sessionFile,
+			inspectPane: async () => {
+				writeFileSync(`${sessionFile}.exit`, JSON.stringify({ type: "done" }));
+				return { kind: "missing", error: "pane_not_found" };
+			},
+		});
+		assert.deepEqual(result, { reason: "done", exitCode: 0 });
 	});
 
-	it("waits briefly for delayed sidecar publication after pane disappearance", async () => {
-		const dir = mkdtempSync(join(tmpdir(), "completion-delayed-race-"));
-		const sessionFile = join(dir, "child.jsonl");
+	it("waits briefly for delayed sidecar publication after pane disappearance", async (t) => {
+		const sessionFile = completionSession(t);
 		const timer = setTimeout(() => {
 			writeFileSync(`${sessionFile}.exit`, JSON.stringify({ type: "done" }));
 		}, 30);
-		try {
-			const result = await waitForCompletion(new AbortController().signal, {
-				intervalMs: 1,
-				sessionFile,
-				readTerminalTail: async () => "",
-				inspectPane: async () => ({ kind: "missing", error: "pane_not_found" }),
-				paneDisappearanceGraceMs: 150,
-			});
-			assert.deepEqual(result, { reason: "done", exitCode: 0 });
-		} finally {
-			clearTimeout(timer);
-			rmSync(dir, { recursive: true, force: true });
-		}
-	});
-
-	it("keeps an ambiguous pane read failure retryable while the pane exists", async () => {
-		let reads = 0;
+		t.after(() => clearTimeout(timer));
 		const result = await waitForCompletion(new AbortController().signal, {
 			intervalMs: 1,
-			readTerminalTail: async () => {
-				reads += 1;
-				if (reads === 1) throw new Error("socket unavailable");
-				return "__SUBAGENT_DONE_0__";
-			},
-			inspectPane: async () => ({
-				kind: "present",
-				observedAt: 0,
-				agentStatus: "working",
-			}),
+			sessionFile,
+			inspectPane: async () => ({ kind: "missing", error: "pane_not_found" }),
+			paneDisappearanceGraceMs: 150,
 		});
-		assert.equal(result.exitCode, 0);
-		assert.equal(reads, 2);
+		assert.deepEqual(result, { reason: "done", exitCode: 0 });
 	});
 
-	it("treats presence-check throws as unknown and keeps polling", async () => {
+	it("keeps a diagnostic read failure irrelevant while the pane exists", async (t) => {
+		const sessionFile = completionSession(t);
 		let reads = 0;
+		let inspections = 0;
 		const result = await waitForCompletion(new AbortController().signal, {
 			intervalMs: 1,
+			sessionFile,
 			readTerminalTail: async () => {
 				reads += 1;
-				if (reads === 1) throw new Error("pane read failed");
-				return "__SUBAGENT_DONE_0__";
+				throw new Error("socket unavailable");
 			},
 			inspectPane: async () => {
-				throw new Error("herdr list failed");
+				if (++inspections === 2)
+					writeFileSync(`${sessionFile}.exitcode`, "0\n");
+				return { kind: "present", observedAt: 0, agentStatus: "working" };
+			},
+		});
+		assert.equal(result.exitCode, 0);
+		assert.equal(reads, 0);
+		assert.equal(inspections, 2);
+	});
+
+	it("treats presence-check throws as unknown and keeps polling", async (t) => {
+		const sessionFile = completionSession(t);
+		let reads = 0;
+		const result = await waitForCompletion(new AbortController().signal, {
+			intervalMs: 1,
+			sessionFile,
+			inspectPane: async () => {
+				if (++reads === 1) throw new Error("Rex list failed");
+				writeFileSync(`${sessionFile}.exitcode`, "0\n");
+				return { kind: "present", observedAt: 0, agentStatus: "idle" };
 			},
 		});
 		assert.equal(result.exitCode, 0);
 		assert.equal(reads, 2);
 	});
 
-	it("inspects herdr status even when terminal reads succeed", async () => {
-		let reads = 0;
+	it("inspects Rex status while waiting for the exitcode file", async (t) => {
+		const sessionFile = completionSession(t);
 		const inspections: string[] = [];
 		const result = await waitForCompletion(new AbortController().signal, {
 			intervalMs: 1,
-			readTerminalTail: async () => {
-				reads += 1;
-				return reads === 1 ? "shell output" : "__SUBAGENT_DONE_0__";
+			sessionFile,
+			inspectPane: async () => {
+				writeFileSync(`${sessionFile}.exitcode`, "0\n");
+				return { kind: "present", observedAt: 2_000, agentStatus: "blocked" };
 			},
-			inspectPane: async () => ({
-				kind: "present",
-				observedAt: 2_000,
-				agentStatus: "blocked",
-			}),
 			onPaneInspection: (inspection) =>
 				inspections.push(
 					inspection.kind === "present"

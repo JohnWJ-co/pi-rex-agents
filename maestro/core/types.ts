@@ -196,7 +196,7 @@ export type RunOutcome = "completed" | "failed" | "timeout" | "killed" | "help";
 
 // pi-herdr-agents extension
 export interface CompletionResult {
-	reason: "done" | "ping" | "sentinel" | "error";
+	reason: "done" | "ping" | "exitcode" | "error";
 	exitCode: number;
 	ping?: { name: string; message: string };
 	errorMessage?: string;
@@ -226,7 +226,7 @@ export interface WorktreeHandoff {
 
 // pi-herdr-agents extension
 export interface CompletionEvidence {
-	reason: "done" | "ping" | "sentinel" | "error";
+	reason: "done" | "ping" | "exitcode" | "error";
 	/** Required harness exit status from CompletionResult. */
 	// pi-herdr-agents extension
 	exitCode: number;
@@ -279,6 +279,7 @@ export type SurfaceAgentStatus =
 	| "working"
 	| "blocked"
 	| "done"
+	| "error"
 	| "unknown";
 
 // pi-herdr-agents extension

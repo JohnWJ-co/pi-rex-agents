@@ -30,6 +30,10 @@ current checkout with `-e`, then checks split/split/tab, close-and-reuse and
 explicit tab using real child blocks and session evidence. The default split
 limit is 2; reload/resume reservation adoption is also covered by unit tests.
 A skipped placement test is not passing placement evidence.
+The same suite includes `rex-return-contract.test.ts`: ordinary result JSON
+and JSONL fallback, persistent root working/done identity with two immediate
+inbox rounds, and error delivery after killing only the owned child Pi.
+No idle grace period or terminal-screen completion evidence is allowed.
 Startup uses `waitForPiReady` (`idle` only); each later turn uses
 `waitForPiTurnSettled` (`done` or `idle`, excluding `working` and `blocked`).
 Keep the existing timeout and require session evidence before checking status (F1).
@@ -49,6 +53,9 @@ $L up
 $L drive
 $L down
 ```
+
+Manual `drive` evidence includes `resultFile`, the validated `result` matching
+the report body, and `exitcode: 0`, alongside session and block lifecycle data.
 
 Report pass, fail, and skip separately. A skipped Rex test is not full verification.
 

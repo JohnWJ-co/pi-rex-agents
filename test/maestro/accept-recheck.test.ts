@@ -184,6 +184,10 @@ async function fixture(
 					`${JSON.stringify({ type: "session", version: 3, id: record.id, cwd: dir })}\n`,
 				);
 			writeFileSync(`${record.sessionFile}.exit`, JSON.stringify(sidecar));
+			writeFileSync(
+				`${record.sessionFile}.exitcode`,
+				sidecar.type === "error" ? "1\n" : "0\n",
+			);
 		},
 		ledger() {
 			const file = join(dir, "rex-agents", "outcomes.jsonl");

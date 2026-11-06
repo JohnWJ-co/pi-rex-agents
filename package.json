@@ -15,7 +15,7 @@
     "test": "node --experimental-strip-types --test test/rex-cli.test.ts test/runtime-routing.test.ts test/system-prompt-mode.test.ts test/test.ts test/worktree-cleanup.test.ts test/launch.test.ts test/verify-lab-guards.test.ts test/no-foreign-host.test.ts test/maestro/*.test.ts",
     "test:integration": "node --experimental-strip-types --test --test-concurrency=1 test/integration/*.test.ts",
     "test:integration:live": "PI_TEST_LIVE=1 node --experimental-strip-types --test --test-concurrency=1 test/integration/*.test.ts",
-    "test:integration:rex": "node --experimental-strip-types --test --test-concurrency=1 test/integration/rex-smoke.test.ts test/integration/rex-surface-conformance.test.ts test/integration/rex-placement.test.ts",
+    "test:integration:rex": "node --experimental-strip-types --test --test-concurrency=1 test/integration/rex-smoke.test.ts test/integration/rex-surface-conformance.test.ts test/integration/rex-placement.test.ts test/integration/rex-return-contract.test.ts",
     "version": "auto-changelog --package && git add CHANGELOG.md",
     "p0": "node --experimental-strip-types src/p0.ts",
     "p1": "bun src/p1.ts",

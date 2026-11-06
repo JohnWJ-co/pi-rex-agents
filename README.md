@@ -44,6 +44,8 @@ pi --no-extensions -e /Users/qiangwenjun/Documents/project/pi-rex-agents/pi-exte
 
 子代理会在第一轮前自动启用已安装的上下文压缩工具，即使指定 `tools: "read,bash"`。目前支持 billion-context 的 `compress`、`decompress`、`search_context`、`acp_status` 以及可选的 `acp_rule`；显式的 `deny-tools` 仍然优先。新启动、resume、persistent 和 worktree handoff 都适用。未安装压缩插件时不添加工具，沿用 Pi 原生 auto-compaction，详见 [配置说明](docs/configuration.md#context-compression-tools)。
 
+子代理结束时原子发布结果文件，父进程校验子代理、任务和 generation 身份后读取正文，文件不可用时回退到 session JSONL。启动脚本另写 `.exitcode` 作为进程退出的兜底证据；完成判定不读取终端屏幕。Pi 原生状态显示子代理名，扩展仅追加 `pira` 子记录。持久化专家收到一次任务投递后即可立即发送下一轮，inbox 由目录事件唤醒，另有 5 秒兜底检查。详见 [回传契约](docs/delegation-outcome-contract.md#rex-runtime-evidence)。
+
 ## 集成测试
 
 测试需要一个 Rex 会话，并且当前 Pi 进程运行在 Rex block 内（`REX_SESSION` / `REX_BLOCK` 已设置）。
@@ -97,9 +99,8 @@ npm run p0
 1. **没有 Rex 原生侧栏标记**：Pi 自己的 widget 仍可用（P2 已验证），但不是 Rex 侧栏。
 2. **split 上限按父进程计数**：默认最多 2 个子 block；其他父进程的子 block 和用户手工添加的 block 不占本父进程的名额。worktree 子代理始终使用新 tab。
 3. **进程身份是尽力校验**：Rex 提供 `program_status.owner.pid`、`foreground.pid`、cwd，但没有 pane shell 的强身份；worktree 清理保留上游的脏工作区和进程占用检查，并给出 warning。
-4. **持久化专家的第二轮有短暂 settle 窗口**：集成测试在 `subagents_list` 显示 idle 后等待 2 秒再发送；适配层暂不修改上游行为。
-5. **不是 Rex 原生插件**：本包是运行在 Rex 中 Pi 进程内的 Pi extension，不是 Rex 自己的 Lua/插件系统。
-6. **工具名冲突**：不能同时加载未过滤的 `pi-herdr-agents` 与 `pi-rex-agents`，见 [docs/install.md](docs/install.md)。
+4. **不是 Rex 原生插件**：本包是运行在 Rex 中 Pi 进程内的 Pi extension，不是 Rex 自己的 Lua/插件系统。
+5. **工具名冲突**：不能同时加载未过滤的 `pi-herdr-agents` 与 `pi-rex-agents`，见 [docs/install.md](docs/install.md)。
 
 ## P0 / P1 / P2 的边界
 

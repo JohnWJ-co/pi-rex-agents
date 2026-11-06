@@ -29,12 +29,15 @@ import {
   sendParentPrompt,
   startParentPi,
   waitForBlock,
+  waitForFile,
   waitForReport,
   waitForSessionEntry,
   type RexLab,
   type RexSessionEntry,
 } from "../../../../test/integration/rex-harness.ts";
 import { RexCli } from "../../../../maestro/surfaces/rex/rex-cli.ts";
+import { getSubagentResultFile, readSubagentResult } from "../../../../maestro/adapters/pi/session.ts";
+import { isRecord, isString } from "../../../../maestro/core/config/type-guards.ts";
 
 const SELF = fileURLToPath(import.meta.url);
 const CURRENT = join(tmpdir(), "pira-lab-current.json");
@@ -208,6 +211,13 @@ async function drive(): Promise<number> {
     return entry.type === "message" && entry.message?.role === "assistant" && content.includes("REX_SMOKE_PARENT_CONTINUED");
   });
   const after = await waitForBlock(lab, (ids) => ids.every((id) => id === state.parentBlockId), "child block cleanup");
+  if (!delivered.childSession) throw new Error("RexSmoke report has no child session");
+  const resultFile = getSubagentResultFile(delivered.childSession);
+  const raw: unknown = JSON.parse(readFileSync(resultFile, "utf8"));
+  if (!isRecord(raw) || !isString(raw.subagentId) || !isString(raw.taskId) || !isString(raw.generation)) throw new Error("RexSmoke result identity is missing");
+  const result = readSubagentResult(delivered.childSession, { subagentId: raw.subagentId, taskId: raw.taskId, generation: raw.generation });
+  if (!result || result.status !== "done" || result.finalText !== "REX_SMOKE_CHILD" || !String(delivered.report.content).includes(result.finalText)) throw new Error("RexSmoke result does not match delivery");
+  const exitcode = Number((await waitForFile(`${delivered.childSession}.exitcode`, (content) => content.trim() === "0")).trim());
   const evidence = {
     endpoint: state.endpoint,
     whoami: state.whoami,
@@ -218,6 +228,9 @@ async function drive(): Promise<number> {
     blocksAfter: after,
     childSession: delivered.childSession,
     childSessionExists: Boolean(delivered.childSession && existsSync(delivered.childSession)),
+    resultFile,
+    result,
+    exitcode,
     report: delivered.report,
     parentContinued: Boolean(continued),
   };

@@ -28,6 +28,8 @@ import { FakeSurfaceProvider } from "../../maestro/surfaces/fake/fake-surface-pr
 import { launchOperationsFromSurface } from "../../maestro/adapters/pi/launch-operations.ts";
 import { loadPaneConfig } from "../../maestro/core/config/pane-config.ts";
 import { discoverAgentCatalog } from "../../maestro/core/roles/discovery.ts";
+import { writeResultArtifact } from "../../maestro/adapters/pi/child/subagent-done.ts";
+import { createPiPersistentIO } from "../../maestro/runtime/pi-persistent-io.ts";
 import {
 	appendPersistentTaskEvent,
 	readPersistentDeliveryLedger,
@@ -326,6 +328,110 @@ test("Task15 detached activity observation works before any factory and retains 
 });
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
+for (const resumed of [false, true])
+	for (const mismatch of [false, true])
+		test(`${resumed ? "resumed" : "ordinary"} result ${mismatch ? "identity mismatch falls back to JSONL" : "is preferred over JSONL"}`, () =>
+			fixture(async (f) => {
+				const input = f.input("artifact");
+				const path = join(f.dir, "resume-result.jsonl");
+				if (resumed) {
+					writeFileSync(
+						path,
+						JSON.stringify({
+							type: "session",
+							version: 3,
+							id: "previous",
+							cwd: f.dir,
+						}) + "\n",
+					);
+					writeSubagentSessionPolicy(path, {
+						owner: "public",
+						deniedTools: [],
+					});
+				}
+				const handle = resumed
+					? await f.session.resumePi({
+							taskId: input.task.id,
+							sessionPath: path,
+							name: "resumed artifact",
+						})
+					: await f.session.spawnPi(input);
+				const record = f.session.getRecord(input.task.id);
+				assert.ok(record);
+				f.complete(record);
+				writeFileSync(
+					record.sessionFile,
+					readFileSync(record.sessionFile, "utf8") +
+						JSON.stringify({
+							type: "message",
+							id: "assistant-result",
+							message: {
+								role: "assistant",
+								content: [{ type: "text", text: "JSONL fallback" }],
+							},
+						}) +
+						"\n",
+				);
+				writeResultArtifact(record.sessionFile, {
+					v: 1,
+					subagentId: record.id,
+					taskId: record.id,
+					generation: mismatch ? "stale-generation" : record.id,
+					finalText: "artifact final",
+					status: "done",
+					blockId: "fixture",
+					finishedAt: new Date().toISOString(),
+				});
+				const ownedTask = f.session.getTask(input.task.id);
+				assert.ok(ownedTask);
+				await f.session.supervise(handle, ownedTask);
+				assert.equal(
+					f.settled.at(-1)?.summary,
+					mismatch ? "JSONL fallback" : "artifact final",
+				);
+			}));
+
+test("persistent summaries use the current task artifact and fall back after its removal", () =>
+	fixture(async (f) => {
+		const input = f.input("persistent-result", true);
+		await f.session.spawnPi(input);
+		const record = f.session.getRecord(input.task.id);
+		assert.ok(record);
+		writeFileSync(
+			record.sessionFile,
+			JSON.stringify({
+				type: "message",
+				id: "fallback",
+				message: {
+					role: "assistant",
+					content: [{ type: "text", text: "persistent JSONL" }],
+				},
+			}) + "\n",
+		);
+		const io = createPiPersistentIO({
+			get worktreeOperations(): never {
+				throw new Error("Summary reads must not inspect worktrees");
+			},
+		});
+		const file = writeResultArtifact(
+			record.sessionFile,
+			{
+				v: 1,
+				subagentId: record.id,
+				taskId: record.taskId ?? "",
+				generation: record.generationId ?? "",
+				finalText: "persistent artifact",
+				status: "done",
+				blockId: "fixture",
+				finishedAt: new Date().toISOString(),
+			},
+			true,
+		);
+		assert.equal(io.readTaskSummary(record).summary, "persistent artifact");
+		rmSync(file);
+		assert.equal(io.readTaskSummary(record).summary, "persistent JSONL");
+	}));
+
 async function fixture(
 	run: (f: Awaited<ReturnType<typeof makeFixture>>) => Promise<void>,
 ) {
@@ -494,6 +600,10 @@ async function makeFixture() {
 				}) + "\n",
 			);
 		writeFileSync(`${record.sessionFile}.exit`, JSON.stringify(result));
+		writeFileSync(
+			`${record.sessionFile}.exitcode`,
+			result.type === "error" ? "1\n" : "0\n",
+		);
 	}
 	return {
 		dir,
@@ -1131,7 +1241,7 @@ test("resume settlement reader is scoped to its run, not shared with concurrent 
 			);
 			f.complete(p);
 			// The sidecar is semantic evidence; the shell separately confirms exit.
-			f.provider.appendScreen(p.surface, "__SUBAGENT_DONE_0__");
+			writeFileSync(`${p.sessionFile}.exitcode`, "0\n");
 			await persistentWait;
 			assert.deepEqual(resumeIO.readResumeResult!(), {
 				summary: "Resumed session exited without new output",
@@ -1224,7 +1334,7 @@ test("local evidence drains persistent events without activity hydration while p
 		assert.equal(tickToolCall, "fresh-call");
 		assert.ok(drains > 0);
 		f.complete(r);
-		f.provider.appendScreen(r.surface, "__SUBAGENT_DONE_0__");
+		writeFileSync(`${r.sessionFile}.exitcode`, "0\n");
 		assert.equal((await wait).outcome, "completed");
 	}));
 
@@ -1306,7 +1416,7 @@ test("persistent events use raw demand-driven I/O, no duplicate initial row or p
 		io.requestStop(r);
 		assert.equal(r.taskId, "followup");
 		f.complete(r);
-		f.provider.appendScreen(r.surface, "__SUBAGENT_DONE_0__");
+		writeFileSync(`${r.sessionFile}.exitcode`, "0\n");
 		await wait;
 	}));
 
@@ -1398,7 +1508,6 @@ for (const persistent of [false, true])
 			const r = f.latest()!;
 			assert.equal(r.persistent, persistent ? true : undefined);
 			f.complete(r);
-			if (persistent) f.provider.appendScreen(r.surface, "__SUBAGENT_DONE_0__");
 			await f.session.supervise(h, input.task);
 			assert.deepEqual(f.settled[0].fallbackAttempts, ["test/one", "test/two"]);
 			assert.deepEqual(f.settled[0].fallbackFailures, [
@@ -1447,7 +1556,7 @@ test("effective role-default persistence prevents running fallback but not launc
 		const r = f.latest()!;
 		const wait = f.session.supervise(h, input.task);
 		f.complete(r, { type: "error", errorMessage: "role-default error" });
-		f.provider.appendScreen(r.surface, "__SUBAGENT_DONE_1__");
+		writeFileSync(`${r.sessionFile}.exitcode`, "1\n");
 		await wait;
 		assert.equal(f.commands.length, 1);
 		assert.equal(r.persistent, true);
@@ -1962,6 +2071,6 @@ test("public, control, logical specialist, generation and inbox namespaces remai
 		assert.equal(next.taskId, "inbox-1");
 		assert.equal(f.session.getControlTaskId(next.id), "control");
 		f.complete(next);
-		f.provider.appendScreen(next.surface, "__SUBAGENT_DONE_0__");
+		writeFileSync(`${next.sessionFile}.exitcode`, "0\n");
 		await wait;
 	}));

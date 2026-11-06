@@ -638,8 +638,8 @@ describe("RunSession evidence, observations and retries", () => {
 	}[] = [
 		{ evidence: { reason: "done", exitCode: 0 }, outcome: "completed" },
 		{ evidence: { reason: "done", exitCode: 7 }, outcome: "failed" },
-		{ evidence: { reason: "sentinel", exitCode: 0 }, outcome: "completed" },
-		{ evidence: { reason: "sentinel", exitCode: 2 }, outcome: "failed" },
+		{ evidence: { reason: "exitcode", exitCode: 0 }, outcome: "completed" },
+		{ evidence: { reason: "exitcode", exitCode: 2 }, outcome: "failed" },
 		{
 			evidence: {
 				reason: "ping",
@@ -2184,7 +2184,7 @@ describe("RunSession ownership edge regressions", { timeout: 10000 }, () => {
 		const t = task();
 		const handle = await f.session.spawn(t);
 		const wait = f.session.supervise(handle, t);
-		f.adapter.complete(handle.id, { reason: "sentinel", exitCode: 0 });
+		f.adapter.complete(handle.id, { reason: "exitcode", exitCode: 0 });
 		f.session.suppress(t.id);
 		assert.equal((await wait).outcome, "completed");
 		assert.equal(sends, 0);

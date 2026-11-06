@@ -48,6 +48,7 @@ import {
 	shellComment,
 	SUBAGENTS_DIR,
 	timestampForFile,
+	withExitCodeArtifact,
 } from "./launch-command.ts";
 import {
 	PI_LAUNCH_SESSION_ENV,
@@ -760,6 +761,8 @@ function buildPiCommand(
 	const { request } = resolved;
 	const parts = [
 		"pi",
+		"--name",
+		shellQuote(request.name),
 		"--session",
 		shellQuote(artifacts.sessionFile),
 		...(request.handoff
@@ -820,13 +823,15 @@ function buildPiCommand(
 		env.push(
 			`${DECLARED_SKILLS_ENV}=${shellQuote(formatDeclaredSkillsEnv(parseDeclaredSkills(request.behavior.skills)))}`,
 		);
-		if (request.behavior.persistent) {
-			env.push("PI_SUBAGENT_PERSISTENT=1");
-			env.push(
-				`PI_SUBAGENT_GENERATION_ID=${shellQuote(artifacts.policy.generationId)}`,
-			);
-			env.push(`PI_SUBAGENT_TASK_ID=${shellQuote(artifacts.initialTaskId!)}`);
-		}
+		env.push(
+			`PI_SUBAGENT_PERSISTENT=${request.behavior.persistent ? "1" : "0"}`,
+		);
+		env.push(
+			`PI_SUBAGENT_GENERATION_ID=${shellQuote(request.behavior.persistent ? artifacts.policy.generationId : resolved.id)}`,
+		);
+		env.push(
+			`PI_SUBAGENT_TASK_ID=${shellQuote(artifacts.initialTaskId ?? resolved.id)}`,
+		);
 		env.push(`PI_SUBAGENT_SESSION=${shellQuote(artifacts.sessionFile)}`);
 		env.push(`PI_SUBAGENT_ID=${shellQuote(resolved.id)}`);
 		env.push(`PI_SUBAGENT_ACTIVITY_FILE=${shellQuote(artifacts.activityFile)}`);
@@ -842,7 +847,7 @@ function buildPiCommand(
 		`${env.join(" ")} ${parts.join(" ")}`;
 	return request.handoff
 		? piCommand
-		: `${piCommand}; echo '__SUBAGENT_DONE_'$?'__'`;
+		: withExitCodeArtifact(piCommand, artifacts.sessionFile);
 }
 
 async function startPiProcess(

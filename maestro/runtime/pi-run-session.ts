@@ -27,6 +27,8 @@ import {
 import {
 	getNewEntries,
 	findLastAssistantSummary,
+	readSubagentResult,
+	subagentResultSummary,
 	findObservedSessionRuntime,
 	inspectNoProgressSessionTail,
 	type AttributedSummary,
@@ -157,20 +159,28 @@ function errorProvenance(
 // Capture only resume presentation scalars, not the child or its owning registry.
 function resumeResultReader(
 	sessionFile: string,
+	subagentId: string,
 	cursor: number,
 	exitCode: number,
 	errorMessage: string | undefined,
 	errorSource: CompletionEvidence["errorSource"],
 ): NonNullable<PiSettlementIO["readResumeResult"]> {
 	return () => ({
-		...(findLastAssistantSummary(getNewEntries(sessionFile, cursor)) ?? {
-			summary: errorMessage
-				? `Subagent error: ${errorMessage}`
-				: exitCode === 0
-					? "Resumed session exited without new output"
-					: `Resumed session exited with code ${exitCode}`,
-			summarySource: errorProvenance(errorSource),
-		}),
+		...(subagentResultSummary(
+			readSubagentResult(sessionFile, {
+				subagentId,
+				taskId: subagentId,
+				generation: subagentId,
+			}),
+		) ??
+			findLastAssistantSummary(getNewEntries(sessionFile, cursor)) ?? {
+				summary: errorMessage
+					? `Subagent error: ${errorMessage}`
+					: exitCode === 0
+						? "Resumed session exited without new output"
+						: `Resumed session exited with code ${exitCode}`,
+				summarySource: errorProvenance(errorSource),
+			}),
 		sessionFile,
 	});
 }
@@ -630,7 +640,14 @@ export function createDefaultRunSession(
 					child.runtimePlan = plan;
 				}
 				const { summary, summarySource }: AttributedSummary = evidence
-					? (findLastAssistantSummary(
+					? (subagentResultSummary(
+							readSubagentResult(child.sessionFile, {
+								subagentId: child.id,
+								taskId: child.id,
+								generation: child.id,
+							}),
+						) ??
+						findLastAssistantSummary(
 							cursor === undefined ? all : all.slice(cursor),
 						) ?? {
 							summary: evidence.errorMessage
@@ -767,6 +784,7 @@ export function createDefaultRunSession(
 				if (cursor !== undefined)
 					entry.readResumeResult = resumeResultReader(
 						child.sessionFile,
+						child.id,
 						cursor,
 						exitCode,
 						evidence?.errorMessage,

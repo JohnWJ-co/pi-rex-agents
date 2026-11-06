@@ -93,6 +93,9 @@ const pi = {
   getActiveTools() {
     return [];
   },
+  getAllTools() {
+    return [...tools.values()];
+  },
   getThinkingLevel() {
     return "medium";
   },
@@ -203,13 +206,19 @@ while (Date.now() < deadline) {
       message?.customType === "subagent_result" ||
       message?.type === "subagent_result",
   );
-  // Persistent children are only idle after the completion turn has settled.
-  // Sending while the child is still finalizing races the inbox poller and can
-  // be acknowledged as a task without producing a second turn.
+  // Wait for the parent-owned idle state, then dispatch without a settling delay.
   const idle = listText.includes("| idle |");
   if (completion && (!usePersistent || idle)) break;
   await new Promise((resolve) => setTimeout(resolve, 1000));
 }
+
+const firstComplete = Boolean(
+  completion?.customType === "subagent_result" &&
+    typeof completion.content === "string" &&
+    completion.content.includes(
+      `<subagent_report from="p1-child" kind="${usePersistent ? "task-result" : "result"}">\nP1_CHILD_OK\n</subagent_report>`,
+    ),
+);
 
 let worktreeResult: unknown;
 if (useWorktree) {
@@ -236,10 +245,9 @@ if (useWorktree) {
 }
 
 let persistentResult: unknown;
+let persistentComplete = !usePersistent;
 if (usePersistent) {
-  // The child appends its task-done event during agent_settled. Give that turn
-  // a moment to finish before injecting the next user message.
-  await new Promise((resolve) => setTimeout(resolve, 2_000));
+  // Dispatch immediately after observed idle; the inbox watcher queues a follow-up.
   const sendTool = tools.get("subagent_send");
   const stopTool = tools.get("subagent_stop");
   if (!sendTool || !stopTool) throw new Error("persistent control tools were not registered");
@@ -267,7 +275,36 @@ if (usePersistent) {
     () => {},
     ctx,
   );
-  persistentResult = { sent, second: second ?? null, stopped };
+  // Stop is asynchronous. Observe the wrapper's exit before shutting down the
+  // parent host, which would otherwise cancel the child's outstanding stop.
+  let exitCode: number | undefined;
+  if (stopped.details?.status === "stop_requested" && typeof second?.details?.sessionFile === "string") {
+    const stopDeadline = Date.now() + 120_000;
+    while (Date.now() < stopDeadline) {
+      try {
+        const raw = readFileSync(`${second.details.sessionFile}.exitcode`, "utf8").trim();
+        if (/^\d{1,3}$/.test(raw) && Number(raw) <= 255) {
+          exitCode = Number(raw);
+          break;
+        }
+      } catch {
+        // The wrapper has not published its exit evidence yet.
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+  persistentResult = { sent, second: second ?? null, stopped, exitCode: exitCode ?? null };
+  persistentComplete = Boolean(
+    second?.customType === "subagent_result" &&
+      second.details?.task === sent.details?.task &&
+      second.details?.logicalId === sent.details?.id &&
+      typeof second.content === "string" &&
+      second.content.includes(
+        '<subagent_report from="p1-child" kind="task-result">\nP1_SECOND_OK\n</subagent_report>',
+      ) &&
+      stopped.details?.status === "stop_requested" &&
+      exitCode === 0,
+  );
   console.log(JSON.stringify({ event: "persistent", persistentResult }, null, 2));
 }
 
@@ -280,7 +317,7 @@ console.log(
   JSON.stringify(
     {
       event: "result",
-      ok: Boolean(completion) && parentSurvived,
+      ok: firstComplete && parentSurvived && persistentComplete,
       parentSurvived,
       completion: completion ?? null,
       worktree: worktreeResult ?? null,
@@ -295,6 +332,6 @@ console.log(
 
 await emit("session_shutdown", { type: "session_shutdown", reason: "quit" });
 
-if (!completion || !parentSurvived || (usePersistent && !persistentResult)) {
+if (!firstComplete || !parentSurvived || !persistentComplete) {
   process.exitCode = 1;
 }

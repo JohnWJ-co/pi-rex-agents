@@ -82,7 +82,8 @@ export function observePaneInspection(
 		lifecycle.hasWorked ||
 		agentStatus === "working" ||
 		agentStatus === "blocked" ||
-		agentStatus === "done";
+		agentStatus === "done" ||
+		agentStatus === "error";
 
 	const pane: PaneObservation = {
 		kind: "present",
@@ -134,7 +135,11 @@ export function observePaneInspection(
 		if (lifecycle.activityDetail)
 			activeTurn.activity = lifecycle.activityDetail;
 		turn = activeTurn;
-	} else if (agentStatus === "done" || agentStatus === "idle") {
+	} else if (
+		agentStatus === "done" ||
+		agentStatus === "error" ||
+		agentStatus === "idle"
+	) {
 		turn = hasWorked
 			? {
 					kind: "waiting",

@@ -35,11 +35,15 @@ This tree is the P4 migration worktree. Keep changes scoped to the current check
 - `maestro/runtime/` — Pi run sessions, delivery, cleanup, worktree operations and supervision
 - `maestro/adapters/pi/` — Pi launch transactions, child protocol, session I/O and process evidence
 - `maestro/adapters/pi/context-tools.ts` — registered compression-provider discovery; the parent appends these tools to fresh, resume, persistent and interactive handoff launch allowlists through the runtime seam
+- `maestro/adapters/pi/child/subagent-done.ts` / `session.ts` — atomic result publication and launch/task identity validation with JSONL fallback
+- `maestro/adapters/pi/child/rex-status.ts` — bounded OSC metadata on the pira child record only; Pi owns the root
+- `maestro/adapters/pi/child/inbox.ts` — persistent directory-watch wakeups with five-second reconciliation
 - `maestro/surfaces/rex/` — the only real SurfaceProvider implementation; `maestro/surfaces/fake/` is test-only
 - `test/smoke-extension.ts` — load-level entry, Rex host guard and host/leaf notice smoke
 - `test/integration/rex-harness.ts` — isolated Rex server, fake-provider configuration, parent launch and observable wait helpers
 - `test/integration/rex-smoke.test.ts` — real parent-to-child Rex smoke lifecycle
 - `test/integration/rex-placement.test.ts` — real split/split/tab placement, close-and-reuse and explicit tab evidence
+- `test/integration/rex-return-contract.test.ts` — result/JSONL evidence, persistent native states and immediate follow-up, killed-child error delivery
 - `test/integration/fake-provider.ts` — deterministic HTTP provider used by integration tests
 - `.pi/skills/verify-pi-rex-agents/scripts/lab.ts` — manual doctor/up/drive/down evidence lab
 - `.pi/skills/verify-pi-rex-agents/scripts/pin.ts` — registration behavior pin

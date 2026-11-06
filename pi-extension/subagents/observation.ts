@@ -59,7 +59,7 @@ function hydrateLifecycle(running: AdoptedRow): SubagentLifecycle {
 	} else if (state?.phase === "done") {
 		// Legacy activity "done" means the turn ended, not that completion
 		// evidence was recorded. Hydrate as Herdr-style waiting and let the
-		// preserved watcher consume sidecar/sentinel evidence.
+		// preserved watcher consume sidecar/exitcode evidence.
 		const observedAt = state.lastActivityAtMs ?? running.startTime;
 		lifecycle = observePaneInspection(
 			lifecycle,

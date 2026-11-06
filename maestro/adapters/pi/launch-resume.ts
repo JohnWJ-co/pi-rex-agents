@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { getSubagentActivityFile } from "./activity-file.ts";
 import { createLifecycle } from "../../core/lifecycle.ts";
@@ -23,6 +23,7 @@ import {
 	shellComment,
 	SUBAGENTS_DIR,
 	timestampForFile,
+	withExitCodeArtifact,
 } from "./launch-command.ts";
 import type { PiLaunchOperations } from "./launch-operations.ts";
 import {
@@ -133,6 +134,9 @@ export async function launchResumedPiSubagent(
 			`PI_SUBAGENT_NAME=${shellQuote(request.name)}`,
 			`PI_SUBAGENT_SESSION=${shellQuote(request.sessionFile)}`,
 			`PI_SUBAGENT_ID=${shellQuote(id)}`,
+			"PI_SUBAGENT_PERSISTENT=0",
+			`PI_SUBAGENT_TASK_ID=${shellQuote(id)}`,
+			`PI_SUBAGENT_GENERATION_ID=${shellQuote(id)}`,
 			`PI_SUBAGENT_ACTIVITY_FILE=${shellQuote(activityFile)}`,
 			`PI_SUBAGENT_AUTO_EXIT=${autoExit ? "1" : "0"}`,
 		];
@@ -146,6 +150,8 @@ export async function launchResumedPiSubagent(
 		const command = [
 			...env,
 			"pi",
+			"--name",
+			shellQuote(request.name),
 			"--session",
 			shellQuote(request.sessionFile),
 			...(pinnedModel ? ["--model", shellQuote(pinnedModel)] : []),
@@ -176,10 +182,14 @@ export async function launchResumedPiSubagent(
 			lifecycle: createLifecycle(startTime),
 		};
 		request.acquisitionSignal?.throwIfAborted();
+		// The watcher may start before the shell consumes its first line. Remove
+		// the prior run's completion evidence before dispatch, not only in-shell.
+		rmSync(`${request.sessionFile}.exitcode`, { force: true });
+		rmSync(`${request.sessionFile}.exit`, { force: true });
 		try {
 			initialized.launchScriptFile = await operations.runScript(
 				surface,
-				`${command}; echo '__SUBAGENT_DONE_'$?'__'`,
+				withExitCodeArtifact(command, request.sessionFile),
 				{
 					scriptPath: launchScriptFile,
 					scriptPreamble: [

@@ -433,6 +433,7 @@ describe("PiHarnessAdapter", () => {
 					errorMessage: "first provider rejected",
 				}),
 			);
+			writeFileSync(`${first.sessionId}.exitcode`, "1\n");
 			await f.adapter.awaitCompletion(first, new AbortController().signal);
 			const next = await f.adapter.spawn({
 				...f.options,
@@ -445,6 +446,7 @@ describe("PiHarnessAdapter", () => {
 			assert.notEqual(await f.adapter.getState(next), "done");
 			await assert.rejects(f.adapter.interrupt(first), /Unknown Pi child/);
 			writeFileSync(`${next.sessionId}.exit`, JSON.stringify({ type: "done" }));
+			writeFileSync(`${next.sessionId}.exitcode`, "0\n");
 			assert.equal(
 				(await f.adapter.awaitCompletion(next, new AbortController().signal))
 					.reason,
@@ -476,6 +478,7 @@ describe("PiHarnessAdapter", () => {
 				`${h.sessionId}.exit`,
 				JSON.stringify({ type: "done", exitCode: 0 }),
 			);
+			writeFileSync(`${h.sessionId}.exitcode`, "0\n");
 			const e = await f.adapter.awaitCompletion(
 				h,
 				new AbortController().signal,
@@ -536,6 +539,7 @@ describe("PiHarnessAdapter", () => {
 				`${h.sessionId}.exit`,
 				JSON.stringify({ type: "ping", name: h.name, message: "help" }),
 			);
+			writeFileSync(`${h.sessionId}.exitcode`, "0\n");
 			assert.equal((await two).reason, "ping");
 		}));
 	it("restores saved public policy after termination and refuses persistent policy", async () =>
@@ -631,6 +635,7 @@ describe("PiHarnessAdapter", () => {
 					errorMessage: "provider account refused",
 				}),
 			);
+			writeFileSync(`${h.sessionId}.exitcode`, "1\n");
 			const evidence = await f.adapter.awaitCompletion(
 				h,
 				new AbortController().signal,

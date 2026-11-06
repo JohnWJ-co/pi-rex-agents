@@ -70,6 +70,21 @@ export function buildSubagentToolAllowlist(
 	return [...allow].join(",");
 }
 
+export function withExitCodeArtifact(
+	command: string,
+	sessionFile: string,
+): string {
+	const file = `${sessionFile}.exitcode`;
+	return [
+		`rm -f -- ${shellQuote(file)} ${shellQuote(`${sessionFile}.exit`)}`,
+		command,
+		"pira_exit_code=$?",
+		`pira_exit_tmp=${shellQuote(`${file}.tmp.`)}$$`,
+		`printf '%s\\n' "$pira_exit_code" > "$pira_exit_tmp" && mv -f -- "$pira_exit_tmp" ${shellQuote(file)}`,
+		'exit "$pira_exit_code"',
+	].join("\n");
+}
+
 export function timestampForFile(includeMilliseconds = true): string {
 	return (
 		new Date()

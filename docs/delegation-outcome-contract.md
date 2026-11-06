@@ -17,6 +17,43 @@ orchestrator host implements it. A parent agent and a methodology pack rely on
 it. It does not cover how the host runs children, which terminal it uses, or
 which roles exist.
 
+## Rex runtime evidence
+
+The Rex fork keeps the report envelope below and obtains its body from a
+versioned result artifact. An ordinary or resumed child atomically replaces
+`<sessionFile>.result.json`; a persistent specialist writes
+`<sessionFile>.result.<taskId>.json` for each completed task (task IDs are URI
+encoded in filenames). Publication uses a temporary file and rename, after the
+completion sidecar or persistent task event and before shutdown or clearing
+the current task.
+
+The JSON fields are `v: 1`, `finalText`, `subagentId`, `taskId`, `generation`,
+`status` (`done` or `error`), optional `errorMessage`, `blockId`, and `finishedAt`.
+`finalText` is the last nonempty assistant text at settlement. The parent
+accepts an artifact only when its version and all three identity fields match
+the current launch/task. Missing, malformed or mismatched artifacts fall back
+to session JSONL. Results provide child-authored evidence; neither a result
+nor an OSC status establishes that the parent accepted the work.
+
+The `.exit` sidecar retains semantic done/error/help and accept-check evidence.
+The shell wrapper atomically writes the actual process status to `.exitcode`
+when Pi exits. Without a sidecar, that file or confirmed block disappearance
+settles the run; terminal capture is diagnostic only. Auto-exiting runs and
+persistent lifetime ownership require independent process-exit evidence before
+release. After Pi exits, the existing 500ms artifact grace lets its wrapper
+publish `.exitcode` before block cleanup; only then may an existing semantic
+sidecar serve as the fallback.
+
+Each Pi starts with `--name <display name>` and owns its root OSC status and
+identity. The child extension writes only `id=pira app=pira` to `/dev/tty`:
+working at agent start, then done/error with
+`task=<id> gen=<generation> result=<basename>`. Decoded metadata is bounded to
+2048 UTF-8 bytes. A persistent inbox uses `fs.watch` on the parent directory,
+with a 5-second reconciliation and immediate draining after task completion;
+a delivered task may be followed immediately without an idle grace period.
+Task identity is captured at each `turn_start`: queued follow-ups can share an
+agent run, so settlement does not require another `agent_start`.
+
 ## Roles and ownership
 
 | Role | Meaning |
@@ -123,9 +160,10 @@ Only child-authored text goes inside the envelope. Each summary carries a typed
 `summarySource` of `"child"`, `"host"`, or `"child-error"`
 (`maestro/adapters/pi/session.ts` `SummarySource`).
 
-- The source is `"child"` only when the child's last assistant message has
-  non-empty text (`session.ts` `findLastAssistantSummary`). A help-request
-  message is child text.
+- The source is `"child"` when a matching Rex result artifact supplies
+  nonempty `finalText`, or the JSONL fallback supplies the child's last
+  nonempty assistant text (`session.ts` `findLastAssistantSummary`). A
+  help-request message is child text.
 - `"child-error"` is a host label followed by error text the child wrote:
   `Subagent error: <errorMessage>` from the final assistant message of the
   transcript, or from an `.exit` sidecar of type `error` that carries its own

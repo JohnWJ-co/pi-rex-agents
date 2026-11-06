@@ -6,12 +6,16 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Box, Text } from "@earendil-works/pi-tui";
 import { Type } from "@sinclair/typebox";
-import { writeFileSync } from "node:fs";
+import { renameSync, rmSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { basename } from "node:path";
 import {
 	appendPersistentTaskEvent,
 	consumePersistentTaskInbox,
 	readPersistentDeliveryLedger,
 	readPersistentTaskEvents,
+	getSubagentResultFile,
+	type SubagentResultArtifact,
 } from "../session.ts";
 import { createSubagentActivityRecorder } from "../activity-file.ts";
 import { createDoneNudge } from "./done-nudge.ts";
@@ -29,6 +33,48 @@ import {
 } from "../../../core/accept.ts";
 import { readAcceptSpecFile } from "../accept-runner.ts";
 import { createChildAcceptLoop } from "./accept-check.ts";
+import { reportRexChildStatus } from "./rex-status.ts";
+import { watchPersistentInbox } from "./inbox.ts";
+
+/** Publish only complete JSON; a failed write preserves any previous result. */
+export function writeResultArtifact(
+	sessionFile: string,
+	result: SubagentResultArtifact,
+	persistent = false,
+): string {
+	const file = getSubagentResultFile(
+		sessionFile,
+		persistent ? result.taskId : undefined,
+	);
+	const temp = `${file}.tmp.${process.pid}.${randomUUID()}`;
+	try {
+		writeFileSync(temp, JSON.stringify(result), {
+			encoding: "utf8",
+			flag: "wx",
+		});
+		renameSync(temp, file);
+	} finally {
+		rmSync(temp, { force: true });
+	}
+	return file;
+}
+
+export function findFinalAssistantText(messages: any[] | undefined): string {
+	for (let i = (messages?.length ?? 0) - 1; i >= 0; i--) {
+		const message = messages![i];
+		if (message?.role !== "assistant" || !Array.isArray(message.content))
+			continue;
+		const text = message.content
+			.filter(
+				(part: any) =>
+					part.type === "text" && isString(part.text) && part.text.trim(),
+			)
+			.map((part: any) => part.text)
+			.join("\n");
+		if (text.trim()) return text;
+	}
+	return "";
+}
 
 export function shouldMarkUserTookOver(agentStarted: boolean): boolean {
 	return agentStarted;
@@ -186,6 +232,9 @@ export default function (pi: ExtensionAPI) {
 	const generation = process.env.PI_SUBAGENT_GENERATION_ID ?? "";
 	const sessionFile = process.env.PI_SUBAGENT_SESSION;
 	const initialTask = process.env.PI_SUBAGENT_TASK_ID ?? "";
+	const subagentId = process.env.PI_SUBAGENT_ID ?? "";
+	const blockId = process.env.REX_BLOCK ?? "";
+	let stopInboxWatcher: (() => void) | undefined;
 	let currentTask = persistent
 		? findUnsettledPersistentTask(sessionFile ?? "", generation) ||
 			(initialTask &&
@@ -196,12 +245,47 @@ export default function (pi: ExtensionAPI) {
 				? initialTask
 				: "")
 		: "";
+	let startedTask = currentTask;
 	const recorder = createSubagentActivityRecorder({
 		runningChildId: process.env.PI_SUBAGENT_ID,
 		activityFile: process.env.PI_SUBAGENT_ACTIVITY_FILE,
 		persistent,
 	});
-	recordProcessIdentity(process.env.PI_SUBAGENT_ID, sessionFile);
+	recordProcessIdentity(subagentId, sessionFile);
+
+	function publishResult(messages: any[] | undefined, taskId = initialTask) {
+		const error = findLatestAssistantError(messages);
+		const status = error ? "error" : "done";
+		const file = sessionFile
+			? getSubagentResultFile(sessionFile, persistent ? taskId : undefined)
+			: "";
+		if (sessionFile) {
+			try {
+				writeResultArtifact(
+					sessionFile,
+					{
+						v: 1,
+						finalText: findFinalAssistantText(messages),
+						subagentId,
+						taskId,
+						generation,
+						status,
+						errorMessage: error?.errorMessage,
+						blockId,
+						finishedAt: new Date().toISOString(),
+					},
+					persistent,
+				);
+			} catch {
+				// Completion still has its .exit/exitcode and JSONL fallback paths.
+			}
+		}
+		reportRexChildStatus(status, {
+			taskId,
+			generation,
+			result: basename(file),
+		});
+	}
 	// The role's declared skills, as this child's own Pi loaded them.
 	registerDeclaredSkills(pi);
 
@@ -261,6 +345,8 @@ export default function (pi: ExtensionAPI) {
 		denied = parseDeniedTools(deniedToolsValue);
 
 		renderWidget(ctx, null);
+		if (persistent && sessionFile)
+			stopInboxWatcher ??= watchPersistentInbox(sessionFile, drainInbox);
 	});
 
 	pi.on("input", () => {
@@ -278,7 +364,20 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("agent_start", () => {
 		agentStarted = true;
+		startedTask = currentTask;
 		recorder.agentStart();
+		reportRexChildStatus("working", {
+			taskId: currentTask || initialTask,
+			generation,
+			result: sessionFile
+				? basename(
+						getSubagentResultFile(
+							sessionFile,
+							persistent ? currentTask : undefined,
+						),
+					)
+				: "",
+		});
 	});
 
 	pi.on("agent_end", (event) => {
@@ -313,6 +412,9 @@ export default function (pi: ExtensionAPI) {
 			doneNudge.settled(latestAgentMessages, runAborted, ctx);
 		}
 		if (persistent && !completionFinalized) {
+			// An explicit done can queue the next inbox before this turn settles.
+			// Only the task that actually started the latest turn may settle here.
+			if (currentTask !== startedTask) return;
 			let messages = latestAgentMessages;
 			try {
 				const branchMessages = ctx.sessionManager
@@ -332,8 +434,10 @@ export default function (pi: ExtensionAPI) {
 					process.env.PI_SUBAGENT_SESSION ?? "",
 					buildPersistentTaskEvent(currentTask, generation),
 				);
+				publishResult(messages, currentTask);
 				currentTask = "";
 				recorder.agentEndWaiting();
+				drainInbox();
 			}
 			return;
 		}
@@ -371,16 +475,19 @@ export default function (pi: ExtensionAPI) {
 					),
 				);
 			} catch {
-				// Best effort — the watcher can still detect the terminal sentinel
+				// Best effort — the watcher can still read the shell exitcode
 				// after shutdown if the completion sidecar cannot be written.
 			}
 		}
 
+		publishResult(messages);
 		recorder.agentEndDone();
 		ctx.shutdown();
 	});
 
 	pi.on("turn_start", (event) => {
+		// Queued follow-ups can start a new turn within the same agent run.
+		startedTask = currentTask;
 		recorder.turnStart(event.turnIndex);
 	});
 
@@ -421,7 +528,7 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.on("session_shutdown", async (event) => {
-		if (inboxPoller) clearInterval(inboxPoller);
+		stopInboxWatcher?.();
 		doneNudge?.cancel();
 		recorder.sessionShutdown(event.reason);
 		// A check still running belongs to this session: stop it, bounded.
@@ -486,35 +593,27 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	let inboxPoller: ReturnType<typeof setInterval> | undefined;
-	if (persistent) {
-		inboxPoller = setInterval(() => {
+	function drainInbox() {
+		if (!sessionFile || currentTask || completionFinalized || !sessionContext)
+			return;
+		const inbox = consumePersistentTaskInbox(sessionFile);
+		if (!inbox) return;
+		if (isPersistentStopDirective(inbox)) {
 			try {
-				const sessionFile = process.env.PI_SUBAGENT_SESSION;
-				if (!sessionFile || currentTask) return;
-				const inbox = consumePersistentTaskInbox(sessionFile);
-				if (!inbox) return;
-				if (isPersistentStopDirective(inbox)) {
-					try {
-						writeFileSync(
-							`${sessionFile}.exit`,
-							JSON.stringify({ type: "done" }),
-						);
-					} catch {
-						// The parent can still confirm the shell exit marker.
-					}
-					completionFinalized = true;
-					recorder.subagentDone();
-					sessionContext?.shutdown();
-					return;
-				}
-				currentTask = inbox.task;
-				recorder.taskStart();
-				pi.sendUserMessage(inbox.message);
+				writeFileSync(`${sessionFile}.exit`, JSON.stringify({ type: "done" }));
 			} catch {
-				// A malformed or transiently unavailable inbox must not kill the poller.
+				// The parent can still confirm the shell exitcode artifact.
 			}
-		}, 1000);
+			completionFinalized = true;
+			recorder.subagentDone();
+			sessionContext.shutdown();
+			return;
+		}
+		currentTask = inbox.task;
+		latestAgentMessages = undefined;
+		recorder.taskStart();
+		// Pi may still be unwinding agent_settled; followUp queues the next turn.
+		pi.sendUserMessage(inbox.message, { deliverAs: "followUp" });
 	}
 
 	if (autoExit) return;
@@ -529,13 +628,26 @@ export default function (pi: ExtensionAPI) {
 		parameters: Type.Object({}),
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
 			const sessionFile = process.env.PI_SUBAGENT_SESSION;
+			let messages = latestAgentMessages;
+			try {
+				const branch = ctx.sessionManager
+					.getBranch()
+					.flatMap((entry) =>
+						entry.type === "message" ? [entry.message] : [],
+					);
+				if (branch.length) messages = branch;
+			} catch {
+				// Use agent_end evidence if the session branch is unavailable.
+			}
 			recorder.subagentDone();
 			if (persistent && sessionFile && currentTask) {
 				appendPersistentTaskEvent(
 					sessionFile,
 					buildPersistentTaskEvent(currentTask, generation),
 				);
+				publishResult(messages, currentTask);
 				currentTask = "";
+				drainInbox();
 				return {
 					content: [
 						{
@@ -548,6 +660,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			if (sessionFile) {
 				writeFileSync(`${sessionFile}.exit`, JSON.stringify({ type: "done" }));
+				publishResult(messages);
 			}
 			completionFinalized = true;
 			ctx.shutdown();

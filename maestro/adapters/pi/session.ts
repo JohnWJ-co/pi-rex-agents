@@ -58,6 +58,95 @@ export interface WorktreeSessionFork {
 	handoffMessage: string;
 }
 
+export interface SubagentResultIdentity {
+	subagentId: string;
+	taskId: string;
+	generation: string;
+	persistent?: boolean;
+}
+
+export interface SubagentResultArtifact {
+	v: 1;
+	finalText: string;
+	subagentId: string;
+	taskId: string;
+	generation: string;
+	status: "done" | "error";
+	errorMessage?: string;
+	blockId: string;
+	finishedAt: string;
+}
+
+export function getSubagentResultFile(
+	sessionFile: string,
+	taskId?: string,
+): string {
+	return taskId === undefined
+		? `${sessionFile}.result.json`
+		: `${sessionFile}.result.${encodeURIComponent(taskId)}.json`;
+}
+
+/** A result is only authoritative for the exact launch and task we own. */
+export function readSubagentResult(
+	sessionFile: string,
+	expected: SubagentResultIdentity,
+): SubagentResultArtifact | null {
+	try {
+		const result: unknown = JSON.parse(
+			readFileSync(
+				getSubagentResultFile(
+					sessionFile,
+					expected.persistent ? expected.taskId : undefined,
+				),
+				"utf8",
+			),
+		);
+		if (
+			!isRecord(result) ||
+			!isPlainObject(result) ||
+			result.v !== 1 ||
+			result.subagentId !== expected.subagentId ||
+			result.taskId !== expected.taskId ||
+			result.generation !== expected.generation ||
+			!isString(result.finalText) ||
+			(result.status !== "done" && result.status !== "error") ||
+			(result.errorMessage !== undefined && !isString(result.errorMessage)) ||
+			!isString(result.blockId) ||
+			!isString(result.finishedAt) ||
+			!Number.isFinite(Date.parse(result.finishedAt))
+		)
+			return null;
+		const artifact: SubagentResultArtifact = {
+			v: 1,
+			finalText: result.finalText,
+			subagentId: expected.subagentId,
+			taskId: expected.taskId,
+			generation: expected.generation,
+			status: result.status,
+			blockId: result.blockId,
+			finishedAt: result.finishedAt,
+		};
+		if (result.errorMessage !== undefined)
+			artifact.errorMessage = result.errorMessage;
+		return artifact;
+	} catch {
+		return null;
+	}
+}
+
+export function subagentResultSummary(
+	result: SubagentResultArtifact | null,
+): AttributedSummary | null {
+	if (result?.finalText.trim())
+		return { summary: result.finalText, summarySource: "child" };
+	if (result?.status === "error" && result.errorMessage?.trim())
+		return {
+			summary: `Subagent error: ${result.errorMessage.trim()}`,
+			summarySource: "child-error",
+		};
+	return null;
+}
+
 const SUBAGENT_POLICY_VERSION = 2;
 const SUBAGENT_POLICY_SUFFIX = ".pi-rex-subagent-policy.json";
 

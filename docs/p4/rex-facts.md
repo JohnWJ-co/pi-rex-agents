@@ -1,7 +1,7 @@
 # Rex 通信机制实测记录（2026-11-06）
 
 环境：Rex `0.0.1793741575-g1b6654`（api_revision 10），Pi `v1.5.0`，测试模型 `CBAPI/cn:deepseek-v4.1-flash`。
-所有结论都来自真实 Rex 会话中的实验；编号 F1–F11 供计划和任务卡引用。
+所有结论都来自真实 Rex 会话中的实验；编号 F1–F13 供计划和任务卡引用。
 
 ## F1 Pi 原生上报 OSC 7501（根记录）
 
@@ -55,8 +55,9 @@
 
 ## F9 内核的父→子通道与宿主无关
 
-- 持久化子代理的后续任务通过文件 inbox 传递：子代理扩展每 1000ms 轮询一次，再 `pi.sendUserMessage`（`maestro/adapters/pi/child/subagent-done.ts`）。中断走 `sendKeys Escape`。
-- 推论：在 Rex 下可以直接使用；把轮询改成 `fs.watch` + 兜底轮询，可以消除 README 已知限制 4 里的 2 秒 settle 窗口。
+- T5 之前，持久化子代理的后续任务通过文件 inbox 传递，子代理扩展每 1000ms 轮询一次，再 `pi.sendUserMessage`（`maestro/adapters/pi/child/subagent-done.ts`）；中断走 `sendKeys Escape`。
+- T5 改为监听 inbox 所在目录的 `fs.watch`，保留 5 秒兜底轮询。真实集成在父端观察到 idle 后立即发送第二轮，不再增加 2 秒 settle 等待；根记录依次回到 working/done，两个 task 的 result 文件分别与投递内容一致。
+- macOS watcher 启动可能有事件延迟。单测先在同目录写入匹配前缀的探针，要求 2 秒内收到回调，再写真正的 inbox，并仍要求 2 秒内唤醒；握手超时明确报告“watcher 未就绪”。消息断言放在回调外，避免被 drain 的错误处理吞掉。
 
 ## F10 开发环境
 
@@ -76,3 +77,11 @@
 - 上游内核使用 `globalThis[Symbol.for("pi-subagents/runtime")]`。Rex 若共用该槽，可能接管外来的 composition；只有 owner symbol 改名时，则会报 `Previous PiRunSession does not carry its owning composition.`。修正应隔离内核全局槽，保留 owner 校验，无需修改项目或全局配置。
 - Rex runtime 使用 `pi-rex-agents/runtime`，widget/status timer 使用 `pi-rex-agents/widget-interval` / `pi-rex-agents/status-interval`。内核中不再使用 `pi-subagents/` Symbol；正常测试访问统一导入 `SUBAGENT_RUNTIME_KEY`，仅隔离回归保留旧键以模拟外来内核。
 - 本轮默认配置 RPC `get_commands` 验证：无 `Failed to load extension`；`subagent`、`subagents-init`、`worktree` 各出现一次，`sourceInfo.path` 均为 P4 的 `pi-extension/subagents/index.ts`。单测同时确认旧槽中的外来 runtime、子登记表和计时器未被修改或接管。
+
+## F13 结果文件、退出码与清理顺序（2026-11-06 T5）
+
+- 子代理在 settle 时原子发布版本为 `v:1` 的结果文件：普通任务为 `<sessionFile>.result.json`，持久化任务为 `<sessionFile>.result.<taskId>.json`。正文取最后一条非空 assistant 文本；父端校验 subagentId、taskId 和 generation，文件缺失、解析失败或身份不符时回退到 session JSONL。真实集成同时验证结果与投递一致，以及删除结果文件后的 JSONL 回退。
+- Pi 启动参数带 `--name <显示名>`，根 OSC 仍由 Pi 自己维护。扩展只写 `id=pira` 子记录，携带 task/generation/result 文件名；消息按 UTF-8 限制为 2048 字节。Rex provider 以根记录映射 working/blocked/done/error/idle，忽略补充子记录对根状态的影响。
+- 持久化任务可以在显式 `subagent_done` 后排队进入同一低层 agent run；follow-up 有新的 `turn_start`，未必有新的 `agent_start`。任务身份在 turn_start 更新，既阻止旧 turn 完成新任务，也允许同一 run 的后续任务正常发布结果。新增回归先复现了第二轮缺少完成事件，再验证两种事件顺序均通过。
+- 包装 shell 在 Pi 退出后用临时文件加 rename 发布 `<sessionFile>.exitcode`。任务生命周期在投递和清理 block 前等待进程退出证据；确认 Pi 已退出后，仍在既有 500ms 宽限内优先等待包装 shell 发布 `.exitcode`，宽限结束才回退到已有的语义 sidecar，避免关闭 block 抢在 shell 写入前。普通与持久化停止均覆盖这一顺序。屏幕内容不再参与完成判定，`readScreen` 仅用于诊断。
+- 强杀集成从 Rex root owner 的后代中定位并杀死真正的 Pi，保留包装 shell；已验证没有 `.exit` 时仍写出 `.exitcode=137`，父端投递 error 并关闭子 block。强杀包装 shell 后只剩 idle zsh 的额外探测优化不属于本轮验证，也没有改变 SupervisionCoordinator 的批量 presence 缓存语义。

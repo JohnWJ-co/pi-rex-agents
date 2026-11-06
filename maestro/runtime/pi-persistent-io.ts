@@ -7,6 +7,8 @@ import {
 	writePersistentTaskInbox,
 	getNewEntries,
 	findLastAssistantSummary,
+	readSubagentResult,
+	subagentResultSummary,
 } from "../adapters/pi/session.ts";
 import type {
 	PiLedgerEntry,
@@ -26,7 +28,15 @@ export function createPiPersistentIO(state: {
 		readEvents: (r) => readPersistentTaskEvents(r.sessionFile),
 		readLedger: (r) => readPersistentDeliveryLedger(r.sessionFile),
 		readTaskSummary: (r) =>
-			existsSync(r.sessionFile)
+			subagentResultSummary(
+				readSubagentResult(r.sessionFile, {
+					subagentId: r.id,
+					taskId: r.taskId ?? "",
+					generation: r.generationId ?? "",
+					persistent: true,
+				}),
+			) ??
+			(existsSync(r.sessionFile)
 				? (findLastAssistantSummary(getNewEntries(r.sessionFile, 0)) ?? {
 						summary: "Persistent specialist completed without output.",
 						summarySource: "host",
@@ -34,7 +44,7 @@ export function createPiPersistentIO(state: {
 				: {
 						summary: "Persistent specialist session is unavailable.",
 						summarySource: "host",
-					},
+					}),
 		rejectBusy(r, task) {
 			ledger(r, task, "rejected-busy");
 		},

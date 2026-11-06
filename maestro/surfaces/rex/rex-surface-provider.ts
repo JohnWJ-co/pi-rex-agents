@@ -26,6 +26,7 @@ export type RexAgentStatus =
 	| "working"
 	| "blocked"
 	| "done"
+	| "error"
 	| "unknown";
 
 export interface RexPlacement {
@@ -166,7 +167,7 @@ function mapProgramState(
 		case "done":
 			return "done";
 		case "error":
-			return "unknown";
+			return "error";
 		default:
 			return "unknown";
 	}
@@ -470,6 +471,7 @@ export class RexSurfaceProvider {
 					kind: "present",
 					present: "present",
 					agentStatus: "idle",
+					agent: "shell",
 					observedAt: now(),
 					state: "shell",
 				};
@@ -495,14 +497,8 @@ export class RexSurfaceProvider {
 		surfaceId: string,
 	): Promise<RexProgramStatusRecord | undefined> {
 		const status = await this.cli.programStatus(this.sessionId, surfaceId);
-		return (
-			status.records.find(
-				(record) =>
-					record.effective_app === "pi" ||
-					record.app === "pi" ||
-					record.effective_app?.startsWith("pi-"),
-			) ?? status.records[0]
-		);
+		// Child OSC records are supplemental and must never shadow Pi's root.
+		return status.records.find((record) => !record.id || record.id === "root");
 	}
 
 	async getAgentPid(surfaceId: string): Promise<number | undefined> {

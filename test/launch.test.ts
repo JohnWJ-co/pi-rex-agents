@@ -760,7 +760,12 @@ describe("Pi launch", () => {
 			assert.deepEqual(policy.deniedTools, ["subagent", "subagent_resume"]);
 			assert.equal(policy.persistent, false);
 			assert.equal(command.includes(projectAgentDir), false);
-			assert.ok(command.startsWith(`cd ${expectedShellQuote(project)} && `));
+			assert.ok(
+				command
+					.split("\n")[1]
+					?.startsWith(`cd ${expectedShellQuote(project)} && `),
+			);
+			assert.match(command, /pi --name 'Worker' --session /);
 			assert.match(command, /--model 'fake\/worker'/);
 			assert.match(command, /--thinking 'high'/);
 			assert.match(command, /--tools 'read,bash,caller_ping'/);
@@ -779,7 +784,10 @@ describe("Pi launch", () => {
 			// and sends no `/skill:` args and no skill bodies.
 			assert.match(command, / PI_SUBAGENT_SKILLS='\["tdd"\]' /);
 			assert.doesNotMatch(command, /\/skill:/);
-			assert.match(command, /--tools 'read,bash,caller_ping' '@[^']+\.md';/);
+			assert.match(
+				command,
+				/--tools 'read,bash,caller_ping' '@[^']+\.md'\npira_exit_code=\$\?/,
+			);
 
 			const taskPath = command.match(/'@([^']+\.md)'/)?.[1];
 			assert.ok(taskPath, "expected artifact-backed task delivery");
@@ -1522,7 +1530,7 @@ describe("Pi launch", () => {
 				/'@[^']+\.md'/,
 				"a fork keeps direct delivery",
 			);
-			assert.match(command, / 'Forked task\.'; echo /);
+			assert.match(command, / 'Forked task\.'\npira_exit_code=\$\?/);
 		});
 	});
 
@@ -1643,6 +1651,8 @@ describe("Pi launch", () => {
 				JSON.stringify({ type: "session", id: "child", cwd: project }) + "\n",
 			);
 			writePublicResumePolicy(sessionFile);
+			writeFileSync(`${sessionFile}.exitcode`, "0\n");
+			writeFileSync(`${sessionFile}.exit`, JSON.stringify({ type: "done" }));
 			const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
 			process.env.PI_CODING_AGENT_DIR = join(root, "isolated-agent");
 			try {
@@ -1676,6 +1686,8 @@ describe("Pi launch", () => {
 					},
 					runScript(surface, value, options) {
 						assert.equal(surface, "pane-resume");
+						assert.equal(existsSync(`${sessionFile}.exitcode`), false);
+						assert.equal(existsSync(`${sessionFile}.exit`), false);
 						events.push("run");
 						command = value;
 						scriptPath = options.scriptPath;
@@ -1701,13 +1713,15 @@ describe("Pi launch", () => {
 				assert.equal(running.runtimePlan, undefined);
 				assert.equal(running.worktree, undefined);
 				assert.ok(
-					command.startsWith(
-						`PI_CODING_AGENT_DIR=${expectedShellQuote(process.env.PI_CODING_AGENT_DIR!)} `,
-					),
+					command
+						.split("\n")[1]
+						?.startsWith(
+							`PI_CODING_AGENT_DIR=${expectedShellQuote(process.env.PI_CODING_AGENT_DIR!)} `,
+						),
 				);
 				assert.ok(
 					command.includes(
-						`pi --session ${expectedShellQuote(sessionFile)} --tools 'read,bash,caller_ping' -e `,
+						`pi --name 'Resume worker' --session ${expectedShellQuote(sessionFile)} --tools 'read,bash,caller_ping' -e `,
 					),
 				);
 				assert.match(command, /PI_SUBAGENT_NAME='Resume worker'/);
@@ -1787,7 +1801,9 @@ describe("Pi launch", () => {
 				);
 				assert.equal(running.sessionFile, sessionFile, given);
 				assert.ok(
-					command.includes(`pi --session ${expectedShellQuote(sessionFile)} `),
+					command.includes(
+						`pi --name 'Resume worker' --session ${expectedShellQuote(sessionFile)} `,
+					),
 					given,
 				);
 				assert.ok(
@@ -1944,7 +1960,9 @@ describe("Pi launch", () => {
 				"managed-worktree",
 			);
 			assert.ok(
-				command.startsWith(`cd ${expectedShellQuote(worktreePath)} && `),
+				command
+					.split("\n")[1]
+					?.startsWith(`cd ${expectedShellQuote(worktreePath)} && `),
 			);
 			assert.match(
 				command,

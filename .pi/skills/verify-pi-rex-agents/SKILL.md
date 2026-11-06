@@ -47,6 +47,10 @@ current checkout with `-e`, then checks split/split/tab, close-and-reuse and
 explicit tab using real child blocks and session evidence. The default split
 limit is 2; reload/resume reservation adoption is also covered by unit tests.
 A skipped placement test is not passing placement evidence.
+The same suite includes `rex-return-contract.test.ts`: ordinary result JSON
+and JSONL fallback, persistent root working/done identity with two immediate
+inbox rounds, and error delivery after killing only the owned child Pi.
+No idle grace period or terminal-screen completion evidence is allowed.
 Startup uses `waitForPiReady` (`idle` only); each later turn uses
 `waitForPiTurnSettled` (`done` or `idle`, excluding `working` and `blocked`).
 Keep the existing timeout and require session evidence before checking status (F1).
@@ -61,7 +65,8 @@ $L drive
 $L down
 ```
 
-`up` creates a short `pira-lab-*` root with `mkdtemp`, starts `rex server run --listen unix://<root>/s --state-dir <root>/state --restore=false`, creates a session, and runs `rex whoami --json` inside the lab block. The returned endpoint must equal the lab socket. `drive` records `evidence.json` with the endpoint, child session, report envelope, parent continuation, and block IDs before/during/after the delegation. `down` stops only the recorded helper/server and removes the lab root.
+`up` creates a short `pira-lab-*` root with `mkdtemp`, starts `rex server run --listen unix://<root>/s --state-dir <root>/state --restore=false`, creates a session, and runs `rex whoami --json` inside the lab block. The returned endpoint must equal the lab socket. `drive` records `evidence.json` with the endpoint, child session, report envelope, parent continuation, and block IDs before/during/after the delegation. It also requires a validated
+`resultFile` / `result` matching the delivery and `exitcode: 0` after child exit. `down` stops only the recorded helper/server and removes the lab root.
 
 Never synchronize with a fixed sleep. Wait for a file, session entry, Pi OSC/program status, or Rex block condition. Never call Herdr APIs or clean a user session.
 
