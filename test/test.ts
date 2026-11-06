@@ -14607,6 +14607,7 @@ describe("subagent interruption", () => {
 
 			const effects = createWorktreeOperations();
 			effects.resolveGitCommit = async () => worktree.baseSha;
+			effects.resolveSourceCheckoutRoot = async (cwd) => cwd;
 			effects.resolveWorktreeProvisionCwd = async (cwd) => cwd;
 			await assert.rejects(
 				launchPiSubagent(

@@ -1,6 +1,7 @@
 import { withEncodedToolErrors } from "./tool-boundary.ts";
 import { createRexInfrastructure, rexHostContext } from "./rex-composition.ts";
 import { registerRexHostNotice } from "./host-notice.ts";
+import { registerWorktreeBoundaryGuard } from "./worktree-boundary.ts";
 import { rexWorktreeRoot } from "../../maestro/surfaces/rex/worktree.ts";
 import type {
 	ExtensionAPI,
@@ -304,7 +305,8 @@ export default function subagentsExtension(
 		options.infrastructure ??
 		(rexHost ? createRexInfrastructure(rexHost) : undefined);
 	if (!infrastructure) return;
-	if (rexHost) registerRexHostNotice(pi, rexHost, spawningConfig);
+	if (rexHost) registerRexHostNotice(pi, rexHost, spawningConfig, options.env);
+	registerWorktreeBoundaryGuard(pi, { env: options.env });
 	runtime.pi = pi;
 	runtime.session = createDefaultRunSession(
 		{

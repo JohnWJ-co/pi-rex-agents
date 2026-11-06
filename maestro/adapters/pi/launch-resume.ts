@@ -24,6 +24,7 @@ import {
 	SUBAGENTS_DIR,
 	timestampForFile,
 	withExitCodeArtifact,
+	worktreeBoundaryAssignment,
 } from "./launch-command.ts";
 import type { PiLaunchOperations } from "./launch-operations.ts";
 import {
@@ -127,6 +128,9 @@ export async function launchResumedPiSubagent(
 				: []),
 			childDepthAssignment(),
 			modelScopeAssignment(request.modelScope),
+			// Resume is limited to public sessions; clear any boundary inherited
+			// from the pane's shell so an ordinary child stays ordinary.
+			...worktreeBoundaryAssignment(),
 			// The saved session policy records no self-spawn opt-in.
 			"PI_SUBAGENT_SELF_SPAWN=0",
 			// A resumed session already holds its skills; never inject them again.

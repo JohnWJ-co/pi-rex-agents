@@ -152,6 +152,7 @@ describe("PiHarnessAdapter", () => {
 				probes.push(ref);
 				return "base-sha";
 			};
+			effects.resolveSourceCheckoutRoot = async (cwd) => cwd;
 			effects.resolveWorktreeProvisionCwd = async (cwd) => cwd;
 			const adapter = new PiHarnessAdapter({
 				surface: f.surface,

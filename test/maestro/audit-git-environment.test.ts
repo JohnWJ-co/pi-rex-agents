@@ -17,6 +17,7 @@ import {
 	captureWorktreeHandoff,
 	createWorktreeCleanupOperations,
 	resolveGitCommit,
+	resolveSourceCheckoutRoot,
 	resolveWorktreeProvisionCwd,
 } from "../../maestro/runtime/worktree-operations.ts";
 import { FakeSurfaceProvider } from "../../maestro/surfaces/fake/fake-surface-provider.ts";
@@ -118,6 +119,12 @@ test("host Git ignores poisoned repository while preserving linked checkout, inc
 		const poisoned = { ...process.env };
 		assert.equal(await resolveGitCommit(source, "HEAD"), expected);
 		assert.equal(await resolveGitCommit(linked, "HEAD"), expected);
+		mkdirSync(join(linked, "nested"));
+		assert.equal(
+			await resolveSourceCheckoutRoot(join(linked, "nested")),
+			realpathSync(linked),
+		);
+		assert.equal(await resolveSourceCheckoutRoot(source), realpathSync(source));
 		assert.equal(
 			await resolveWorktreeProvisionCwd(linked),
 			realpathSync(source),

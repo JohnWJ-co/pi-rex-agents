@@ -73,6 +73,7 @@ async function finalizingSession(t: TestContext) {
 	};
 	const worktreeOps = createWorktreeOperations();
 	worktreeOps.resolveGitCommit = async () => "a".repeat(40);
+	worktreeOps.resolveSourceCheckoutRoot = async (cwd) => cwd;
 	worktreeOps.resolveWorktreeProvisionCwd = async (cwd) => cwd;
 	const captureEntered = deferred();
 	const releaseCapture = deferred();

@@ -133,6 +133,18 @@ export async function resolveGitCommit(
 	);
 }
 
+/** The actual source checkout, even when launch starts in a subdirectory. */
+export async function resolveSourceCheckoutRoot(cwd: string): Promise<string> {
+	const output = await gitRead(
+		cwd,
+		["rev-parse", "--show-toplevel"],
+		Deadline.after(GIT_SOURCE_TIMEOUT_MS),
+	);
+	if (!output || output === "\n")
+		throw new Error("Git returned no checkout root");
+	return output.endsWith("\n") ? output.slice(0, -1) : output;
+}
+
 export async function resolveWorktreeProvisionCwd(
 	sourceCwd: string,
 ): Promise<string> {
@@ -791,6 +803,7 @@ export function createWorktreeCleanupOperations(
 export function createWorktreeOperations(): WorktreeOperations {
 	return {
 		resolveGitCommit,
+		resolveSourceCheckoutRoot,
 		resolveWorktreeProvisionCwd,
 		writeWorktreeManifest,
 		captureWorktreeHandoff,

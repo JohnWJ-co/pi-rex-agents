@@ -774,6 +774,8 @@ describe("Pi launch", () => {
 			assert.match(command, /PI_DENY_TOOLS='subagent,subagent_resume'/);
 			assert.match(command, /PI_SUBAGENT_AUTO_EXIT=1/);
 			assert.match(command, /PI_SUBAGENT_SELF_SPAWN=0/);
+			assert.match(command, / PI_SUBAGENT_WORKTREE='' /);
+			assert.match(command, / PI_SUBAGENT_SOURCE_CWD='' /);
 			// Documented child-context hint: fresh children receive PI_SUBAGENT_ID.
 			assert.match(command, /PI_SUBAGENT_ID='child-1'/);
 			assert.ok(
@@ -1740,6 +1742,8 @@ describe("Pi launch", () => {
 				// inherits one left in the pane's shell.
 				assert.match(command, / PI_SUBAGENT_SELF_SPAWN=0 /);
 				assert.match(command, / PI_SUBAGENT_MODEL_SCOPE='' /);
+				assert.match(command, / PI_SUBAGENT_WORKTREE='' /);
+				assert.match(command, / PI_SUBAGENT_SOURCE_CWD='' /);
 				// A resumed session already holds its skills; one left in the pane's
 				// shell must never be injected again.
 				assert.match(command, / PI_SUBAGENT_SKILLS='\[\]' /);
@@ -1882,8 +1886,11 @@ describe("Pi launch", () => {
 				encoding: "utf8",
 			}).trim();
 			const worktreePath = join(root, "worker-tree");
+			const nestedCwd = join(project, "nested");
+			mkdirSync(nestedCwd);
 			const worktreeRequest: FreshPiLaunchRequest = {
 				...request,
+				cwd: nestedCwd,
 				worktree: { branch: "issue/7", base: "HEAD" },
 			};
 			const manifestFile = join(
@@ -1913,7 +1920,7 @@ describe("Pi launch", () => {
 				},
 				createWorktree(name, cwd, branch, base) {
 					assert.equal(name, "Worker");
-					assert.equal(cwd, project);
+					assert.equal(cwd, nestedCwd);
 					assert.equal(branch, "issue/7");
 					assert.equal(base, baseSha);
 					assert.equal(
@@ -1964,6 +1971,16 @@ describe("Pi launch", () => {
 				command
 					.split("\n")[1]
 					?.startsWith(`cd ${expectedShellQuote(worktreePath)} && `),
+			);
+			assert.ok(
+				command.includes(
+					` PI_SUBAGENT_WORKTREE=${expectedShellQuote(worktreePath)} `,
+				),
+			);
+			assert.ok(
+				command.includes(
+					` PI_SUBAGENT_SOURCE_CWD=${expectedShellQuote(realpathSync(project))} `,
+				),
 			);
 			assert.match(
 				command,
@@ -2373,11 +2390,23 @@ describe("Pi launch", () => {
 			// the pane's shell: both are set explicitly.
 			assert.match(command, / PI_SUBAGENT_SELF_SPAWN=0 /);
 			assert.match(command, / PI_SUBAGENT_MODEL_SCOPE='' /);
+			assert.ok(
+				command.includes(
+					` PI_SUBAGENT_WORKTREE=${expectedShellQuote(worktreePath)} `,
+				),
+			);
+			assert.ok(
+				command.includes(
+					` PI_SUBAGENT_SOURCE_CWD=${expectedShellQuote(realpathSync(project))} `,
+				),
+			);
 			assert.doesNotMatch(
 				command
 					.replace("PI_SUBAGENT_DEPTH=", "")
 					.replace("PI_SUBAGENT_SELF_SPAWN=", "")
-					.replace("PI_SUBAGENT_MODEL_SCOPE=", ""),
+					.replace("PI_SUBAGENT_MODEL_SCOPE=", "")
+					.replace("PI_SUBAGENT_WORKTREE=", "")
+					.replace("PI_SUBAGENT_SOURCE_CWD=", ""),
 				/subagent-done|PI_SUBAGENT_|__SUBAGENT_DONE_/,
 			);
 			assert.ok(
@@ -2392,6 +2421,12 @@ describe("Pi launch", () => {
 			assert.equal(child.cwd, worktreePath);
 			const childText = readFileSync(result.running.sessionFile, "utf8");
 			assert.match(childText, /pi-rex-worktree-handoff/);
+			assert.match(childText, /Workspace \(all reads, writes, and commands\):/);
+			assert.ok(
+				childText.includes(
+					`Source checkout (read-only; never edit or cd into it): ${realpathSync(project)}`,
+				),
+			);
 			assert.match(childText, /handoff\/feature/);
 			assert.match(childText, /Implement the bounded change\./);
 			assert.equal(

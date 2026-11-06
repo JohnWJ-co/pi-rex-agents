@@ -40,6 +40,10 @@ Omit `worktree` for an ordinary pane. If a generated tool client requires every 
 
 Worktrees isolate checkouts, indexes, and `HEAD`. They are **not security sandboxes**: worktrees still share the repository's object database and most refs, and the child process has the same host permissions as Pi.
 
+Each managed-worktree launch carries the absolute worktree and source-checkout paths in its environment. The source boundary is the Git checkout root even when the launch starts in a subdirectory. The child's Rex notice states that the worktree is its workspace, that all reads, writes and commands belong there, and that it must not `cd` into or modify the source checkout; the parent reviews and integrates the result. A child-side `tool_call` guard blocks known writing tools (`edit`, `write`, and equivalent tools with explicit path parameters) when the target resolves inside the source checkout but outside the worktree. The rejection names the source path and offers the corresponding worktree path. Canonical resolution follows symlinks and resolves a nonexistent target through its nearest existing ancestor, after applying Pi's built-in file-tool path normalization (`~`, `@`, file URLs and Unicode spaces).
+
+This guard is deliberately narrow. It does not parse shell commands, and `Bash` can still write anywhere the process can. The workspace rule for shell commands is prompt-enforced, not a security boundary. Ordinary non-worktree children carry empty boundary variables and register no guard handler.
+
 Host-managed Git commands select their checkout through their working directory,
 not inherited `GIT_DIR`, `GIT_WORK_TREE`, index/object-directory overrides, or
 command-local `GIT_CONFIG_*` overrides. The host removes those variables from a
@@ -84,9 +88,10 @@ installed provider, Pi uses native auto-compaction. See
 
 | Parent/orchestrator | Worker |
 | --- | --- |
-| Choose a unique branch and committed base | Work only in the provided checkout |
+| Choose a unique branch and committed base | Work only in the provided checkout, using its absolute path |
 | Provide complete task context | Read existing code before editing |
 | Review the returned Git metadata and diff | Run relevant verification |
+| Keep the source checkout read-only for the worker | Never `cd` into or modify the source checkout |
 | Decide how and when to integrate | Commit when the task requests a commit |
 | Push, create a PR, merge, or clean up explicitly | Do not push, merge, switch branches, or remove the worktree unless explicitly authorized |
 

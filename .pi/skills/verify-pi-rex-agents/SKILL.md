@@ -34,7 +34,7 @@ git diff --check
 npm run test:integration:rex
 ```
 
-For P4 acceptance, judge the unit suite with `bash docs/p4/baseline/test-gate.sh`.
+For the retained P4 acceptance gate, judge the unit suite with `bash docs/p4/baseline/test-gate.sh`.
 It clears `REX_SESSION`, `REX_BLOCK` and `REX_SERVER` in the gate process so
 unit tests must inject deterministic infrastructure. Preserve the caller's real
 Rex environment for the integration suite and manual lab; their evidence shape

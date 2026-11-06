@@ -49,6 +49,7 @@ import {
 	SUBAGENTS_DIR,
 	timestampForFile,
 	withExitCodeArtifact,
+	worktreeBoundaryAssignment,
 } from "./launch-command.ts";
 import {
 	PI_LAUNCH_SESSION_ENV,
@@ -207,6 +208,7 @@ interface ResolvedLaunch {
 
 interface PreparedSurface {
 	surface: string;
+	sourceCheckout?: string;
 	targetCwd: string;
 	effectiveAgentDir: string;
 	localAgentDir: string | null;
@@ -470,6 +472,9 @@ async function prepareLaunchSurface(
 		throw new Error("A worktree subagent cannot use a pre-created block");
 
 	const worktreeOps = requireWorktreeOperations(operations);
+	const sourceCheckout = await worktreeOps.resolveSourceCheckoutRoot(
+		resolved.sourceCwd,
+	);
 	const baseRef = request.worktree.base ?? "HEAD";
 	const baseSha = await worktreeOps.resolveGitCommit(
 		resolved.sourceCwd,
@@ -563,6 +568,7 @@ async function prepareLaunchSurface(
 	const hasIsolatedAgentDir = existsSync(isolatedAgentDir);
 	return {
 		surface: created.paneId,
+		sourceCheckout,
 		targetCwd: created.path,
 		effectiveAgentDir: hasIsolatedAgentDir
 			? isolatedAgentDir
@@ -643,6 +649,7 @@ async function confirmShellReady(
 function buildWorktreeHandoffMessage(
 	request: FreshPiLaunchRequest,
 	worktree: WorktreeLaunch,
+	sourceCwd: string,
 	sessionFile: string,
 ): string {
 	const task = request.task.slice(0, 2000);
@@ -650,7 +657,8 @@ function buildWorktreeHandoffMessage(
 		"Worktree handoff context:",
 		`Branch: ${worktree.branch}`,
 		`Base commit: ${worktree.baseSha}`,
-		`Worktree: ${worktree.path}`,
+		`Workspace (all reads, writes, and commands): ${worktree.path}`,
+		`Source checkout (read-only; never edit or cd into it): ${sourceCwd}`,
 		`Source session: ${request.parent.sessionFile}`,
 		`Fork session: ${sessionFile}`,
 		"",
@@ -672,6 +680,7 @@ function prepareTaskArtifacts(
 		const handoffMessage = buildWorktreeHandoffMessage(
 			request,
 			session.worktree,
+			session.sourceCheckout ?? resolved.sourceCwd,
 			session.sessionFile,
 		);
 		createWorktreeSessionFork({
@@ -796,6 +805,10 @@ function buildPiCommand(
 		`${PI_LAUNCH_SESSION_ENV}=${shellQuote(artifacts.sessionFile)}`,
 		childDepthAssignment(resolved.request.handoff ? "handoff" : "child"),
 		modelScopeAssignment(request.modelScope),
+		...worktreeBoundaryAssignment(
+			artifacts.worktree?.path,
+			artifacts.sourceCheckout,
+		),
 		// Explicit on every path, including a handoff, so an opt-in left in the
 		// pane's shell never reaches a session whose role did not declare it.
 		`PI_SUBAGENT_SELF_SPAWN=${!request.handoff && request.agent && request.behavior.selfSpawn ? "1" : "0"}`,

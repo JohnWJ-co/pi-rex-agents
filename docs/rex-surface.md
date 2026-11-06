@@ -37,6 +37,21 @@ checkout's extension in an isolated Rex server, checks split/split/tab window
 IDs, closes one child, and verifies the next split returns to the parent window.
 The isolated harness owns cleanup; it never operates on another Rex session.
 
+## Managed-worktree child isolation
+
+A managed-worktree launch passes its absolute worktree and source-checkout
+paths in `PI_SUBAGENT_WORKTREE` and `PI_SUBAGENT_SOURCE_CWD`. The source path
+is the Git checkout root, including when the launch cwd is a subdirectory. The child notice
+names the worktree as its workspace and forbids changing into or modifying the
+source checkout. A child-side `tool_call` guard blocks known writing tools with
+explicit file-path parameters when canonical resolution places the target in
+the source checkout but outside the worktree, and reports the matching
+worktree path. Symlinked ancestors, symlink targets, nonexistent tails and
+`/var` versus `/private/var` aliases are resolved before the decision. Built-in
+file-tool paths also use Pi's home, `@`, file-URL and Unicode-space normalization.
+Ordinary children receive empty values and no guard handler. `Bash` is not
+parsed: shell writes remain prompt-constrained and are not a security boundary.
+
 ## Program status and completion
 
 Pi receives `--name <display name>` and owns the root OSC 7501 record.

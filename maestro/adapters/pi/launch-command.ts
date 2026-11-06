@@ -10,6 +10,7 @@ import {
 	DELEGATION_DEPTH_ENV,
 } from "../../core/delegation-depth.ts";
 import { shellQuote } from "../../core/shell.ts";
+import { WORKTREE_PATH_ENV, WORKTREE_SOURCE_ENV } from "../../core/worktree.ts";
 
 export const SUBAGENTS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -51,6 +52,21 @@ export function childDepthAssignment(
 	launch: "child" | "handoff" = "child",
 ): string {
 	return `${DELEGATION_DEPTH_ENV}=${childDelegationDepth(process.env[DELEGATION_DEPTH_ENV], launch)}`;
+}
+
+/**
+ * Absolute worktree/source paths for the child-side guard and notice. Always
+ * emitted, with empty values for ordinary sessions, so an inherited value
+ * from the pane's shell cannot turn an ordinary child into a worktree child.
+ */
+export function worktreeBoundaryAssignment(
+	worktree?: string,
+	source?: string,
+): string[] {
+	return [
+		`${WORKTREE_PATH_ENV}=${shellQuote(worktree ?? "")}`,
+		`${WORKTREE_SOURCE_ENV}=${shellQuote(source ?? "")}`,
+	];
 }
 
 export function buildSubagentToolAllowlist(

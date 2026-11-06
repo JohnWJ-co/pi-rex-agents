@@ -16,7 +16,7 @@ bun test/smoke-extension.ts
 npm pack --dry-run
 ```
 
-For P4 acceptance, judge the unit suite with `bash docs/p4/baseline/test-gate.sh`.
+For the retained P4 acceptance gate, judge the unit suite with `bash docs/p4/baseline/test-gate.sh`.
 It clears `REX_SESSION`, `REX_BLOCK` and `REX_SERVER` only in the gate process;
 unit fixtures inject their own infrastructure instead of borrowing this host.
 Keep the real Rex environment in the caller for integration preflight and the lab.

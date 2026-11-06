@@ -780,6 +780,8 @@ for (const mode of ["success", "focus-warning", "readiness-failure"] as const) {
 						.replace("PI_SUBAGENT_DEPTH=", "")
 						.replace("PI_SUBAGENT_SELF_SPAWN=", "")
 						.replace("PI_SUBAGENT_MODEL_SCOPE=", "")
+						.replace("PI_SUBAGENT_WORKTREE=", "")
+						.replace("PI_SUBAGENT_SOURCE_CWD=", "")
 						.includes("PI_SUBAGENT_") &&
 					!command.includes("subagent-done.ts") &&
 					!command.includes("__SUBAGENT_DONE_"),

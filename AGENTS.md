@@ -1,17 +1,17 @@
 # Repository instructions for agents
 
-These instructions apply to changes in `pi-rex-agents-p4`.
+These instructions apply to the primary `pi-rex-agents` repository. The P4 migration is complete; [`docs/p4/`](docs/p4/) records its plan, evidence and task history.
 
 ## What this package is
 
 `pi-rex-agents` is the Rex host adapter for the Pi subagent extension. It is a hard fork of the upstream execution kernel: parent Pi runs inside a Rex block, ordinary children run in Rex blocks or windows, and completion returns to the parent automatically. Rex is accessed through its documented CLI with explicit argv; no private socket protocol is part of this package.
 
-This tree is the P4 migration worktree. Keep changes scoped to the current checkout. Do not modify the sibling `pi-rex-agents` checkout or the upstream `pi-herdr-agents` checkout. Do not commit or push unless the parent agent explicitly owns that action.
+Keep changes scoped to the checkout assigned to you. Another agent may own a parallel checkout for the same repository, so do not edit or run mutating commands outside your workspace. The parent owns review, integration and publication; do not commit or push unless it explicitly asks.
 
 ## Read these first
 
 - [`README.md`](./README.md) — installation and everyday use
-- [`docs/p4/plan.md`](docs/p4/plan.md) and the relevant task card under [`docs/p4/tasks/`](docs/p4/tasks/) — migration scope
+- [`docs/p4/plan.md`](docs/p4/plan.md) and the relevant task card under [`docs/p4/tasks/`](docs/p4/tasks/) — historical P4 migration scope
 - [`docs/p4/rex-facts.md`](docs/p4/rex-facts.md) — measured Rex behavior, especially socket isolation and OSC lifecycle
 - [`maestro/surfaces/rex/rex-cli.ts`](maestro/surfaces/rex/rex-cli.ts) — the only Rex CLI wrapper and argv boundary
 - [`maestro/surfaces/rex/rex-surface-provider.ts`](maestro/surfaces/rex/rex-surface-provider.ts) — Rex surface lifecycle
@@ -24,7 +24,8 @@ This tree is the P4 migration worktree. Keep changes scoped to the current check
 
 - `pi-extension/subagents/index.ts` — Rex-only Pi composition root; loads the local hard-forked kernel with Rex infrastructure and host notices
 - `pi-extension/subagents/rex-composition.ts` — Rex provider, supervision, worktree and placement composition
-- `pi-extension/subagents/host-notice.ts` — Rex host and leaf system prompt notices
+- `pi-extension/subagents/host-notice.ts` — Rex host and leaf system prompt notices, including the managed-worktree workspace contract
+- `pi-extension/subagents/worktree-boundary.ts` — child-side edit/write guard for source-checkout paths outside the managed worktree
 - `maestro/surfaces/rex/rex-cli.ts` — dependency-free explicit-argv Rex CLI wrapper; every call uses `--autostart=false` and propagates `REX_SERVER`
 - `maestro/surfaces/rex/rex-surface-provider.ts` — block/window creation, Pi command execution, OSC/program status observation, process inspection and cleanup
 - `src/doctor.ts`, `src/p0.ts`, `src/p1.ts`, `src/p2.ts` — doctor and retained integration probes
@@ -59,6 +60,7 @@ Update this map when moving or adding a major seam.
 - Children are launched through the real `subagent` tool. A completed delegation must provide the report envelope, the child session evidence and the child block lifecycle evidence.
 - Synchronization waits for observable files, session entries, OSC/program status or Rex block changes. Fixed sleeps are not synchronization. `waitForPiReady` requires startup `idle`; after a turn, use `waitForPiTurnSettled` for `done` or `idle`, never `working` or `blocked` (F1).
 - The extension is Rex-only. A child is a leaf and must not register or invoke another delegation path.
+- A managed-worktree child treats its absolute worktree path as the workspace, never cds into or modifies the parent/source checkout, and leaves review, integration, publication and cleanup to the parent. The edit/write guard is not a general sandbox; shell commands remain prompt-constrained.
 - The parent owns review, integration, publication and cleanup. Do not switch the parent checkout, push branches, or remove unrelated Rex sessions.
 
 ## Documentation synchronization
@@ -76,7 +78,7 @@ Do not make the integration test weaker to accommodate a flaky or unavailable en
 
 ## Verification
 
-For ordinary changes, run the unit suite through the P4 baseline gate in a clean host environment. Keep `expected-identity.txt` empty; the Rex package identity is asserted by `test/package-manifest.test.js`.
+For ordinary changes, run the unit suite through the retained P4 baseline gate in a clean host environment. Keep `expected-identity.txt` empty; the Rex package identity is asserted by `test/package-manifest.test.js`.
 
 ```bash
 bash docs/p4/baseline/test-gate.sh
@@ -90,7 +92,7 @@ npm pack --dry-run
 git diff --check
 ```
 
-For P4 acceptance, judge `npm test` with `bash docs/p4/baseline/test-gate.sh`.
+For the retained P4 acceptance gate, judge `npm test` with `bash docs/p4/baseline/test-gate.sh`.
 The gate clears `REX_SESSION`, `REX_BLOCK` and `REX_SERVER` before running tests
 so an inherited Rex host cannot mask missing test infrastructure. Unit fixtures
 must inject deterministic infrastructure; host-guard tests inject environment

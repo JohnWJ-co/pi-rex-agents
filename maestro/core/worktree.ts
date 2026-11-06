@@ -1,5 +1,9 @@
 import type { JsonObject } from "./config/type-guards.ts";
 
+/** Absolute checkout and source paths passed to a managed worktree session. */
+export const WORKTREE_PATH_ENV = "PI_SUBAGENT_WORKTREE";
+export const WORKTREE_SOURCE_ENV = "PI_SUBAGENT_SOURCE_CWD";
+
 export interface WorktreeLaunch {
 	path: string;
 	workspaceId: string;
@@ -84,6 +88,7 @@ export function worktreeResultState(
 /** Launch and completion consume effects supplied by the runtime composition. */
 export interface WorktreeOperations {
 	resolveGitCommit(cwd: string, ref: string): Promise<string>;
+	resolveSourceCheckoutRoot(cwd: string): Promise<string>;
 	resolveWorktreeProvisionCwd(sourceCwd: string): Promise<string>;
 	writeWorktreeManifest(path: string, value: JsonObject): void;
 	captureWorktreeHandoff(worktree: WorktreeLaunch): Promise<WorktreeHandoff>;
