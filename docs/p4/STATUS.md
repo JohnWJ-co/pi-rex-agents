@@ -11,7 +11,7 @@
 |---|---|---|---|
 | T0 | 已完成，门禁通过 | `41af43a2c17ae86ec7c5e57b3c1989c6b71147a8` | 完整复制范围已修正；test-gate 最终通过，1452 个测试已加载 |
 | T1 | 已完成，门禁通过 | `15cdafc` | Rex lab、集成 harness、验证技能和 AGENTS.md 已完成；test-gate 与真实 Rex smoke 通过 |
-| T2 | 已完成，门禁通过 | `8df678f` | Rex provider 已入内核；Herdr/sidebar/Windows 专属路径已删除；保留 `test/verify-lab-guards.test.ts`；全部 T2 门禁通过 |
+| T2 | 已完成返工，门禁通过 | `待填` | 恢复通用测试并迁移 audit-stop 到 Rex harness；Rex provider 已入内核；Herdr/sidebar/Windows 专属路径已删除；保留 `test/verify-lab-guards.test.ts` |
 | T2b | 待开始 | | |
 | T3 | 待开始 | | |
 | T4 | 待开始 | | |
@@ -26,19 +26,20 @@
 
 - 将 `src/rex-cli.ts`、`src/rex-surface-provider.ts`、`src/uncertainty.ts`、`src/git.ts`、`src/worktree.ts` 迁移到 `maestro/surfaces/rex/`，并更新内核与测试导入；新增 Rex provider conformance 和 fake Rex CLI provider 测试。
 - `PiRunSession` 默认从 `REX_SESSION`/`REX_BLOCK` 构造 `RexSurfaceProvider`，删除 `HERDR_SOCKET_PATH`、delegated marker 和 Herdr surface 依赖；lifecycle 状态源改为 `surface`。
-- 删除 Herdr surface、sidebar、release/role-pack 和 Windows-only 路径及其专属测试；保留 T1 已迁移的 `test/verify-lab-guards.test.ts`，它继续覆盖 `.pi/skills/verify-pi-rex-agents/scripts/path-guards.ts`。`package.json` 默认测试脚本未引用该文件，引用关系保持一致。
-- `test/test.ts` 中删除的 Herdr/role-pack 专属用例为：`discovers and launches a Pi package role pack without repeated role names`、`removes role-pack listeners when their extension instance shuts down`、`rejects ambiguous package-layer role names with actionable diagnostics`、`keeps child Herdr list formatting, handoff dispatch, and silent startup`；以及 `herdr.ts` 套件中的 CLI stderr、`isHerdrAvailable`、命令构造、响应解析、process exit confirmation 全部 Herdr-only 用例。`test/integration/` 的 persistent、placement、cancel、lifecycle 已改用 Rex harness。
+- 删除 Herdr surface、sidebar、release/role-pack 和 Windows-only 路径及其专属测试；保留 T1 已迁移的 `test/verify-lab-guards.test.ts`，它继续覆盖 `.pi/skills/verify-pi-rex-agents/scripts/path-guards.ts`。`package.json` 默认测试脚本现明确包含 `test/test.ts`、`test/worktree-cleanup.test.ts`、`test/launch.test.ts` 和 `test/verify-lab-guards.test.ts`；此前漏掉这些通用测试是本次返工修正的原因。恢复 `test/integration/hang-advisory.test.ts`，并将 `test/integration/audit-stop.test.ts` 及其 child-only shutdown fixture 迁移到 Rex harness。
+- `test/test.ts` 中删除的 Herdr/role-pack 专属用例为：`discovers and launches a Pi package role pack without repeated role names`、`removes role-pack listeners when their extension instance shuts down`、`rejects ambiguous package-layer role names with actionable diagnostics`、`keeps child Herdr list formatting, handoff dispatch, and silent startup`；以及 `herdr.ts` 套件中的 CLI stderr、`isHerdrAvailable`、命令构造、响应解析、process exit confirmation 全部 Herdr-only 用例。T2 还改写了 `test/test.ts` 的 subagent discovery 和 self-spawn fixture：显式注入不可用 fake surface，并隔离全局 runtime/`REX_*` 环境，以继续验证 role precedence、self-spawn 和 depth guard，不删除这些通用用例。`test/integration/` 的 persistent、placement、cancel、lifecycle 已改用 Rex harness。
+- 从 T1 到 T2 删除的专属测试文件及用例数（按源文件中的 `it`/`test` 用例统计）为：`test/integration/harness-conformance.test.ts` 4（旧 Harness conformance）、`test/integration/mux-surface.test.ts` 10（Herdr/mux surface）、`test/integration/sidebar-lifecycle.test.ts` 7、`test/integration/sidebar.test.ts` 9（sidebar）、`test/integration/surface-conformance.test.ts` 1（旧 surface）、`test/maestro/async-io.test.ts` 3（旧异步 I/O）、`test/maestro/audit-herdr-dispatch.test.ts` 2、`test/maestro/audit-ownership.test.ts` 12、`test/maestro/delegated-marker.test.ts` 21、`test/maestro/git-handoff-async.test.ts` 4、`test/maestro/herdr-cli.test.ts` 5、`test/maestro/herdr-lab.test.ts` 14、`test/maestro/herdr-placement-async.test.ts` 10、`test/maestro/herdr-socket.test.ts` 14、`test/maestro/herdr-surface-provider.test.ts` 13、`test/maestro/opened-primary-workspace.test.ts` 18、`test/maestro/script-launch.test.ts` 33、`test/maestro/sidebar-fixture-ownership.test.ts` 22、`test/package-manifest.test.js` 11（Herdr package manifest）、`test/release-workflow.test.ts` 7（release workflow）、`test/sidebar-plugin.test.js` 24（sidebar plugin），合计 246 个。另删除 T2 专属 fixture/helper `test/fake-herdr-socket.ts`，以及 `test/bench/` 基准、Herdr lab/sidebar fixture；这些不计入测试用例数。`test/integration/audit-stop.test.ts` 与 `test/integration/hang-advisory.test.ts` 曾随旧 Harness 删除，现已恢复/迁移，因此不计为删除。
 - 修复 macOS `/private/var` 与 `/var` 的语义等价路径断言：`test/maestro/audit-git-environment.test.ts` 使用 realpath，`maestro/runtime/worktree-operations.ts` 在 worktree 注册匹配时规范化 path。
-- 测试基线从 1452 调整到删除 T2 专属套件后的 554；保留 `test-gate.sh` 的双次运行和持续性失败判定。
 
 门禁结果：
 
 - `npm run typecheck`：通过。
 - `npm run lint`：通过。
-- `npm run format:check`：通过，检查 143 个文件。
+- `npm run format:check`：通过，检查 146 个文件。
 - `npm run docs:tools:check`：通过。
 - `git diff --check`：通过。
-- `docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t2-gate-final`：第 1 次 `554 tests / 551 pass / 1 fail / 2 skipped`，暂定失败为 `cancelled resume callers still retire both owners on actual lazy-read rejection without getters`；第 2 次 `554 / 552 pass / 0 fail / 2 skipped`，输出 `OK：没有持续性新增失败`。
+- `docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t2-restore-gate2`：两次均加载 `1155 tests / 1136 pass / 9 fail / 10 skipped`；第 1 次的两个暂定失败 `a fallback owner transferred after the cancel shows its own unconfirmed kill and stays live`、`public launch owns the four-argument advisory route and keeps duplicate and fresh evaluations cold` 未在第 2 次持续，输出 `OK：没有持续性新增失败`。`MIN_TESTS` 已从 554 调整为 1155。
+- `node --experimental-strip-types --test --test-concurrency=1 test/integration/audit-stop.test.ts`：通过，macOS 按任务中的 Linux process identity 条件跳过 1 个测试；测试已使用 Rex compat harness，不再依赖 Herdr/mux。
 - `npm run test:integration:rex`：通过，Rex smoke 和 RexSurfaceProvider conformance 共 10 tests、0 failed、0 skipped。
 - T2 Herdr 扫描剩余 44 条，均为后续 T4/T6 处理的历史身份、配置命名或源头文案；扫描结果已保留在本轮 `/tmp/pi-rex-agents-p4-t2-herdr.txt`。
 
@@ -50,7 +51,7 @@
 - 隔离 lab：`doctor`、`up`、`down` 通过；lab p1 启动子 Pi 时因隔离 `models.json` 没有 `CBAPI/cn:deepseek-v4.1-flash`，子进程报告 `Error: Model "CBAPI/cn:deepseek-v4.1-flash" not found`，未将该次作为通过证据；随后 `down` 报告 `labRootExists=false leftoverPids=none`。当前 Rex 会话探针已满足任务卡的“lab 或当前 Rex 会话”要求。
 - T2 创建的 Rex windows、blocks、lab 临时目录和进程均已清理；`rex ls` 中没有 `pira-lab-*` 资源。
 
-判断：T2 全部门禁通过，准备提交。下一任务是 T2b；按监督指令不再派出实现类子代理，代码修改在主会话完成。
+判断：T2 返工后的全部门禁通过，待创建修正提交。按用户监督指令停在 T2，等待用户从 p4 worktree 启动新的 Pi；不开始 T2b。
 
 ### T0：门禁失败，停止
 

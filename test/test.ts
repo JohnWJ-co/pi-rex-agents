@@ -317,6 +317,24 @@ async function withIsolatedAgentEnv(
 		rmSync(root, { recursive: true, force: true });
 	}
 }
+async function withFreshSubagentRuntime<T>(fn: () => Promise<T>): Promise<T> {
+	// SAFETY: this process-local extension runtime is owned by subagents/index.ts.
+	const runtime = (globalThis as any)[Symbol.for("pi-subagents/runtime")];
+	const previous = {
+		pi: runtime.pi,
+		latestCtx: runtime.latestCtx,
+		session: runtime.session,
+	};
+	runtime.pi = undefined;
+	runtime.latestCtx = undefined;
+	runtime.session = undefined;
+	try {
+		return await fn();
+	} finally {
+		Object.assign(runtime, previous);
+	}
+}
+
 /** The text of one tool-result content block, failing if it is not text. */
 function resultText(
 	result: { content: ReadonlyArray<{ type: string; text?: string }> },
@@ -7211,108 +7229,137 @@ describe("subagent discovery", () => {
 	});
 
 	it("uses the effective higher-precedence role before launch diagnostics", async () => {
-		await withIsolatedAgentEnv(
-			async ({ projectDir, projectAgentsDir, globalAgentsDir }) => {
-				const rolePackDir = join(projectDir, "precedence-capability-pack");
-				const rolesDir = join(rolePackDir, "roles");
-				mkdirSync(rolesDir, { recursive: true });
-				writeFileSync(
-					join(rolePackDir, "package.json"),
-					JSON.stringify({ name: "@acme/precedence-capability-pack" }),
-				);
-				writeAgentFile(
-					globalAgentsDir,
-					"global-invalid-project-valid",
-					["description: Invalid global", "tools: []"].join("\n"),
-				);
-				writeAgentFile(
-					projectAgentsDir,
-					"global-invalid-project-valid",
-					["description: Valid project", "tools: read"].join("\n"),
-				);
-				writeAgentFile(
-					rolesDir,
-					"pack-invalid-project-valid",
-					["description: Invalid pack", "tools: []"].join("\n"),
-				);
-				writeAgentFile(
-					projectAgentsDir,
-					"pack-invalid-project-valid",
-					["description: Valid project", "tools: read"].join("\n"),
-				);
-				writeAgentFile(
-					globalAgentsDir,
-					"invalid-hidden-project-valid",
-					["description: Invalid global", "tools: []"].join("\n"),
-				);
-				writeAgentFile(
-					projectAgentsDir,
-					"invalid-hidden-project-valid",
-					[
-						"description: Valid hidden project",
-						"tools: read",
-						"disable-model-invocation: true",
-					].join("\n"),
-				);
-
-				const { api, registeredTools } = createMockExtensionApi();
-				api.events.on(
-					"pi-herdr-subagents:roles:discover:v1",
-					(request: { register(path: string): void }) =>
-						request.register(rolesDir),
-				);
-				subagentsModule.default(api);
-
-				const catalog = testApi.discoverAgentCatalog(api);
-				assert.equal(
-					catalog.diagnostics.filter(
-						(diagnostic) =>
-							diagnostic.code === "invalid-capability-declaration",
-					).length,
-					3,
-					"invalid lower-precedence roles remain visible as diagnostics",
-				);
-				for (const name of [
-					"global-invalid-project-valid",
-					"pack-invalid-project-valid",
-					"invalid-hidden-project-valid",
-				]) {
-					const agent = catalog.agents.find(
-						(candidate) => candidate.name === name,
+		await withFreshSubagentRuntime(() =>
+			withIsolatedAgentEnv(
+				async ({ projectDir, projectAgentsDir, globalAgentsDir }) => {
+					const rolePackDir = join(projectDir, "precedence-capability-pack");
+					const rolesDir = join(rolePackDir, "roles");
+					mkdirSync(rolesDir, { recursive: true });
+					writeFileSync(
+						join(rolePackDir, "package.json"),
+						JSON.stringify({ name: "@acme/precedence-capability-pack" }),
 					);
-					assert.equal(agent?.source, "project");
-					assert.equal(agent?.tools, "read");
-				}
+					writeAgentFile(
+						globalAgentsDir,
+						"global-invalid-project-valid",
+						["description: Invalid global", "tools: []"].join("\n"),
+					);
+					writeAgentFile(
+						projectAgentsDir,
+						"global-invalid-project-valid",
+						["description: Valid project", "tools: read"].join("\n"),
+					);
+					writeAgentFile(
+						rolesDir,
+						"pack-invalid-project-valid",
+						["description: Invalid pack", "tools: []"].join("\n"),
+					);
+					writeAgentFile(
+						projectAgentsDir,
+						"pack-invalid-project-valid",
+						["description: Valid project", "tools: read"].join("\n"),
+					);
+					writeAgentFile(
+						globalAgentsDir,
+						"invalid-hidden-project-valid",
+						["description: Invalid global", "tools: []"].join("\n"),
+					);
+					writeAgentFile(
+						projectAgentsDir,
+						"invalid-hidden-project-valid",
+						[
+							"description: Valid hidden project",
+							"tools: read",
+							"disable-model-invocation: true",
+						].join("\n"),
+					);
 
-				const subagentTool = registeredTools.find(
-					(tool) => tool.name === "subagent",
-				);
-				assert.ok(subagentTool, "expected subagent to be registered");
-				const previousHerdrEnv = process.env.HERDR_ENV;
-				delete process.env.HERDR_ENV;
-				try {
-					for (const agent of [
+					const { api, registeredTools } = createMockExtensionApi();
+					api.events.on(
+						"pi-herdr-subagents:roles:discover:v1",
+						(request: { register(path: string): void }) =>
+							request.register(rolesDir),
+					);
+					const unavailableSurface = new FakeSurfaceProvider();
+					unavailableSurface.isAvailable = () => false;
+					const unavailableInfrastructure = {
+						surfaceProvider: unavailableSurface,
+						launchOperations: launchOperationsFromSurface(unavailableSurface, {
+							mode: "tab",
+							direction: "right",
+							maxPerTab: 1,
+						}),
+						supervision: new SupervisionCoordinator(
+							async () => ({ complete: true, panes: [] }),
+							(id) => unavailableSurface.inspectSurface(id),
+						),
+					};
+					subagentsModule.default(api, {
+						infrastructure: unavailableInfrastructure,
+					});
+
+					const catalog = testApi.discoverAgentCatalog(api);
+					assert.equal(
+						catalog.diagnostics.filter(
+							(diagnostic) =>
+								diagnostic.code === "invalid-capability-declaration",
+						).length,
+						3,
+						"invalid lower-precedence roles remain visible as diagnostics",
+					);
+					for (const name of [
 						"global-invalid-project-valid",
 						"pack-invalid-project-valid",
 						"invalid-hidden-project-valid",
 					]) {
-						const launch = await subagentTool.execute(
-							"call-1",
-							{ name: "Valid override", task: "Inspect", agent },
-							new AbortController().signal,
-							() => {},
-							{},
+						const agent = catalog.agents.find(
+							(candidate) => candidate.name === name,
 						);
-						assert.equal(launch.details.error, "herdr not available");
-						assert.doesNotMatch(
-							launch.content[0].text,
-							/invalid capability declaration/i,
-						);
+						assert.equal(agent?.source, "project");
+						assert.equal(agent?.tools, "read");
 					}
-				} finally {
-					restoreEnvVar("HERDR_ENV", previousHerdrEnv);
-				}
-			},
+
+					const subagentTool = registeredTools.find(
+						(tool) => tool.name === "subagent",
+					);
+					assert.ok(subagentTool, "expected subagent to be registered");
+					const previousHerdrEnv = process.env.HERDR_ENV;
+					const previousRexEnv = {
+						session: process.env.REX_SESSION,
+						block: process.env.REX_BLOCK,
+						server: process.env.REX_SERVER,
+					};
+					delete process.env.HERDR_ENV;
+					delete process.env.REX_SESSION;
+					delete process.env.REX_BLOCK;
+					delete process.env.REX_SERVER;
+					try {
+						for (const agent of [
+							"global-invalid-project-valid",
+							"pack-invalid-project-valid",
+							"invalid-hidden-project-valid",
+						]) {
+							const launch = await subagentTool.execute(
+								"call-1",
+								{ name: "Valid override", task: "Inspect", agent },
+								new AbortController().signal,
+								() => {},
+								{},
+							);
+							assert.equal(launch.details.error, "herdr not available");
+							assert.doesNotMatch(
+								launch.content[0].text,
+								/invalid capability declaration/i,
+							);
+						}
+					} finally {
+						restoreEnvVar("HERDR_ENV", previousHerdrEnv);
+						restoreEnvVar("REX_SESSION", previousRexEnv.session);
+						restoreEnvVar("REX_BLOCK", previousRexEnv.block);
+						restoreEnvVar("REX_SERVER", previousRexEnv.server);
+					}
+				},
+			),
 		);
 	});
 
@@ -7501,15 +7548,32 @@ describe("self-spawn guard", () => {
 		requestedAgent: string | undefined,
 		selfSpawn: string | undefined,
 	) {
+		// SAFETY: this process-local extension runtime is owned by subagents/index.ts.
+		const runtime = (globalThis as any)[Symbol.for("pi-subagents/runtime")];
+		const previousRuntime = {
+			pi: runtime.pi,
+			latestCtx: runtime.latestCtx,
+			session: runtime.session,
+		};
+		runtime.pi = undefined;
+		runtime.latestCtx = undefined;
+		runtime.session = undefined;
 		const previous = {
 			agent: process.env.PI_SUBAGENT_AGENT,
 			selfSpawn: process.env.PI_SUBAGENT_SELF_SPAWN,
 			herdr: process.env.HERDR_ENV,
+			rexSession: process.env.REX_SESSION,
+			rexBlock: process.env.REX_BLOCK,
+			rexServer: process.env.REX_SERVER,
 		};
 		process.env.PI_SUBAGENT_AGENT = currentAgent;
 		restoreEnvVar("PI_SUBAGENT_SELF_SPAWN", selfSpawn);
-		// Without Herdr, a launch that passes the guard stops at a later check.
+		// Without a Rex block, a launch that passes the guard stops at the
+		// surface availability check instead of trying to access a fake ctx.
 		delete process.env.HERDR_ENV;
+		delete process.env.REX_SESSION;
+		delete process.env.REX_BLOCK;
+		delete process.env.REX_SERVER;
 		try {
 			const { api, registeredTools } = createMockExtensionApi();
 			subagentsModule.default(api);
@@ -7526,6 +7590,10 @@ describe("self-spawn guard", () => {
 			restoreEnvVar("PI_SUBAGENT_AGENT", previous.agent);
 			restoreEnvVar("PI_SUBAGENT_SELF_SPAWN", previous.selfSpawn);
 			restoreEnvVar("HERDR_ENV", previous.herdr);
+			restoreEnvVar("REX_SESSION", previous.rexSession);
+			restoreEnvVar("REX_BLOCK", previous.rexBlock);
+			restoreEnvVar("REX_SERVER", previous.rexServer);
+			Object.assign(runtime, previousRuntime);
 		}
 	}
 
@@ -7559,14 +7627,30 @@ describe("self-spawn guard", () => {
 		toolName: "subagent" | "subagent_resume",
 		depth: string | undefined,
 	) {
+		// SAFETY: this process-local extension runtime is owned by subagents/index.ts.
+		const runtime = (globalThis as any)[Symbol.for("pi-subagents/runtime")];
+		const previousRuntime = {
+			pi: runtime.pi,
+			latestCtx: runtime.latestCtx,
+			session: runtime.session,
+		};
+		runtime.pi = undefined;
+		runtime.latestCtx = undefined;
+		runtime.session = undefined;
 		const previous = {
 			depth: process.env.PI_SUBAGENT_DEPTH,
 			agent: process.env.PI_SUBAGENT_AGENT,
 			herdr: process.env.HERDR_ENV,
+			rexSession: process.env.REX_SESSION,
+			rexBlock: process.env.REX_BLOCK,
+			rexServer: process.env.REX_SERVER,
 		};
 		restoreEnvVar("PI_SUBAGENT_DEPTH", depth);
 		delete process.env.PI_SUBAGENT_AGENT;
 		delete process.env.HERDR_ENV;
+		delete process.env.REX_SESSION;
+		delete process.env.REX_BLOCK;
+		delete process.env.REX_SERVER;
 		try {
 			const { api, registeredTools } = createMockExtensionApi();
 			subagentsModule.default(api);
@@ -7587,6 +7671,10 @@ describe("self-spawn guard", () => {
 			restoreEnvVar("PI_SUBAGENT_DEPTH", previous.depth);
 			restoreEnvVar("PI_SUBAGENT_AGENT", previous.agent);
 			restoreEnvVar("HERDR_ENV", previous.herdr);
+			restoreEnvVar("REX_SESSION", previous.rexSession);
+			restoreEnvVar("REX_BLOCK", previous.rexBlock);
+			restoreEnvVar("REX_SERVER", previous.rexServer);
+			Object.assign(runtime, previousRuntime);
 		}
 	}
 

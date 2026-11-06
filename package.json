@@ -12,7 +12,7 @@
     "format:check": "biome format pi-extension test maestro scripts",
     "lint": "oxlint pi-extension test maestro scripts",
     "typecheck": "tsc -p .",
-    "test": "node --experimental-strip-types --test test/rex-cli.test.ts test/runtime-routing.test.ts test/system-prompt-mode.test.ts test/maestro/*.test.ts",
+    "test": "node --experimental-strip-types --test test/rex-cli.test.ts test/runtime-routing.test.ts test/system-prompt-mode.test.ts test/test.ts test/worktree-cleanup.test.ts test/launch.test.ts test/verify-lab-guards.test.ts test/maestro/*.test.ts",
     "test:integration": "node --experimental-strip-types --test --test-concurrency=1 test/integration/*.test.ts",
     "test:integration:live": "PI_TEST_LIVE=1 node --experimental-strip-types --test --test-concurrency=1 test/integration/*.test.ts",
     "test:integration:rex": "node --experimental-strip-types --test --test-concurrency=1 test/integration/rex-smoke.test.ts test/integration/rex-surface-conformance.test.ts",
