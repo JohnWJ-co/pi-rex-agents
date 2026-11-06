@@ -15,10 +15,58 @@
 | T2b | 已完成，门禁通过 | `74be436` | 父端白名单覆盖 fresh/resume/persistent/handoff；真实 acp_status 调用及 block 清理通过 |
 | T3 | 已完成，门禁通过 | `da8f08a22a09e547d6109083a5eef32779e9fa86` | 原生 placement、split 上限 2、Rex 配置隔离；真实集成 11/11 通过 |
 | T4 | 已验收 | `ed85215`、`b0bf830` | 监督在 Rex 外独立复核 test-gate（1186 项、无持续新增失败）、typecheck、lint 通过 |
-| T5 | 已完成，门禁通过，待审查 | `716dba02e6ee55cc3c2229d8299d3280811fef60` | 原子结果、Rex 根状态隔离、inbox 即时 follow-up、退出码与清理顺序；真实集成 14/14、DeepSeek 两种冒烟通过 |
-| T6 | 待开始 | | |
+| T5 | 已验收 | `716dba0`、`ce240bc` | 监督在 Rex 外独立复核：1212 项、3 轮后无持续新增失败；typecheck、lint、format:check、no-foreign-host 通过 |
+| T6 | 已完成，门禁通过，待监督审查 | `85eee4f` | 0.4.0、命名/文档/运行时打包收尾；schema 无 breaking 差异，本机 settings 未改 |
 
 ## 日志
+
+### T6 最终报告：命名、文档与运行时打包收尾
+
+实现提交：`85eee4f231cb1e6106c53e7cf8e508170dc3171d`（`P4.T6: rename to pi-rex-agents namespaces, docs and packaging`）。本节记录最终代码的完整验证；后续验收记录提交只补齐提交引用和门禁复核，不改变运行时。
+
+完成内容：
+
+- 版本为 **0.4.0**，保留 `private: true`。实际重命名 **113** 处 `pi-herdr-agents extension` 边界标记，加上原有 4 处 Rex 标记共 **117** 处；`docs/UPSTREAM.md` 明确它们标注相对上游 **3.7.2** 的改动点，供未来手动 cherry-pick 定位。错误码统一为 `PIRA_*`；环境变量、symbol、事件与配置目录的 Rex 命名均已核对。
+- README、安装、当前运行时文档、历史记录标记、AGENTS、CONTEXT 和验证技能完成同步。旧配置不读取、不迁移；保留与未过滤 `pi-herdr-agents` 的同名工具冲突提示及 doctor 检查。
+- 新增运行时 `files` 白名单、MIT LICENSE 和 5 项包契约测试，`pi.skills` 指向唯一操作 skill。lockfile 同步包身份及已声明的 Node 24 类型依赖；`npm ci --ignore-scripts --offline --no-audit --no-fund` 成功，无安装脚本执行。
+- macOS 路径断言与夹具使用 canonical path，保留原断言和截止；另同步此前被路径失败遮蔽的 T5 退出码包装前缀断言。原 inherited 列表中仍存在的用例 **8/8** 通过；其余 8 个标题已无当前测试对应，清理历史例外，没有删除测试。`inherited-failures.txt` 不再含有效例外，`expected-identity.txt` 为 **0 字节**；仅按监督授权添加 full-load coordinator 抖动到 `flaky.txt`，原有 3 秒截止不变。
+
+完整证据目录：`/tmp/pi-rex-agents-p4-t6.hht6yl2b`。逐项门禁结果：
+
+| 门禁 | 结果与证据 |
+|---|---|
+| `npm run typecheck` | 通过，退出码 0，`full-typecheck.log` |
+| `bash docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t6.hht6yl2b/test-gate`（内部完整运行 `npm test`） | 自然结束，退出码 0；两轮均 **1217 tests / 1206 pass / 1 fail / 10 skipped**，最终 `OK：没有持续性新增失败`；MIN_TESTS=1155 和 gate 脚本未改，`full-test-gate.log`、`test-gate/run*.log` |
+| `npm run lint` | 通过，退出码 0，`full-lint.log` |
+| `npm run format:check` | 通过，退出码 0，`full-format.log` |
+| `npm run docs:tools:check` | 通过，退出码 0，`full-docs.log` |
+| `node --experimental-strip-types --test test/maestro/tool-schema.test.ts` | **22/22，0 skipped**，包括 released schema 无 breaking 差异，`full-schema.log` |
+| `node --experimental-strip-types --test test/no-foreign-host.test.ts` | **3/3，0 skipped**，`full-no-foreign.log` |
+| `bun test/smoke-extension.ts` | 通过，`Rex kernel entry smoke OK`，`full-smoke.log` |
+| `node --experimental-strip-types .pi/skills/verify-pi-rex-agents/scripts/lab.ts doctor` | 通过，隔离 Rex 环境可用，`full-tail-doctor.log` |
+| `npm run test:integration:rex` | fake provider，**14/14，0 fail，0 skipped**，`full-tail-integration.log`；覆盖 placement、回传/JSONL 回退、persistent 两轮、强杀 Pi 的 137/error/清理和 SurfaceProvider 契约 |
+| `npm pack --dry-run --json` | 通过，逐项核对 **95 个文件**，仅运行时、README、LICENSE、示例配置、package.json 和操作 skill；无 test、docs/p4、`.pi`、lab、凭据，`full-pack.log` |
+| 实际压缩包加载 | `npm pack --json --ignore-scripts --pack-destination /tmp/pi-rex-agents-p4-t6.hht6yl2b` 后独立解包，链接当前已安装的依赖以提供 peer dependencies；从包内入口检查宿主 guard、parent/leaf 工具注册和通知，`Packed Rex kernel entry smoke OK`。实际包与 dry-run 的文件列表及 shasum 一致；无 Rex CLI 或模型调用，`packed-smoke.json` |
+| `git diff --check`、完整最终 diff 审阅 | 通过；实现 diff 2458 行已分段完整审阅，另复核 STATUS 和文档索引修正 |
+| `find pi-extension/subagents -type f -size +32k`、根目录空目录检查 | 均为空，`requirements.json`、`postflight.json` |
+
+定向包契约 **5/5**、不确定获取错误处理 **16/16** 通过，日志为 `focused-fixed-manifest.log`、`focused-fixed-uncertainty.log`。补充自检曾误把“本次重命名 113 处”当作总数，实际总数含已有 4 处；对照 `ce240bc` 后机械更正为 117 并通过，没有改任务门禁或放宽约束。
+
+验收记录提交前再次完整执行上述 13 项正式门禁，`handoff-state.json` 全部退出码为 0。`bash docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t6.hht6yl2b/handoff-test-gate` 自然结束，两轮均 **1217 tests / 1204 pass / 3 fail / 10 skipped**，结论仍为没有持续性新增失败；静态检查、schema **22/22**、no-foreign-host **3/3**、smoke、doctor、fake provider 集成 **14/14、0 skipped** 均通过。`handoff-pack.log` 的 95 个路径和 shasum 与已实际加载的压缩包一致；完整最终差异及资源/保护项已复核，日志为 `handoff-*.log`、`handoff-test-gate/run*.log`、`postflight.json`。
+
+真实模型冒烟：**T6 未新增真实模型调用**，也未派实现子代理。最近已验收的真实证据是 T5 `716dba0` 上使用 **CBAPI/cn:deepseek-v4.1-flash** 的 `p1` 与 `p1:persistent`：普通任务返回 P1_CHILD_OK；持久化两轮返回 P1_CHILD_OK / P1_SECOND_OK，taskId 不同、generation 相同，实际 `.exitcode=0`，父进程存活，子 block 已清理。原始与独立核验记录见 T5 最终报告及 `/tmp/pi-rex-agents-p4-t5.y69wLH/verified-fes_d4ga/final-stop-proof`；这不是 T6 重新运行真实模型的声明。本轮 fake provider 集成和包内加载验证使用 T6 最终代码，没有调用 gpt-6-astra。
+
+资源及保护项：`postflight.json` 确认父 block 保留，没有测试 session、`pira-lab-*` / `pi-integ-*` 根、测试 server/provider/integration 进程或空根目录；实际解包与隔离配置目录已删除，包与日志只保留在仓库外证据目录。只检查、清理本轮测试资源，未操作其他 Rex session 的 block。`.pi/settings.json` 仍为 skip-worktree，SHA-256 为 `71782f9b595246d7655a555dfa7808fda04607c10dd36c6f59f9bd43fcd94a97`；留给用户撤销本机覆盖。`released.json` SHA-256 为 `086a2c0830abcde01f4870041d0b25679e8f5ff7f9596a4fbf79f91f3622c9ea`，与基线相同；未修改 gate 脚本、任务卡、主 checkout 或上游 checkout。
+
+遗留问题：原始全套 npm test 仍有间歇失败、负载抖动和 10 项跳过，不能称为零失败；实现验证时 `public launch owns the four-argument advisory route and keeps duplicate and fresh evaluations cold` 仅首轮暂定新增、后轮通过，验收复核首轮的 `marks host-generated completion errors as host and child-written ones as child`、`ordinary finalizer transcript failure preserves Stage3 payload and nonblocking close`、`public resume finalizer failure recovers at the late read (empty) after delivered/map-delete` 也均在后轮通过。没有为这些用例追加例外。监督批准的 coordinator 抖动保留既有 3 秒截止。Rex 原生侧栏标记尚未实现；进程/cwd 可见性仍受权限限制。T5 已记录的“杀包装 shell 后只剩 idle zsh”的完整重探测另行处理，本轮未扩大监督逻辑。无未解决的 T6 阻塞，无 breaking schema 差异。
+
+建议的合并方式：用户审查并确认后，先由用户撤销本机 `.pi/settings.json` 覆盖并确认主 checkout 干净，再在主 checkout 将 `p4-kernel` 以 `git merge --no-ff p4-kernel` 合回 `master`，保留 T0–T6 的任务提交和修正轨迹；合并后复核门禁及正式安装入口。本轮不切换主 checkout、不自行合并、推送或发布；完成提交后停止等待用户审查。
+
+### T5 验收，开始 T6
+
+监督已审查 `716dba0`，在 Rex 外独立执行 test-gate：加载 **1212** 项，三轮后没有持续性新增失败；typecheck、lint、format:check、no-foreign-host 均通过。真实冒烟暴露的排队第二轮任务身份与 block 清理早于 `.exitcode` 发布两项修复已验收。
+
+按监督授权，将 `quit then a second host load creates a healthy coordinator without resetting the global session` 加入 `flaky.txt`，备注全套并发负载导致既有 3 秒截止抖动：监督三轮中两轮超时，单独运行和单文件运行均通过。保留用例和截止时间。T6 只在当前 worktree 主会话实现；不修改本机 `.pi/settings.json`，不派实现子代理，`released.json` 出现 breaking 差异即停；真实冒烟如需执行仅用 `CBAPI/cn:deepseek-v4.1-flash`，不自行 reload、合并或推送。
 
 ### T5 完成：最终门禁、真实证据与资源清理
 
