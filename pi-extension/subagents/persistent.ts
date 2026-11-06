@@ -23,7 +23,6 @@ import {
 import {
 	type HostField,
 	hostLine,
-	hostText,
 	list,
 	sendParentMessage,
 	value,
@@ -135,6 +134,7 @@ export function persistentFactsFields(
 function sendPersistentStopFailure(
 	api: Pick<ExtensionAPI, "sendMessage">,
 	facts: PersistentSpecialistFacts,
+	name: string,
 ): void {
 	sendParentMessage(
 		api,
@@ -142,9 +142,7 @@ function sendPersistentStopFailure(
 		{
 			head: [
 				[
-					hostText(
-						"Persistent specialist stop failed: process exit was not confirmed. Evidence is retained.",
-					),
+					hostLine`Persistent specialist "${name}" (id ${facts.logicalId}) stop failed: process exit was not confirmed. Evidence is retained.`,
 				],
 			],
 			evidence: [persistentFactsFields(facts)],
@@ -277,6 +275,7 @@ export function createPersistentControls({
 						sendPersistentStopFailure(
 							liveApi,
 							persistentSpecialistFacts(running, io, worktree),
+							running.name,
 						);
 						cancel();
 					} catch {

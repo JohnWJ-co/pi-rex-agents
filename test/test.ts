@@ -12923,13 +12923,61 @@ describe("persistent delivery batch ledger", () => {
 					},
 				);
 				const head =
-					'Persistent specialist "Batch" completed task task-1 (1 tasks completed) and is idle and accepting subagent_send.';
+					'Persistent specialist "Batch" (id logical) completed task task-1 (1 tasks completed) and is idle; send follow-ups with subagent_send id logical or name "Batch".';
 				assert.equal(
 					sent[0].content,
 					`${head}\n\n${source === "child" ? childReport("Batch", "task-result", summary) : summary}\n\nParent action: Continue the parent task using this result; do not return an empty response.`,
 				);
 			});
 		});
+
+	it("names the logical specialist id, not the task id, in task-result and help notices", () => {
+		withTempDir((dir) => {
+			const running = makeRunning(join(dir, "identity.jsonl"));
+			const messages: any[] = [];
+			const api = {
+				sendMessage(message: any) {
+					messages.push(message);
+				},
+			};
+			const io = {
+				...testIO,
+				readTaskSummary: () => ({
+					summary: "Task finished: all green",
+					summarySource: "child" as const,
+				}),
+			};
+			const done = appendPersistentTaskEvent(running.sessionFile, {
+				type: "task-done",
+				task: "task-1",
+				generation: "generation",
+			});
+			hostModule.__test__.deliverPersistentTaskEvent(running, done, api, io);
+			const help = appendPersistentTaskEvent(running.sessionFile, {
+				type: "help-request",
+				task: "task-2",
+				generation: "generation",
+				message: "Need direction.",
+			});
+			hostModule.__test__.deliverPersistentTaskEvent(running, help, api, io);
+
+			assert.equal(messages.length, 2);
+			assert.match(
+				messages[0].content,
+				/^Persistent specialist "Batch" \(id logical\) completed task task-1 \(1 tasks completed\) and is idle; send follow-ups with subagent_send id logical or name "Batch"\./,
+			);
+			assert.doesNotMatch(messages[0].content, /\(id task-1\)/);
+			assert.match(
+				messages[1].content,
+				/^Persistent specialist "Batch" \(id logical\) requests help for task task-2:/,
+			);
+			assert.match(
+				messages[1].content,
+				/Reply with subagent_send id logical or name "Batch"\./,
+			);
+			assert.doesNotMatch(messages[1].content, /\(id task-2\)/);
+		});
+	});
 
 	it("reads once for new events and suppresses same-batch duplicates of both outcomes", () => {
 		withTempDir((dir) => {
@@ -13372,6 +13420,14 @@ describe("persistent subagent send", () => {
 			assert.equal(sentMessages.length, 2);
 			assert.equal(sentMessages[0].message.details.task, "task-1");
 			assert.equal(sentMessages[1].message.details.error, "persistent-crash");
+			assert.match(
+				sentMessages[1].message.content,
+				/^Persistent specialist "Persistent crash drain" \(id logical-crash-drain\) crashed\./m,
+			);
+			assert.match(
+				sentMessages[1].message.content,
+				/^Logical ID: logical-crash-drain$/m,
+			);
 			assert.match(sentMessages[1].message.content, /task-1=delivered/);
 		});
 	});
@@ -15679,6 +15735,10 @@ describe("host lines resist child-controlled text", () => {
 				assert.equal(sentMessages.length, 1);
 				const { content, details } = sentMessages[0].message;
 				assertNoForgedHostLines(content, false);
+				assert.match(
+					content,
+					/^Persistent specialist "Batch" \(id logical\) reported a/,
+				);
 				assert.match(content, /task task\\n\\nParent action: FORGED/);
 				assert.match(content, /did not issue\. The event was ignored/);
 				assert.equal(details.ignoredEvent.task, event.task, "details keep it");
@@ -15712,6 +15772,11 @@ describe("host lines resist child-controlled text", () => {
 			subagentsModule.__test__.notifyPersistentCrash(running, api);
 			const { content } = sentMessages[0].message;
 			assertNoForgedHostLines(content, false);
+			assert.match(
+				content,
+				/^Persistent specialist "Batch" \(id logical\) crashed\./m,
+			);
+			assert.match(content, /^Logical ID: logical$/m);
 			assert.match(content, /^Task outcomes: t\\n\\nParent action/m);
 		});
 	});

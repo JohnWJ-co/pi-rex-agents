@@ -21,7 +21,6 @@ import {
 	checkField,
 	formatElapsed,
 	hostLine,
-	hostText,
 	type SubagentResultDetails,
 	type SubagentPingDetails,
 	sendParentMessage,
@@ -76,7 +75,7 @@ export function createDelivery({
 	): void {
 		running.ignoredTaskEvents = (running.ignoredTaskEvents ?? 0) + 1;
 		if (running.ignoredTaskEvents > 1) return;
-		const line = hostLine`Persistent specialist "${running.name}" reported a ${event.type} event for task ${event.task}, which the parent did not issue. The event was ignored; the specialist's state and completion count are unchanged, and later unrecognized events are ignored without a notice.`;
+		const line = hostLine`Persistent specialist "${running.name}" (id ${running.logicalId!}) reported a ${event.type} event for task ${event.task}, which the parent did not issue. The event was ignored; the specialist's state and completion count are unchanged, and later unrecognized events are ignored without a notice.`;
 		sendParentMessage(
 			api,
 			"subagent_status",
@@ -128,7 +127,7 @@ export function createDelivery({
 					{
 						head: [
 							[
-								hostLine`Persistent specialist "${running.name}" requests help for task ${event.task}:`,
+								hostLine`Persistent specialist "${running.name}" (id ${running.logicalId!}) requests help for task ${event.task}:`,
 							],
 						],
 						report: {
@@ -137,7 +136,9 @@ export function createDelivery({
 							body: event.message ?? "",
 						},
 						evidence: [
-							[hostLine`Reply with subagent_send to ${running.name}.`],
+							[
+								hostLine`Reply with subagent_send id ${running.logicalId!} or name "${running.name}".`,
+							],
 						],
 					},
 					{
@@ -169,7 +170,7 @@ export function createDelivery({
 				{
 					head: [
 						[
-							hostLine`Persistent specialist "${running.name}" completed task ${event.task} (${String(completed)} tasks completed) and is idle and accepting subagent_send.`,
+							hostLine`Persistent specialist "${running.name}" (id ${running.logicalId!}) completed task ${event.task} (${String(completed)} tasks completed) and is idle; send follow-ups with subagent_send id ${running.logicalId!} or name "${running.name}".`,
 						],
 						...summary.head,
 					],
@@ -244,9 +245,7 @@ export function createDelivery({
 			{
 				head: [
 					[
-						hostText(
-							"Persistent specialist crashed. Evidence is retained. Persistent sessions cannot be resumed in v1; spawn a new specialist.",
-						),
+						hostLine`Persistent specialist "${running.name}" (id ${running.logicalId!}) crashed. Evidence is retained. Persistent sessions cannot be resumed in v1; spawn a new specialist.`,
 					],
 				],
 				evidence: [persistentFactsFields(facts)],
@@ -307,7 +306,11 @@ export function createDelivery({
 					api,
 					"subagent_stop",
 					{
-						head: [[hostText("Persistent specialist stopped.")]],
+						head: [
+							[
+								hostLine`Persistent specialist "${running.name}" (id ${running.logicalId!}) stopped.`,
+							],
+						],
 						evidence: [persistentFactsFields(facts)],
 					},
 					{ status: "stopped", facts },

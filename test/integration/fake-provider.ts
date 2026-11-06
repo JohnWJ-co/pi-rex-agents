@@ -301,7 +301,7 @@ async function persistentSpecialistResponse(
 	if (
 		state.stopSent &&
 		!state.finalListSent &&
-		source.includes("Persistent specialist stopped.")
+		/Persistent specialist "[^"]*" \(id [^)]*\) stopped\./.test(source)
 	) {
 		state.finalListSent = true;
 		return { toolCalls: [{ name: "subagents_list", arguments: {} }] };

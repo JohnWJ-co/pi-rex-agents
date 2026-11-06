@@ -41,7 +41,7 @@ function specialist(t: TestContext) {
 		runtimePlan: undefined,
 		lifecycle: createLifecycle(0),
 		persistent: true,
-		logicalId: "specialist",
+		logicalId: "logical-specialist",
 		generationId: "generation",
 		policyHash: "a".repeat(64),
 		tasksCompleted: 0,
@@ -211,6 +211,10 @@ for (const cause of ["reload", "send failure"] as const) {
 		assert.equal(live.sentMessages[0].message.details.status, "failed");
 		assert.match(
 			live.sentMessages[0].message.content,
+			/^Persistent specialist "specialist" \(id logical-specialist\) stop failed:/,
+		);
+		assert.match(
+			live.sentMessages[0].message.content,
 			/exit was not confirmed/,
 		);
 		assert.equal(f.runtime.heldDeliveries?.length ?? 0, 0);
@@ -291,6 +295,10 @@ test("late verified exit after a delivered timeout sends one stopped update and 
 	assert.deepEqual(
 		f.parent.sentMessages.map(({ message }) => message.details.status),
 		["failed", "stopped"],
+	);
+	assert.match(
+		f.parent.sentMessages[1].message.content,
+		/^Persistent specialist "specialist" \(id logical-specialist\) stopped\./,
 	);
 	assert.deepEqual(f.ledger, [
 		{

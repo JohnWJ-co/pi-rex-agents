@@ -217,13 +217,15 @@ The raw values stay in structured details (`errorMessage`, `fallbackFailures`,
 
 | Value | Where it appears |
 | --- | --- |
-| Run name | Every `Sub-agent "…"` and `Persistent specialist "…"` head, the cancellation text, and `Reply with subagent_send to …` |
+| Run name | Every `Sub-agent "…"` and `Persistent specialist "…"` head, the cancellation text, and `Reply with subagent_send id … or name "…"` |
 | Provider or agent error | `Error:` in the head, and `"host"` or `"child-error"` bodies |
 | Model IDs | `Requested model:`, `Models attempted:`, `Model used:` (from the child transcript), and each `Model failures` entry with its error |
 | Runtime mismatch | `Runtime warning:` (names the model the transcript reported) |
 | Worktree fields | `Worktree:`, `Workspace:`, `Branch:`, `Base/head:`, the `Changed:` and `Untracked:` lists, and `Git inspection warning:` |
 | Session file | `Session:` |
-| Persistent task IDs | Task-result and help-request heads, the ignored-event notice, and the `Task outcomes:` list in crash and stop notices |
+| Persistent task IDs | Task-result and help-request heads, the ignored-event notice, and the `Task outcomes:` list in crash and stop notices; never the persistent specialist's logical ID |
+| Persistent logical specialist IDs | Task-result, help-request, ignored-event, crash, stop, and stop-failure heads, beside the parent-owned run name |
+| Persistent follow-up routing | Task-result and help-request heads, which name the logical ID and specialist name for `subagent_send`; a task ID in the same head identifies only the reported task |
 
 #### Executable commands
 
@@ -281,6 +283,16 @@ Stop-failure notices belong to one stop attempt. A retry or verified process exi
 invalidates the previous notice before waiting for a live parent API. A late
 verified exit after a failed stop produces one terminal `stopped` update and a
 stopped ledger entry. A queued timeout notice cannot follow that terminal update.
+
+Every persistent notice that reports a task result or help request names both
+the parent-owned run name and the logical specialist ID, and the completion
+notice tells the parent to continue with `subagent_send` using that ID or the
+specialist name. The task ID in the same head identifies only the task whose
+result or question is being reported; it is never the logical ID and is never
+offered for follow-up routing. Crash, stop, and stop-failure notices repeat the
+specialist name and logical ID in their heads because they are not tied to one
+task; the persistent facts below them still carry the full logical ID,
+generation ID, and policy hash.
 
 The help request's head and `from` use the parent-owned run name. The name in
 the `.exit` sidecar goes to `details.reportedName` when it differs

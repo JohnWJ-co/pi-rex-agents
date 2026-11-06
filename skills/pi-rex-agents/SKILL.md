@@ -32,7 +32,7 @@ delegate; another multiplexer or its skills do not apply here, even if installed
 
 - Installed compression-provider tools are appended to an explicit tool allowlist, including `tools: "read,bash"`; explicit deny rules still apply. Without a compression provider, Pi keeps native auto-compaction.
 - The parent reads validated result artifacts and falls back to session JSONL for text. Semantic exit, the wrapper exit code and owned process evidence govern completion; terminal screen text does not.
-- Persistent specialists accept a new task after the previous result arrives. Directory events wake their inbox, with a 5-second polling fallback. A busy specialist rejects a send and keeps no queue.
+- Persistent specialists accept a new task after the previous result arrives. Directory events wake their inbox, with a 5-second polling fallback. A busy specialist rejects a send and keeps no queue. Task-result, help, crash, stop, and stop-failure notices name the specialist's logical ID; use `subagent_send` with that ID or the specialist name for follow-ups, while any task ID in the notice identifies only the task being reported.
 
 ## While children run
 
