@@ -23,7 +23,7 @@ export type {
 	PaneObservation,
 	ProcessState,
 	SubagentLifecycle,
-	SurfaceAgentStatus as HerdrAgentStatus,
+	SurfaceAgentStatus,
 	TurnState,
 } from "./types.ts";
 
@@ -99,8 +99,8 @@ export function observePaneInspection(
 				}
 			: lifecycle.process;
 
-	// A local interrupt has higher precedence than coarse Herdr status. Herdr
-	// can lag behind Escape; only newer Pi activity or completion clears it.
+	// A local interrupt has higher precedence than coarse surface status. Surface
+	// status can lag behind Escape; only newer Pi activity or completion clears it.
 	if (lifecycle.turn.kind === "interrupted") {
 		return { ...lifecycle, process, pane, hasWorked };
 	}
@@ -129,7 +129,7 @@ export function observePaneInspection(
 				lifecycle.turn.kind === "active"
 					? lifecycle.turn.startedAt
 					: observedAt,
-			source: "herdr",
+			source: "surface",
 		};
 		if (lifecycle.activityDetail)
 			activeTurn.activity = lifecycle.activityDetail;
@@ -273,8 +273,8 @@ export function observeActivity(
 				}
 			: lifecycle.process;
 
-	// Herdr owns coarse turn state. Pi detail may enrich an authoritative
-	// Herdr-working turn, or provide a fallback only while pane status is unknown.
+	// The surface reports coarse turn state. Pi detail may enrich an authoritative
+	// surface-working turn, or provide a fallback only while surface status is unknown.
 	let turn = lifecycle.turn;
 	const sameDetail =
 		lifecycle.activityDetail?.kind === "scope" &&
@@ -442,7 +442,7 @@ export function projectLifecycle(
 			runtimeEndedAt: process.completedAt,
 		};
 
-	// Pi activity is optional enrichment. Only authoritative Herdr inspection
+	// Pi activity is optional enrichment. Only authoritative surface inspection
 	// unavailability may produce a stalled projection.
 	if (
 		lifecycle.pane.kind === "read-error" &&
@@ -465,7 +465,7 @@ export function projectLifecycle(
 			}
 			return {
 				kind: "active",
-				label: turn.source === "herdr" ? "agent working" : "agent active",
+				label: turn.source === "surface" ? "agent working" : "agent active",
 				stateDurationSince: turn.startedAt,
 			};
 		}

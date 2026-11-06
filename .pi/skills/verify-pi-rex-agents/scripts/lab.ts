@@ -34,7 +34,7 @@ import {
   type RexLab,
   type RexSessionEntry,
 } from "../../../../test/integration/rex-harness.ts";
-import { RexCli } from "../../../../src/rex-cli.ts";
+import { RexCli } from "../../../../maestro/surfaces/rex/rex-cli.ts";
 
 const SELF = fileURLToPath(import.meta.url);
 const CURRENT = join(tmpdir(), "pira-lab-current.json");

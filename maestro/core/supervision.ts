@@ -132,7 +132,7 @@ export class SupervisionCoordinator {
 
 	private configureEntry(entry: Entry): void {
 		entry.fileFallback = true;
-		if (!this.forcePolling && process.platform !== "win32") {
+		if (!this.forcePolling) {
 			entry.wakeRegistration = this.wakeRegistry.register(
 				entry.sessionFile,
 				() => this.signal(entry, "wake"),

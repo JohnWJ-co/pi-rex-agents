@@ -40,7 +40,7 @@ import {
 	shellQuote,
 	PI_TIMEOUT,
 	type TestEnv,
-} from "./harness.ts";
+} from "./rex-compat.ts";
 
 const LOG_DIR =
 	process.env.CANCEL_EVIDENCE_DIR ??

@@ -9,7 +9,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { join, relative } from "node:path";
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
 import { buildSessionContext } from "@earendil-works/pi-coding-agent";
@@ -27,8 +27,6 @@ import {
 	type FreshPiLaunchRequest,
 	type ResumePiLaunchRequest,
 } from "../maestro/adapters/pi/launch.ts";
-import { HerdrClientError } from "../maestro/surfaces/herdr/herdr-cli.ts";
-import { runScriptInPane } from "../maestro/surfaces/herdr/terminal.ts";
 import { createWorktreeOperations } from "../maestro/runtime/worktree-operations.ts";
 import { createSubagentPaneFactory } from "../maestro/core/config/pane-config.ts";
 import { FakeSurfaceProvider } from "../maestro/surfaces/fake/fake-surface-provider.ts";
@@ -906,12 +904,6 @@ describe("Pi launch", () => {
 				error: () => new Error("script write failed"),
 			},
 			{
-				label: "a not-spawned Herdr client",
-				definite: true,
-				error: () =>
-					new HerdrClientError("not-spawned", "herdr was not spawned", "", ""),
-			},
-			{
 				label: "an uncertain command dispatch",
 				definite: false,
 				error: (surface: string) =>
@@ -942,17 +934,6 @@ describe("Pi launch", () => {
 				sessionFile,
 				parent: { sessionId: "parent", sessionDir },
 			};
-		}
-
-		async function withoutHerdr<T>(run: () => Promise<T>): Promise<T> {
-			const saved = process.env.HERDR_ENV;
-			delete process.env.HERDR_ENV;
-			try {
-				return await run();
-			} finally {
-				if (saved === undefined) delete process.env.HERDR_ENV;
-				else process.env.HERDR_ENV = saved;
-			}
 		}
 
 		for (const target of targets)
@@ -1030,44 +1011,6 @@ describe("Pi launch", () => {
 						error.message,
 						/script write failed; rollback unconfirmed: (Error: )?pane close timed out; pane retained: owned-pane; no fallback/,
 					);
-				});
-			});
-
-		for (const target of ["owned pane", "resumed pane"] as const)
-			it(`a real script-write failure on a ${target} dispatches nothing and closes the pane`, async () => {
-				await withFixture(async (value) => {
-					// A regular file where the script directory belongs: portable, even as root.
-					const scripts = join(
-						value.sessionDir,
-						"artifacts",
-						"parent",
-						"subagent-scripts",
-					);
-					mkdirSync(dirname(scripts), { recursive: true });
-					writeFileSync(scripts, "obstruction\n");
-					const provider = new FakeSurfaceProvider();
-					const operations = launchOperationsFromSurface(provider, {
-						mode: "grouped",
-						direction: "right",
-						maxPerTab: 4,
-					});
-					operations.waitForShellReady = async () => {};
-					const scriptPaths: string[] = [];
-					operations.runScript = (surface, command, options) => {
-						scriptPaths.push(options.scriptPath);
-						return runScriptInPane(surface, command, options);
-					};
-					const error = await withoutHerdr(() =>
-						rejection(launchPiSubagent(requestFor(target, value), operations)),
-					);
-					assert.equal(scriptPaths.length, 1);
-					assert.equal(dirname(scriptPaths[0]), scripts);
-					assert.ok("code" in error);
-					assert.match(String(error.code), /^(EEXIST|ENOTDIR)$/);
-					assert.doesNotMatch(error.message, /herdr is not available/);
-					assert.equal(error instanceof AcquiredPiLaunchError, false);
-					assert.equal(existsSync(scriptPaths[0]), false);
-					assert.deepEqual(provider.listSurfaces(), []);
 				});
 			});
 	});

@@ -10,7 +10,7 @@ import piRexAgentsExtension from "./extension.ts";
 import { createRexHostApi } from "./rex-host-api.ts";
 import { createRexInfrastructure, REX_PANE_CONFIG } from "./infrastructure.ts";
 import { childPlacement } from "./placement.ts";
-import { RexSurfaceProvider } from "./rex-surface-provider.ts";
+import { RexSurfaceProvider } from "../maestro/surfaces/rex/rex-surface-provider.ts";
 import { rexifyText } from "./rex-wording.ts";
 
 type Handler = (...args: any[]) => unknown;

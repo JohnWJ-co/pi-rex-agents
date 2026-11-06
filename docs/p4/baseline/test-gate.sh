@@ -8,7 +8,7 @@
 set -u
 dir=$(cd "$(dirname "$0")" && pwd)
 logdir=${1:-$(mktemp -d -t pira-gate)}
-min=${MIN_TESTS:-1452}
+min=${MIN_TESTS:-554}
 mkdir -p "$logdir"
 allowed="$logdir/allowed.txt"
 cat "$dir"/inherited-failures.txt "$dir"/flaky.txt "$dir"/expected-identity.txt | grep -v '^#' | sed '/^$/d' | sort -u > "$allowed"

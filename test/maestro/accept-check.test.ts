@@ -120,9 +120,12 @@ describe("accept parameter", () => {
 	});
 
 	async function launch(params: Partial<typeof SubagentParams.static>) {
-		const previous = process.env.HERDR_ENV;
-		// Without Herdr, a launch that passes the refusal stops at a later check.
-		delete process.env.HERDR_ENV;
+		const previous = {
+			REX_SESSION: process.env.REX_SESSION,
+			REX_BLOCK: process.env.REX_BLOCK,
+		};
+		delete process.env.REX_SESSION;
+		delete process.env.REX_BLOCK;
 		try {
 			const { api, registeredTools } = createMockExtensionApi();
 			subagentsModule.default(api);
@@ -135,8 +138,10 @@ describe("accept parameter", () => {
 				{},
 			);
 		} finally {
-			if (previous === undefined) delete process.env.HERDR_ENV;
-			else process.env.HERDR_ENV = previous;
+			if (previous.REX_SESSION === undefined) delete process.env.REX_SESSION;
+			else process.env.REX_SESSION = previous.REX_SESSION;
+			if (previous.REX_BLOCK === undefined) delete process.env.REX_BLOCK;
+			else process.env.REX_BLOCK = previous.REX_BLOCK;
 		}
 	}
 

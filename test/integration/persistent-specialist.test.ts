@@ -20,7 +20,7 @@ import {
 	sleep,
 	shellQuote,
 	type TestEnv,
-} from "./harness.ts";
+} from "./rex-compat.ts";
 import { resetProviderRequests } from "./fake-provider.ts";
 import { isString } from "../../maestro/core/config/type-guards.ts";
 

@@ -13,8 +13,8 @@ This tree is the P4 migration worktree. Keep changes scoped to the current check
 - [`README.md`](./README.md) — installation and everyday use
 - [`docs/p4/plan.md`](docs/p4/plan.md) and the relevant task card under [`docs/p4/tasks/`](docs/p4/tasks/) — migration scope
 - [`docs/p4/rex-facts.md`](docs/p4/rex-facts.md) — measured Rex behavior, especially socket isolation and OSC lifecycle
-- [`src/rex-cli.ts`](src/rex-cli.ts) — the only Rex CLI wrapper and argv boundary
-- [`src/rex-surface-provider.ts`](src/rex-surface-provider.ts) — Rex surface lifecycle
+- [`maestro/surfaces/rex/rex-cli.ts`](maestro/surfaces/rex/rex-cli.ts) — the only Rex CLI wrapper and argv boundary
+- [`maestro/surfaces/rex/rex-surface-provider.ts`](maestro/surfaces/rex/rex-surface-provider.ts) — Rex surface lifecycle
 - [`src/extension.ts`](src/extension.ts) — Pi composition root
 - [`test/integration/rex-harness.ts`](test/integration/rex-harness.ts) and [`test/integration/fake-provider.ts`](test/integration/fake-provider.ts) — deterministic Rex integration fixtures
 - [`.pi/skills/verify-pi-rex-agents/SKILL.md`](.pi/skills/verify-pi-rex-agents/SKILL.md) — verification map and isolated lab
@@ -23,14 +23,15 @@ This tree is the P4 migration worktree. Keep changes scoped to the current check
 ## Code map
 
 - `src/extension.ts` — Rex-only Pi composition root; loads the kernel with Rex infrastructure and host notices
-- `src/rex-cli.ts` — dependency-free explicit-argv Rex CLI wrapper; every call uses `--autostart=false` and propagates `REX_SERVER`
-- `src/rex-surface-provider.ts` — block/window creation, Pi command execution, OSC/program status observation, process inspection and cleanup
+- `maestro/surfaces/rex/rex-cli.ts` — dependency-free explicit-argv Rex CLI wrapper; every call uses `--autostart=false` and propagates `REX_SERVER`
+- `maestro/surfaces/rex/rex-surface-provider.ts` — block/window creation, Pi command execution, OSC/program status observation, process inspection and cleanup
 - `src/rex-host-api.ts`, `src/rex-wording.ts`, `src/placement.ts` — Rex host API proxy, user-facing host text and placement policy
-- `src/infrastructure.ts`, `src/worktree.ts`, `src/git.ts` — runtime seams and Rex-managed worktree paths
+- `src/infrastructure.ts`, `maestro/surfaces/rex/worktree.ts`, `maestro/surfaces/rex/git.ts` — runtime seams and Rex-managed worktree paths
 - `pi-extension/subagents/` — execution kernel, delivery envelope, controls, persistent specialists and renderers
 - `maestro/core/` — host-neutral seams, lifecycle, routing, wakeups and worktree contracts retained by the fork
 - `maestro/runtime/` — Pi run sessions, delivery, cleanup, worktree operations and supervision
 - `maestro/adapters/pi/` — Pi launch transactions, child protocol, session I/O and process evidence
+- `maestro/surfaces/rex/` — the only real SurfaceProvider implementation; `maestro/surfaces/fake/` is test-only
 - `test/integration/rex-harness.ts` — isolated Rex server, fake-provider configuration, parent launch and observable wait helpers
 - `test/integration/rex-smoke.test.ts` — real parent-to-child Rex smoke lifecycle
 - `test/integration/fake-provider.ts` — deterministic HTTP provider used by integration tests

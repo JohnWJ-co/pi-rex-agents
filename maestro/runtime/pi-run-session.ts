@@ -1,5 +1,4 @@
 import { existsSync, statSync } from "node:fs";
-import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { SpawnOptions } from "../core/harness-adapter.ts";
 import type {
@@ -32,8 +31,7 @@ import {
 	inspectNoProgressSessionTail,
 	type AttributedSummary,
 } from "../adapters/pi/session.ts";
-import { createPiScriptShellResolver } from "../adapters/pi/script-shell.ts";
-import { HerdrSurfaceProvider } from "../surfaces/herdr/herdr-surface-provider.ts";
+import { RexSurfaceProvider } from "../surfaces/rex/rex-surface-provider.ts";
 import { readSubagentActivityFile } from "../adapters/pi/activity-file.ts";
 import { projectActivity } from "../core/activity.ts";
 import {
@@ -53,13 +51,6 @@ import {
 	resolveRuntimePlans,
 	type ResolvedRuntimePlan,
 } from "../core/routing.ts";
-import { loadPaneConfig } from "../core/config/pane-config.ts";
-import {
-	DelegatedMarkers,
-	herdrMarkerSessionReader,
-	herdrMarkerWriter,
-	type DelegatedMarker,
-} from "./delegated-marker.ts";
 import {
 	createRunSession,
 	type RunSession,
@@ -118,7 +109,6 @@ interface PiEntry {
 	started: PiStartedMetadata;
 	completed?: PiCompletedMetadata;
 	readResumeResult?: PiSettlementIO["readResumeResult"];
-	marker?: DelegatedMarker;
 }
 // The previous facade carries its live composition explicitly across module replacement.
 // No module-local lookup can accidentally rediscover an owner.
@@ -137,8 +127,6 @@ interface PiSessionOwner {
 		"surfaceProvider" | "supervision" | "processProbe" | "acceptRunner"
 	>;
 	worktreeOperations: WorktreeOperations;
-	/** Absent outside Herdr: without a socket nothing can be marked. */
-	markers?: DelegatedMarkers;
 	/** Owns this composition's parent re-checks; a quit terminates them. */
 	acceptChecks?: AcceptCheckOwner;
 }
@@ -152,26 +140,6 @@ function temporarySurfaceRelease(
 	return async () => {
 		await provider.closeSurface(surface);
 	};
-}
-
-function createDelegatedMarkers(
-	infrastructure: PiRunSessionInfrastructure | undefined,
-): DelegatedMarkers | undefined {
-	// Injected infrastructure never falls back to the ambient Herdr socket.
-	if (infrastructure) {
-		const write = infrastructure.markerWriter;
-		const readSession = infrastructure.markerSessionReader;
-		return write && readSession
-			? new DelegatedMarkers({ write, readSession })
-			: undefined;
-	}
-	const socketPath = process.env.HERDR_SOCKET_PATH;
-	return socketPath
-		? new DelegatedMarkers({
-				write: herdrMarkerWriter(socketPath),
-				readSession: herdrMarkerSessionReader(socketPath),
-			})
-		: undefined;
 }
 
 /** Host diagnostics stay host; only text the child wrote is child-error. */
@@ -202,22 +170,12 @@ function resumeResultReader(
 	});
 }
 
-/**
- * The Herdr provider one launch types its script through. On Windows it
- * resolves bash from the launching session's own settings and trust decision;
- * a snapshot without them is untrusted.
- */
-export function createLaunchSurfaceProvider(
-	snapshot: PiLaunchSnapshot,
-): HerdrSurfaceProvider {
-	return new HerdrSurfaceProvider({
-		paneConfig: snapshot.paneConfig,
-		resolveScriptShell: createPiScriptShellResolver(
-			snapshot.scriptShell ?? {
-				cwd: snapshot.parent.cwd,
-				projectTrusted: false,
-			},
-		),
+function createLaunchSurfaceProvider(
+	_snapshot: PiLaunchSnapshot,
+): RexSurfaceProvider {
+	return new RexSurfaceProvider({
+		sessionId: process.env.REX_SESSION ?? "",
+		anchorBlockId: process.env.REX_BLOCK,
 	});
 }
 
@@ -258,16 +216,9 @@ export function createDefaultRunSession(
 		// this explicitly injected registry. Injected infrastructure already owns one.
 		const provider =
 			options.infrastructure?.surfaceProvider ??
-			new HerdrSurfaceProvider({
-				paneConfig: loadPaneConfig(
-					join(options.configDir, "herdr-agents"),
-					options.configExamplePath,
-				),
-				// No launch context here, so project settings are untrusted.
-				resolveScriptShell: createPiScriptShellResolver({
-					cwd: process.cwd(),
-					projectTrusted: false,
-				}),
+			new RexSurfaceProvider({
+				sessionId: process.env.REX_SESSION ?? "",
+				anchorBlockId: process.env.REX_BLOCK,
 			});
 		const wake = options.infrastructure ? undefined : new FileWakeRegistry();
 		const supervision =
@@ -477,8 +428,7 @@ export function createDefaultRunSession(
 	// Replacements must invoke the original kernel's invocation closure, which
 	// reads this shared current binding, not the old facade's options.
 	if (adopted) resumePi = state.resumePi;
-	// Live markers and their sequence survive a reload with their runs.
-	state.markers ??= createDelegatedMarkers(options.infrastructure);
+	// The Rex provider exposes child state through Pi's OSC status reporter.
 	const acceptChecks = (state.acceptChecks ??= {
 		label: "parent run session",
 	});
@@ -516,7 +466,6 @@ export function createDefaultRunSession(
 			(candidate) => candidate.record === child,
 		);
 		if (child.lifecycle.delivery === "suppressed" || !entry) return;
-		entry.marker?.renew();
 		if (observation.kind === "local-evidence" && child.persistent) {
 			try {
 				state.options.persistent.drain(child, io);
@@ -595,10 +544,7 @@ export function createDefaultRunSession(
 		};
 		if (suppressed)
 			child.lifecycle = markDelivery(child.lifecycle, "suppressed");
-		else {
-			entry.marker = state.markers?.attach(child);
-			state.entries.set(task.id, entry);
-		}
+		else state.entries.set(task.id, entry);
 		return {
 			handle,
 			adapter: owner,
@@ -611,8 +557,6 @@ export function createDefaultRunSession(
 				: undefined,
 			observe: (at) => hydrate(child, at, "refresh"),
 			finalize: async (result, _task, control) => {
-				// Clear before delivery; a retained worktree root keeps its pane.
-				entry.marker?.retire();
 				const at = Date.now();
 				let evidence = result.evidence;
 				if (evidence)
@@ -976,8 +920,6 @@ export function createDefaultRunSession(
 			const suppressed = live(id);
 			const r = suppressed?.record;
 			if (r) r.lifecycle = markDelivery(r.lifecycle, "suppressed");
-			// Nothing renews an unsupervised run's marker; clear it now.
-			suppressed?.marker?.retire();
 			state.kernel.suppress(id);
 			state.entries.delete(id);
 		},

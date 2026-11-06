@@ -5,8 +5,9 @@ This page is the reference for the durable `config.json` settings, task-model pr
 ## Configuration file
 
 The durable user configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`,
-defaulting to `~/.pi/agent/herdr-agents/config.json`. The host uses Pi's public
-agent-directory resolver: an empty `PI_CODING_AGENT_DIR` uses the default,
+defaulting to `~/.pi/agent/herdr-agents/config.json`. The directory name is a
+compatibility path retained until the T6 configuration-path rename; the host
+uses Pi's public agent-directory resolver. an empty `PI_CODING_AGENT_DIR` uses the default,
 and a leading `~` expands as it does in Pi. It is not read from the
 installed package root, so npm and git package upgrades do not overwrite it.
 Create it by copying the installed package's `config.json.example`, or run
@@ -147,7 +148,7 @@ on the ranking, and the remaining `uncertainty`. Code checks the basis's shape,
 not whether a source was read, so the basis is labeled as submitted and
 unverified.
 
-While init runs, it emits `pi-herdr-subagents:task-models:init:approval:v1`.
+While init runs, it emits the versioned task-model approval event.
 With no offer, the prompt directs the model to `subagents_write_task_models`
 with `expectedConfigRevision`. When exactly one loaded extension offers, init
 opens that extension's flow, and the extension's instructions replace the
@@ -224,13 +225,13 @@ after writing preferences.
 
 ## Persistent specialist limit
 
-Set `persistent.maxAgents` to the maximum concurrently retained persistent specialists. It defaults to `3`; a persistent spawn at the cap is rejected before Herdr creates a pane or workspace, and no specialist is evicted. Admission reserves capacity before resource acquisition, so overlapping launches count toward the cap even before their running rows appear. Reservations survive reload and transfer to the running specialist or are released when acquisition fails; quitting clears pending reservations.
+Set `persistent.maxAgents` to the maximum concurrently retained persistent specialists. It defaults to `3`; a persistent spawn at the cap is rejected before Rex creates a pane or workspace, and no specialist is evicted. Admission reserves capacity before resource acquisition, so overlapping launches count toward the cap even before their running rows appear. Reservations survive reload and transfer to the running specialist or are released when acquisition fails; quitting clears pending reservations.
 
 ## Delegation depth limit
 
 Set `spawning.maxDepth` to the deepest child any launch may create. It must be a positive integer and defaults to `3`; unknown keys and other values fail configuration loading. A top-level parent session is depth `0`, its children are depth `1`, grandchildren `2`, and great-grandchildren `3`. A session at depth `maxDepth` cannot launch anything.
 
-The limit is enforced by the host on every child launch path: `subagent` (including `agent`, persistent, and `worktree` launches), `subagent_resume`, and `/subagent`. It applies to all roles, not only `self-spawn` ones. A refused launch returns an actionable error before Herdr creates a pane or workspace. A `/worktree` handoff is not a child: it continues the parent's conversation at the parent's own depth, so it is allowed at the limit and refused only when the parent's depth is unknown.
+The limit is enforced by the host on every child launch path: `subagent` (including `agent`, persistent, and `worktree` launches), `subagent_resume`, and `/subagent`. It applies to all roles, not only `self-spawn` ones. A refused launch returns an actionable error before Rex creates a pane or workspace. A `/worktree` handoff is not a child: it continues the parent's conversation at the parent's own depth, so it is allowed at the limit and refused only when the parent's depth is unknown.
 
 Every launched child receives `PI_SUBAGENT_DEPTH=<parent depth + 1>`, and a `/worktree` handoff receives the parent's own depth, set explicitly in the launch command so a value left in the pane's shell never reaches the new session. A parent reads its own depth from that variable; an absent variable means a top-level session (depth `0`). A present value that is not a canonical non-negative integer (for example empty, `abc`, `-1`, or `1.5`) is treated as an unknown depth: the session is treated as already at the limit and every launch is refused until the variable is unset. It never resets the count to `0`. Run `/reload` after changing `spawning.maxDepth`.
 
@@ -291,7 +292,7 @@ Two versioned `pi.events` channels let another extension take part in
 command's live `ExtensionCommandContext`, so they are for trusted extensions in
 the same process. The context is current only while the event is emitted.
 
-The host emits `pi-herdr-subagents:task-models:init:approval:v1` while init
+The host emits the versioned task-model approval event while init
 runs:
 
 ```typescript
@@ -338,7 +339,7 @@ type OpenResult =
   before offering looks the same as no listener, so init uses the direct
   writer. An extension that guards the writer still refuses that write.
 
-Another extension's command emits `pi-herdr-subagents:task-models:init:start:v1`
+Another extension's command emits the versioned task-model start event
 to start the same init:
 
 ```typescript
@@ -353,52 +354,12 @@ type InitOutcome =
   | { kind: "not-started"; reason: string };
 ```
 
-The host offers synchronously as `pi-herdr-agents` and starts nothing until the
+The host offers synchronously as `Pi subagent extension` and starts nothing until the
 emitter calls `start()`. Call it only when exactly one host offered. `start`
 runs init with the request's context and returns synchronously; the emitter
 shows a `not-started` reason. The host does not listen in subagent sessions
 and unsubscribes at `session_shutdown`. Unsubscribe an approval listener there
 too, as the role-pack bridge does.
-
-## Sidebar markers
-
-The extension always marks delegated children for the optional
-[Pi Herdr Agents Sidebar](../plugins/sidebar/README.md) Herdr plugin, whose Focus
-action hides marked children from Herdr's Agents view. There is no setting:
-install the plugin to use the markers, or uninstall it to ignore them. Releases
-`3.2.0` through `3.3.1` wrote markers only with `sidebar.enabled` set to `true`;
-later releases ignore a leftover `sidebar` key.
-
-The parent reads each fresh, resumed, persistent, or managed
-worktree child's pane with `pane.get` through `HERDR_SOCKET_PATH`. Once Herdr
-reports the child's own session file as the pane's `agent_session`, within 15
-seconds of launch, the parent reports the pane token `piha_delegated_v1` with
-the value `live`, a 15-second time-to-live, and an increasing sequence number.
-It renews the token on supervision checks, each time only after Herdr still
-reports that session. Herdr learns each Pi's session from its own Pi
-integration (`herdr integration install pi`), and drops it when that Pi exits,
-so without the integration nothing is marked. With Herdr 0.9.4 or later, a Pi
-suspended with Ctrl-Z keeps its session, also after it resumes with `fg`,
-until it exits. Herdr 0.9.3 and earlier drop it at suspend. The parent clears
-the token when the run finalizes or is suppressed, or when Herdr no longer
-reports the child's session. A `/worktree` handoff session
-is never marked.
-
-Marker reads and writes never fail a launch or keep Pi running. Each has a
-2-second timeout on an unreferenced socket. Before the marker is live, a failed
-read is retried every 250 milliseconds until the 15-second discovery window
-ends. Once it is live, failures are not retried, and three failed renewal
-reads or writes in a row stop that child's marker. Markers work on Linux and macOS;
-outside Herdr nothing is marked. After a parent crash, a marker can remain for
-up to 15 seconds after the last write Herdr applied. A marker belongs to the
-pane, so after the child exits, an agent started by hand in that pane can stay
-hidden by Focus until the next renewal clears the marker, usually within 5
-seconds. With Herdr 0.9.4 or later, a suspended child stays marked, also
-after it resumes with `fg`, until it exits; a non-Pi program started at that
-pane's shell meanwhile can stay hidden until the suspended child exits. Herdr
-0.9.3 and earlier clear the marker within about 5 seconds of suspending. See
-[what a marker proves](../plugins/sidebar/README.md#what-a-marker-proves) and
-[reusing a delegated pane](../plugins/sidebar/README.md#reusing-a-delegated-pane).
 
 ## Supervision transport
 
@@ -460,20 +421,20 @@ recovered notice for non-interactive children.
 `polling(fallback)` means at least one tracked child is using per-child polling;
 other children can still use wake+batch.
 
-A Linux manual benchmark on 2026-09-06 used isolated Herdr panes held pending,
+A Linux manual benchmark on 2026-09-06 used isolated Rex panes held pending,
 20-second windows, and the extension's completion/supervision seams. At 10
 children across three rotated rounds, wake+batch averaged 2.20 CLI launches/s
 versus 14.20 for forced polling (84.5% fewer); mean evidence-to-resolver
 latency was 3.2 ms versus 449.0 ms, and the largest reconciliation probe gap
 was 4.82 s. The benchmark measures `/proc` CPU ticks for the supervisor and
-isolated Herdr tree, not parent-model latency; raw samples are written to
+isolated Rex tree, not parent-model latency; raw samples are written to
 `/tmp/issue29-bench/` by `test/bench/supervision-bench.mjs`.
 
 ## Pane placement
 
 `panes.mode` defaults to `"grouped"` when omitted. Ordinary public `subagent` and `subagent_resume` launches, including bare forks, fill extension-owned `Agents`, `Agents 2`, etc. tabs in the target checkout's existing workspace. `panes.maxPerTab` is a positive safe integer, defaults to `4`, and counts all live panes in each owned tab, including user-added panes and retained shells. Overlapping launches in one parent respect this cap. It is independent of `persistent.maxAgents`.
 
-Checkout matching uses Herdr's canonical `worktree.checkout_path` and includes descendant directories. Shell working directories do not establish workspace ownership. If no checkout matches (including non-Git directories), placement uses the caller's workspace; overflow never creates a workspace. A reviewer with `cwd` set to a managed checkout joins that workspace without creating another worktree. Resume placement uses the saved session's cwd.
+Checkout matching uses Rex's canonical `worktree.checkout_path` and includes descendant directories. Shell working directories do not establish workspace ownership. If no checkout matches (including non-Git directories), placement uses the caller's workspace; overflow never creates a workspace. A reviewer with `cwd` set to a managed checkout joins that workspace without creating another worktree. Resume placement uses the saved session's cwd.
 
 Explicit `panes.mode: "tab"` preserves one new tab per ordinary child in the caller's workspace. Explicit `"split"` preserves splits of the stable parent pane. `panes.direction` is `"right"` (default) or `"down"` and applies to grouped and legacy splits. `maxPerTab` does not affect these legacy modes. Managed worktrees retain their separate workspaces.
 
@@ -484,7 +445,7 @@ placement in that process, because the server might still create the pane.
 Unknown new tabs are never adopted by label. Queue cancellation or expiry
 prevents the queued launch from issuing a later mutation.
 
-Ownership is tracked by returned pane/tab/workspace IDs, never labels. Separate parent processes own separate groups; `/reload` preserves a parent's in-memory ownership, but a full restart does not adopt old tabs. Placement never moves existing panes or renames user tabs. Background launches preserve focus; Herdr may resize sibling panes when splitting or closing. User-added panes are never closed by automatic tab cleanup. An owned tab remains reusable while user panes remain, even after all child panes close.
+Ownership is tracked by returned pane/tab/workspace IDs, never labels. Separate parent processes own separate groups; `/reload` preserves a parent's in-memory ownership, but a full restart does not adopt old tabs. Placement never moves existing panes or renames user tabs. Background launches preserve focus; Rex may resize sibling panes when splitting or closing. User-added panes are never closed by automatic tab cleanup. An owned tab remains reusable while user panes remain, even after all child panes close.
 
 Run `/reload` after changing role, model, or pane settings.
 

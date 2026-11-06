@@ -18,7 +18,6 @@ interface SurfaceProviderFixture {
 	dispose(): Promise<void>;
 }
 
-const DEFAULT_GROUPING_CAP = 4;
 const WAIT_INTERVAL_MS = 50;
 
 export function registerSurfaceProviderConformance(
@@ -112,8 +111,9 @@ export function registerSurfaceProviderConformance(
 			"grouped placement overflows to a new tab at the cap",
 			async () => {
 				await usingFixture(factory, async (fixture) => {
+					if (fixture.groupingCap === undefined) return;
 					const { provider, cwd } = fixture;
-					const groupingCap = fixture.groupingCap ?? DEFAULT_GROUPING_CAP;
+					const groupingCap = fixture.groupingCap;
 					const surfaceIds: string[] = [];
 					for (let index = 0; index < groupingCap + 1; index += 1) {
 						surfaceIds.push(

@@ -7,8 +7,8 @@
 import { readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import piRexAgentsExtension from "./extension.ts";
-import { flattenBlocks, RexCli } from "./rex-cli.ts";
-import { RexSurfaceProvider } from "./rex-surface-provider.ts";
+import { flattenBlocks, RexCli } from "../maestro/surfaces/rex/rex-cli.ts";
+import { RexSurfaceProvider } from "../maestro/surfaces/rex/rex-surface-provider.ts";
 
 type Handler = (...args: any[]) => unknown;
 

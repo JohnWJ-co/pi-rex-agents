@@ -1,11 +1,11 @@
 # Development
 
-This page is for contributors. Read [`AGENTS.md`](../AGENTS.md) for repository rules and [`RELEASING.md`](../RELEASING.md) for the release procedure.
+This page is for contributors. Read [`AGENTS.md`](../AGENTS.md) for repository rules and the current package README for release and publication guidance.
 
 ## Code map
 
 The maestro seams remain inside one npm package with the same Pi extension
-entry point. Pi is the sole real harness and Herdr the sole real surface
+entry point. Pi is the sole real harness and Rex the sole real surface
 provider; fakes are for conformance tests only.
 
 - `pi-extension/subagents/index.ts` — Pi composition root: loads config,
@@ -38,13 +38,13 @@ provider; fakes are for conformance tests only.
 - `maestro/core/worktree.ts`, `maestro/core/worktree-cleanup.ts` — manifest
   schema/state, handoff types, and cleanup eligibility/formatting.
 - `maestro/core/realpath-without-opening.ts` — lstat/stat/readlink realpath for
-  cleanup canonicalization and Herdr checkout comparisons; avoids Bun `open()`
+  cleanup canonicalization and Rex checkout comparisons; avoids Bun `open()`
   freezes on protected directories.
 - `maestro/core/git-environment.ts` removes inherited repository-selection and
   command-local Git configuration overrides from host-managed Git subprocesses.
   It retains user configuration, identity, and hooks.
 - `maestro/core/deadline.ts` defines finite monotonic operation budgets.
-  `maestro/surfaces/herdr/herdr-cli.ts` owns bounded asynchronous Herdr clients.
+  `maestro/surfaces/rex/rex-cli.ts` owns bounded asynchronous Rex CLI calls;
   `maestro/runtime/worktree-operations.ts` owns asynchronous Git preflight and
   handoff inspection. Explicit cleanup Git commands remain bounded and synchronous.
 - `maestro/core/host-text.ts` — the one encoding for variable values in
@@ -70,38 +70,22 @@ provider; fakes are for conformance tests only.
   child's `agent_before_settle` retry loop), and
   `maestro/runtime/accept-recheck.ts` (the parent re-check `finalize` runs and
   the outcome-ledger append).
-- `maestro/surfaces/herdr/` — `HerdrSurfaceProvider`, Herdr CLI driver,
-  terminal scripts/placement, and `herdr-socket.ts`, the bounded socket
-  client for pane metadata. The CLI driver is `herdr-cli.ts` (exec, JSON,
-  availability, test exec hook), `herdr-pane.ts` (pane inspection, process
-  info, readiness and absence waits), and `herdr.ts` (placement, worktrees,
-  the opened-primary report, pane commands). On Windows a launch script runs
-  through an absolute bash path spelled for the pane's shell
-  (`maestro/core/script-launch.ts` builds the PowerShell, cmd or Git Bash
-  line; `terminal.ts` reads the shell from `pane process-info`;
-  `maestro/adapters/pi/script-shell.ts` resolves the path with Pi's
-  `shellPath` setting for the launching session's cwd and project trust, then
-  bash-tool discovery) so a bare `bash` never resolves to the WSL launcher.
+- `maestro/surfaces/rex/` — the only runtime SurfaceProvider: `rex-cli.ts` owns explicit-argv Rex calls, `rex-surface-provider.ts` owns block/window placement, Pi command execution, OSC/program status, process inspection, and worktree surfaces.
 - `maestro/runtime/` — run ownership, controls/retries, observation,
   delivery-gated cleanup, Pi composition, worktree operations/handoff,
-  task-model init composition, and sidebar markers (`delegated-marker.ts`).
+  task-model init composition, and persistent-specialist I/O.
   `pi-run-session.ts` composes the Pi run session; its public contract types
   live in `pi-run-session-types.ts` and its persistent-specialist inbox and
   ledger I/O in `pi-persistent-io.ts`.
-- `plugins/sidebar/` — the optional Herdr plugin. Its `sidebar.mjs` uses Node
-  built-ins only and imports nothing from the extension, so Herdr can install
-  the directory by itself.
 - `maestro/adapters/fake/`, `maestro/surfaces/fake/`, `test/maestro/` —
   conformance fakes, seam tests, and the import dependency-rule test.
 
 See [ADR-0012](adr/0012-adopt-maestro-seams-in-repo.md), the
 [glossary](../CONTEXT.md), and the [documentation map](README.md).
 
-The **CI** workflow runs formatting, lint, type-check, unit tests, and the package preview
-on pushes and pull requests to `main`, or manually from GitHub Actions. It has
-read-only repository permissions and never publishes. Herdr integration tests
-remain a local gate; the separate **Release** workflow still validates each
-release before publishing.
+Local checks cover formatting, lint, type-checking, unit tests, tool-doc
+snapshots, and package contents. Deterministic Rex integration remains a local
+gate; run it from inside the Rex session that owns the test environment.
 
 Run local checks:
 
@@ -117,23 +101,16 @@ npm pack --dry-run
 
 `npm run typecheck` covers production sources, the TypeScript tests (`test/**/*.ts`), and the verification lab scripts (`.pi/skills/**/*.ts`) under `strict`. Tests run with type stripping, so a type error in a test fails the typecheck gate, not `npm test`. JavaScript tests (`*.js`, `*.mjs`) are not type-checked.
 
-The public tool schemas are captured by loading the real extensions. After changing a tool name, description, or parameter, run `npm run docs:tools` to regenerate `test/fixtures/tool-schema/current.json` and the marked blocks in `docs/tools.md`, and commit the result. `test/maestro/tool-schema.test.ts` also compares the snapshot with `test/fixtures/tool-schema/released.json`, the last released contract, and fails on a change that would break an existing client: a removed or newly required property, a changed type, or a narrowed union or enum. Release copies `current.json` over `released.json`.
+The public tool schemas are captured by loading the real extensions. After changing a tool name, description, or parameter, run `npm run docs:tools` to regenerate `test/fixtures/tool-schema/current.json` and the marked blocks in `docs/tools.md`, and commit the result. `test/maestro/tool-schema.test.ts` also compares the snapshot with `test/fixtures/tool-schema/released.json`, the last released contract, and fails on a change that would break an existing client: a removed or newly required property, a changed type, or a narrowed union or enum.
 
 `npm run lint` needs Node.js 22.18+ (or 22.6–22.17 with `NODE_OPTIONS=--experimental-strip-types`) because oxlint imports TypeScript directly: its configuration, `oxlint.config.ts`, and the JavaScript plugin it loads, `tools/oxlint/anti-slop/index.ts`. Without type stripping, oxlint fails before linting with `Unknown file extension ".ts"`. This is a contributor tooling requirement, not a runtime requirement for package users.
 
-Run the required end-to-end suite from inside Herdr:
+Run the required end-to-end suite from inside Rex:
 
 ```bash
-npm run test:integration
+npm run test:integration:rex
 ```
 
-Start the Herdr server with Node.js 22.19+ on its `PATH`, because test panes inherit the server's environment, not the test runner's: Pi 1.0.0 needs Node.js 22.19+ and crashes at startup on versions older than 22.15.
-
-The deterministic suite launches real Pi sessions, Herdr panes, and worktrees without provider credentials. The optional live-provider smoke test is not a merge gate:
-
-```bash
-PI_TEST_MODEL="openai-codex/gpt-5.6-luna" PI_TEST_TIMEOUT=180000 \
-  npm run test:integration:live
-```
-
-See [RELEASING.md](../RELEASING.md) for versioning, trusted publication, and release verification.
+The deterministic suite launches real Pi sessions, Rex blocks/windows, and
+worktrees without provider credentials. A missing Rex environment is an
+explicit skip, not passing lifecycle evidence.

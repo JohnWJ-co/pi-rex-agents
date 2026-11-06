@@ -32,7 +32,6 @@ import type {
 	ModelRegistryAdapter,
 } from "../core/routing.ts";
 import type { PaneConfig } from "../core/config/pane-config.ts";
-import type { MarkerSessionReader, MarkerWriter } from "./delegated-marker.ts";
 import type {
 	RunSession,
 	RunObservation,
@@ -52,11 +51,6 @@ export interface PiLaunchSnapshot {
 	parentRuntime?: ParentRuntime;
 	modelRegistry: ModelRegistryAdapter;
 	paneConfig: PaneConfig;
-	/**
-	 * Where a Windows launch reads Pi's `shellPath` from: the launching
-	 * session's cwd and project-trust decision. Absent means untrusted.
-	 */
-	scriptShell?: { cwd: string; projectTrusted: boolean };
 }
 
 // pi-herdr-agents extension
@@ -295,10 +289,6 @@ export interface PiRunSessionInfrastructure {
 	processProbe?: ProcessIdentityProbe;
 	/** The parent accept re-check's command runner; tests inject it. */
 	acceptRunner?: AcceptRunner;
-	/** Sidebar marker transport; defaults to this pane's Herdr socket. */
-	markerWriter?: MarkerWriter;
-	/** Sidebar marker session evidence; defaults to this pane's Herdr socket. */
-	markerSessionReader?: MarkerSessionReader;
 }
 // pi-herdr-agents extension
 export interface DefaultRunSessionOptions {

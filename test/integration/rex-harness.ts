@@ -25,7 +25,7 @@ import {
 	RexCli,
 	shellQuote,
 	type RexProgramStatusRecord,
-} from "../../src/rex-cli.ts";
+} from "../../maestro/surfaces/rex/rex-cli.ts";
 
 export { flattenBlocks };
 

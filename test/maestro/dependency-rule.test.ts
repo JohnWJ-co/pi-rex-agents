@@ -10,7 +10,7 @@ type RepoArea =
 	| "core"
 	| "adapters/pi"
 	| "adapters/fake"
-	| "surfaces/herdr"
+	| "surfaces/rex"
 	| "surfaces/fake"
 	| "runtime"
 	| "pi-extension"
@@ -134,7 +134,7 @@ function classifyRepoPath(repoPath: string): RepoArea {
 	if (repoPath.startsWith("maestro/core/")) return "core";
 	if (repoPath.startsWith("maestro/adapters/pi/")) return "adapters/pi";
 	if (repoPath.startsWith("maestro/adapters/fake/")) return "adapters/fake";
-	if (repoPath.startsWith("maestro/surfaces/herdr/")) return "surfaces/herdr";
+	if (repoPath.startsWith("maestro/surfaces/rex/")) return "surfaces/rex";
 	if (repoPath.startsWith("maestro/surfaces/fake/")) return "surfaces/fake";
 	if (repoPath.startsWith("maestro/runtime/")) return "runtime";
 	return "other";
@@ -175,21 +175,21 @@ function isForbiddenEdge(root: string, reference: ModuleReference) {
 				isNodeBuiltin(specifier) ||
 				isAllowedPiHostPackage(specifier)
 			);
-		case "surfaces/herdr":
+		case "surfaces/rex":
 			return !(
-				["core", "surfaces/herdr"].includes(target) ||
+				["core", "surfaces/rex"].includes(target) ||
 				(isNodeBuiltin(specifier) && !specifier.startsWith("@earendil-works/"))
 			);
 		case "runtime":
 			return !(
-				["core", "adapters/pi", "surfaces/herdr", "runtime"].includes(target) ||
+				["core", "adapters/pi", "surfaces/rex", "runtime"].includes(target) ||
 				isNodeBuiltin(specifier)
 			);
 		case "adapters/fake":
 		case "surfaces/fake":
 			return !(target === "core" || isNodeBuiltin(specifier));
 		case "pi-extension":
-			return target === "adapters/pi" || target === "surfaces/herdr";
+			return target === "adapters/pi" || target === "surfaces/rex";
 		default:
 			return false;
 	}
@@ -278,12 +278,12 @@ describe("maestro dependency rule", () => {
 		);
 	});
 
-	it("surfaces/herdr imports core and node only", () => {
+	it("surfaces/rex imports core and node only", () => {
 		assertNoForbiddenImports(
-			"surfaces/herdr dependency violations",
+			"surfaces/rex dependency violations",
 			(violation) =>
 				toRepoPath(repoRoot, violation.file).startsWith(
-					"maestro/surfaces/herdr/",
+					"maestro/surfaces/rex/",
 				),
 		);
 	});
@@ -320,7 +320,7 @@ describe("maestro dependency rule", () => {
 				"maestro/core/multiline.ts":
 					'import {\n\texecFileSync,\n} from "node:child_process";\n',
 				"maestro/core/export.ts": 'export * from "../adapters/pi/x.ts";\n',
-				"maestro/core/dynamic.ts": 'await import("../surfaces/herdr/x.ts");\n',
+				"maestro/core/dynamic.ts": 'await import("../surfaces/rex/x.ts");\n',
 				"maestro/core/require.ts":
 					'const pi = require("@earendil-works/pi-ai");\n',
 				"maestro/core/import-type.ts":
@@ -330,7 +330,7 @@ describe("maestro dependency rule", () => {
 				"maestro/core/import-equals.ts":
 					'import cp = require("child_process");\n',
 				"maestro/adapters/pi/x.ts": "export {};\n",
-				"maestro/surfaces/herdr/x.ts": "export {};\n",
+				"maestro/surfaces/rex/x.ts": "export {};\n",
 			},
 			(root) => {
 				assert.deepEqual(
@@ -338,7 +338,7 @@ describe("maestro dependency rule", () => {
 						(violation) => violation.message,
 					),
 					[
-						"maestro/core/dynamic.ts: forbidden import ../surfaces/herdr/x.ts",
+						"maestro/core/dynamic.ts: forbidden import ../surfaces/rex/x.ts",
 						"maestro/core/export.ts: forbidden import ../adapters/pi/x.ts",
 						"maestro/core/import-equals.ts: forbidden import child_process",
 						"maestro/core/import-type-binding.ts: forbidden import @earendil-works/pi-ai",
@@ -396,13 +396,13 @@ describe("maestro dependency rule", () => {
 		withScratchFixture(
 			{
 				"maestro/runtime/sdk.ts": 'import "@earendil-works/pi-ai";\n',
-				"maestro/surfaces/herdr/sdk.ts":
+				"maestro/surfaces/rex/sdk.ts":
 					'import type { PiHost } from "@earendil-works/pi-ai";\n',
 			},
 			(root) => {
 				assert.deepEqual(violationMessages(root), [
 					"maestro/runtime/sdk.ts: forbidden import @earendil-works/pi-ai",
-					"maestro/surfaces/herdr/sdk.ts: forbidden import @earendil-works/pi-ai",
+					"maestro/surfaces/rex/sdk.ts: forbidden import @earendil-works/pi-ai",
 				]);
 			},
 		);

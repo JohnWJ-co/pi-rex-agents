@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import piRexAgentsExtension from "./extension.ts";
-import { flattenBlocks, RexCli } from "./rex-cli.ts";
+import { flattenBlocks, RexCli } from "../maestro/surfaces/rex/rex-cli.ts";
 
 type Handler = (...args: any[]) => unknown;
 

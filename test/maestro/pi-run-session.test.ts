@@ -13,7 +13,6 @@ import {
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
-import { createServer } from "node:net";
 import {
 	createWorktreeOperations,
 	readWorktreeManifest,
@@ -48,7 +47,6 @@ import {
 	AcquisitionUncertainError,
 	isAcquisitionUncertainError,
 } from "../../maestro/core/surface-provider.ts";
-import { runScriptInPane } from "../../maestro/surfaces/herdr/terminal.ts";
 
 for (const resumed of [false, true])
 	test(`uncertain ${resumed ? "resume" : "dispatch"} with failed rollback transfers the real owner until cancel confirms exit`, () =>
@@ -132,63 +130,6 @@ test("confirmed rollback of uncertain dispatch still blocks model fallback", () 
 		assert.equal(dispatches, 1);
 		assert.equal(f.settled.length, 1);
 		assert.match(f.settled[0].errorMessage!, /dispatch receipt lost/);
-	}));
-
-async function withoutHerdr<T>(run: () => Promise<T>): Promise<T> {
-	const saved = process.env.HERDR_ENV;
-	delete process.env.HERDR_ENV;
-	try {
-		return await run();
-	} finally {
-		if (saved === undefined) delete process.env.HERDR_ENV;
-		else process.env.HERDR_ENV = saved;
-	}
-}
-
-test("a real script-write failure dispatches nothing, closes its pane, and falls back to the next model", () =>
-	fixture(async (f) => {
-		const input = f.input("script-write-fallback");
-		input.plans = [
-			input.plans[0],
-			{ ...input.plans[0], model: "test/two", modelId: "two" },
-		];
-		// A regular file where the script directory belongs: portable, even as root.
-		const scripts = join(
-			f.dir,
-			"sessions",
-			"artifacts",
-			"parent",
-			"subagent-scripts",
-		);
-		mkdirSync(dirname(scripts), { recursive: true });
-		writeFileSync(scripts, "obstruction\n");
-		const fake = f.operations.runScript;
-		const failures: unknown[] = [];
-		let attempts = 0;
-		f.operations.runScript = async (surface, command, options) => {
-			if (attempts++ > 0) return fake(surface, command, options);
-			assert.equal(dirname(options.scriptPath), scripts);
-			try {
-				return await runScriptInPane(surface, command, options);
-			} catch (error) {
-				failures.push(error);
-				throw error;
-			}
-		};
-		const handle = await withoutHerdr(() => f.session.spawnPi(input));
-		assert.equal(attempts, 2);
-		assert.equal(failures.length, 1);
-		assert.match(String(failures[0]), /EEXIST|ENOTDIR/);
-		assert.equal(f.commands.length, 1, "only the fallback was dispatched");
-		assert.equal(handle.launchFailure, undefined);
-		const started = f.session.getStarted(input.task.id);
-		assert.equal(started?.status, "started");
-		assert.equal(started?.model, "test/two");
-		assert.deepEqual(
-			f.provider.listSurfaces().map((surface) => surface.id),
-			[handle.surfaceId],
-			"the failed candidate's pane was closed",
-		);
 	}));
 
 test("a definite dispatch failure with unconfirmed rollback stays ownerless uncertainty and launches no fallback", () =>
@@ -679,7 +620,6 @@ for (const mode of ["success", "focus-warning", "readiness-failure"] as const) {
 				focused = true;
 				if (mode === "focus-warning") throw new Error("focus unavailable");
 			};
-			const { writes } = markedSession(f);
 			const handoff = f.session.handoffWorktree({
 				name: "handoff",
 				task: "continue",
@@ -712,7 +652,6 @@ for (const mode of ["success", "focus-warning", "readiness-failure"] as const) {
 			}
 			const result = await observed;
 			await turn();
-			assert.deepEqual(writes, []);
 			assert.equal(readFileSync(source, "utf8"), bytes);
 			assert.equal(f.registrations(), 0);
 			assert.equal(f.settled.length, 0);
@@ -1907,299 +1846,4 @@ test("public, control, logical specialist, generation and inbox namespaces remai
 		f.complete(next);
 		f.provider.appendScreen(next.surface, "__SUBAGENT_DONE_0__");
 		await wait;
-	}));
-
-interface RecordedMarkerWrite {
-	paneId: string;
-	seq: number;
-	live: boolean;
-}
-
-/** Injects marker I/O into the fixture's shared composition. */
-function markedSession(f: Awaited<ReturnType<typeof makeFixture>>) {
-	const writes: RecordedMarkerWrite[] = [];
-	/** The agent session Herdr reports for each pane, by pane ID. */
-	const sessions = new Map<string, string>();
-	let held: Array<() => void> | undefined;
-	const infrastructure = f.options.infrastructure;
-	assert.ok(infrastructure);
-	const session = runtime.createDefaultRunSession(
-		{
-			...f.options,
-			infrastructure: {
-				...infrastructure,
-				markerWriter: (write) => {
-					writes.push(write);
-					const pending = held;
-					return pending
-						? new Promise((settle) => pending.push(() => settle("answered")))
-						: Promise.resolve("answered");
-				},
-				markerSessionReader: async (paneId) => {
-					const path = sessions.get(paneId);
-					return path ? { kind: "session", path } : { kind: "none" };
-				},
-			},
-		},
-		f.session,
-	);
-	return {
-		session,
-		writes,
-		/** Herdr now reports this child's own session for its pane. */
-		report(record: { surface: string; sessionFile: string }) {
-			sessions.set(record.surface, record.sessionFile);
-		},
-		/** Herdr no longer reports a session for the pane. */
-		exit(record: { surface: string }) {
-			sessions.delete(record.surface);
-		},
-		/** Leaves later writes in flight until `release`. */
-		hold() {
-			held = [];
-		},
-		release() {
-			const pending = held ?? [];
-			held = undefined;
-			for (const settle of pending) settle();
-		},
-	};
-}
-
-/** Reloads the composition, as `/reload` does. */
-function reloadSession(
-	f: Awaited<ReturnType<typeof makeFixture>>,
-	previous: ReturnType<typeof runtime.createDefaultRunSession>,
-) {
-	return runtime.createDefaultRunSession(f.options, previous);
-}
-
-/** Bounded by iterations, not `Date.now`, which some tests freeze. */
-async function until(predicate: () => boolean, label: string) {
-	for (let attempt = 0; !predicate(); attempt++) {
-		if (attempt > 400) throw new Error(`timed out waiting for ${label}`);
-		await new Promise((resolve) => setTimeout(resolve, 5));
-	}
-}
-
-test("injected infrastructure missing a marker seam never falls back to the ambient Herdr socket", async () => {
-	const dir = mkdtempSync(join(tmpdir(), "pi-marker-ambient-"));
-	const socketPath = join(dir, "herdr.sock");
-	let connections = 0;
-	const server = createServer((socket) => {
-		connections++;
-		socket.destroy();
-	});
-	await new Promise<void>((resolve) => server.listen(socketPath, resolve));
-	const ambient = process.env.HERDR_SOCKET_PATH;
-	process.env.HERDR_SOCKET_PATH = socketPath;
-	try {
-		await fixture(async (f) => {
-			const infrastructure = f.options.infrastructure;
-			assert.ok(infrastructure);
-			let writes = 0;
-			const session = runtime.createDefaultRunSession(
-				{
-					...f.options,
-					infrastructure: {
-						...infrastructure,
-						markerWriter: async () => {
-							writes++;
-							return "answered";
-						},
-					},
-				},
-				f.session,
-			);
-			const input = f.input("ambient");
-			const handle = await session.spawnPi(input);
-			const record = f.latest();
-			assert.ok(record);
-			await new Promise((resolve) => setTimeout(resolve, 300));
-			f.complete(record);
-			await session.supervise(handle, input.task);
-			await turn();
-			assert.equal(writes, 0, "no marker write without a session reader");
-		});
-		assert.equal(connections, 0, "no ambient Herdr socket connection");
-	} finally {
-		if (ambient === undefined) delete process.env.HERDR_SOCKET_PATH;
-		else process.env.HERDR_SOCKET_PATH = ambient;
-		await new Promise((resolve) => server.close(resolve));
-		rmSync(dir, { recursive: true, force: true });
-	}
-});
-
-test("a delegated child is marked once Herdr reports its session and cleared before delivery", () =>
-	fixture(async (f) => {
-		const { session, writes, report } = markedSession(f);
-		const input = f.input("marked");
-		const handle = await session.spawnPi(input);
-		const record = f.latest();
-		assert.ok(record);
-		// Markers need no process identity, so an ordinary child records none.
-		assert.doesNotMatch(f.commands.at(-1) ?? "", /PI_SUBAGENT_PROCESS_FILE/);
-		report(record);
-		await until(() => writes.length === 1, "the first marker write");
-		assert.deepEqual(
-			writes.map(({ paneId, live }) => ({ paneId, live })),
-			[{ paneId: record.surface, live: true }],
-		);
-		// Observations inside the renewal interval do not write again.
-		session.observe(input.task.id);
-		await turn();
-		assert.equal(writes.length, 1);
-		f.complete(record);
-		await session.supervise(handle, input.task);
-		await until(() => writes.length === 2, "the clearing write");
-		assert.equal(writes[1].live, false);
-		assert.ok(writes[1].seq > writes[0].seq);
-	}));
-
-test("a child whose session Herdr never reports is never marked", () =>
-	fixture(async (f) => {
-		const { session, writes } = markedSession(f);
-		const input = f.input("unreported");
-		const handle = await session.spawnPi(input);
-		const record = f.latest();
-		assert.ok(record);
-		await turn();
-		f.complete(record);
-		await session.supervise(handle, input.task);
-		await turn();
-		assert.deepEqual(writes, []);
-	}));
-
-test("a renewal clears the marker once Herdr stops reporting the child's session", (t) =>
-	fixture(async (f) => {
-		t.mock.timers.enable({ apis: ["Date"], now: 1_000_000 });
-		const marked = markedSession(f);
-		const input = f.input("exited");
-		await marked.session.spawnPi(input);
-		const record = f.latest();
-		assert.ok(record);
-		marked.report(record);
-		await until(() => marked.writes.length === 1, "the first marker write");
-		marked.exit(record);
-		t.mock.timers.tick(5_000);
-		marked.session.observe(input.task.id);
-		await until(() => marked.writes.length === 2, "the clearing write");
-		assert.deepEqual(
-			marked.writes.map(({ live }) => live),
-			[true, false],
-		);
-		marked.report(record);
-		t.mock.timers.tick(5_000);
-		marked.session.observe(input.task.id);
-		await turn();
-		assert.equal(marked.writes.length, 2, "a cleared marker never returns");
-	}));
-
-test("suppressing a marked run clears its marker without waiting for renewal", () =>
-	fixture(async (f) => {
-		const { session, writes, report } = markedSession(f);
-		const input = f.input("suppressed");
-		await session.spawnPi(input);
-		const record = f.latest();
-		assert.ok(record);
-		report(record);
-		await until(() => writes.length === 1, "the first marker write");
-		session.suppress(input.task.id);
-		await until(() => writes.length === 2, "the clearing write");
-		assert.deepEqual(
-			writes.map(({ live }) => live),
-			[true, false],
-		);
-	}));
-
-test("a marker still waiting for Herdr's session report survives a reload", () =>
-	fixture(async (f) => {
-		const marked = markedSession(f);
-		const input = f.input("pending-before-reload");
-		await marked.session.spawnPi(input);
-		const record = f.latest();
-		assert.ok(record);
-		await turn();
-		assert.deepEqual(marked.writes, []);
-
-		reloadSession(f, marked.session);
-		marked.report(record);
-		await until(() => marked.writes.length === 1, "the reloaded marker");
-		assert.deepEqual(
-			marked.writes.map(({ paneId, live }) => ({ paneId, live })),
-			[{ paneId: record.surface, live: true }],
-		);
-	}));
-
-test("reloading keeps renewing existing markers", (t) =>
-	fixture(async (f) => {
-		t.mock.timers.enable({ apis: ["Date"], now: 1_000_000 });
-		const { session, writes, report } = markedSession(f);
-		const input = f.input("kept-on-reload");
-		await session.spawnPi(input);
-		const record = f.latest();
-		assert.ok(record);
-		report(record);
-		await until(() => writes.length === 1, "the first marker write");
-		const reloaded = reloadSession(f, session);
-		await turn();
-		assert.equal(writes.length, 1);
-		t.mock.timers.tick(5_000);
-		reloaded.observe(input.task.id);
-		await until(() => writes.length === 2, "the renewal after reload");
-		assert.deepEqual(
-			writes.map(({ live }) => live),
-			[true, true],
-		);
-		assert.ok(writes[1].seq > writes[0].seq);
-	}));
-
-test("persistent and resumed children are marked like fresh ones", () =>
-	fixture(async (f) => {
-		const { session, writes, report } = markedSession(f);
-		const persistent = f.input("persistent", true);
-		await session.spawnPi(persistent);
-		const specialist = f.latest();
-		assert.ok(specialist?.persistent);
-		report(specialist);
-		await until(() => writes.length === 1, "the persistent marker");
-		assert.equal(writes[0].paneId, specialist.surface);
-		appendPersistentTaskEvent(specialist.sessionFile, {
-			type: "task-done",
-			task: "inbox-persistent",
-			generation: "generation-persistent",
-		});
-		session.observe(persistent.task.id);
-		await turn();
-		assert.deepEqual(
-			writes.map(({ live }) => live),
-			[true],
-		);
-
-		const input = f.input("before-resume");
-		const handle = await session.spawnPi(input);
-		const first = f.latest();
-		assert.ok(first);
-		writeFileSync(
-			first.sessionFile,
-			`${JSON.stringify({ type: "session", version: 3, id: "saved", cwd: f.dir })}\n`,
-		);
-		f.complete(first);
-		await session.supervise(handle, input.task);
-		rmSync(`${first.sessionFile}.exit`, { force: true });
-		const resumed = await session.resumePi({
-			taskId: "resume-marked",
-			name: "resumed",
-			sessionPath: first.sessionFile,
-		});
-		assert.doesNotMatch(f.commands.at(-1) ?? "", /PI_SUBAGENT_PROCESS_FILE/);
-		const record = f.latest();
-		assert.ok(record && record.id === resumed.id);
-		// A resumed child reports the reused session file it was started with.
-		assert.equal(record.sessionFile, first.sessionFile);
-		report(record);
-		await until(
-			() => writes.some((w) => w.paneId === record.surface && w.live),
-			"the resumed marker",
-		);
 	}));

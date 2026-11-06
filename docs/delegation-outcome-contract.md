@@ -371,11 +371,10 @@ timed-out, oversized, or malformed Git inspection reports unknown fields.
 The public tool schemas are the request side of the contract. The host captures
 them by loading the real extensions into
 `test/fixtures/tool-schema/current.json`. The file
-`test/fixtures/tool-schema/released.json` is the last released contract.
-Release copies `current.json` over it (`RELEASING.md:88-94`).
+`test/fixtures/tool-schema/released.json` records the compatibility baseline.
 
 `findBreakingChanges` in `test/helpers/tool-schema-compat.ts` reports a change
-as breaking when a client written for `released.json` could fail. These changes
+as breaking when a client written for the baseline could fail. These changes
 are breaking. Line numbers in this list refer to that file.
 
 - A tool is removed, renamed, or no longer registered in a scope (`:250-263`).

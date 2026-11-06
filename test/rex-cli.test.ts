@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildRexArgv } from "../src/rex-cli.ts";
+import { buildRexArgv } from "../maestro/surfaces/rex/rex-cli.ts";
 
 describe("buildRexArgv", () => {
 	it("adds the isolated server before user arguments", () => {

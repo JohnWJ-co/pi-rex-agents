@@ -11,7 +11,7 @@
 |---|---|---|---|
 | T0 | 已完成，门禁通过 | `41af43a2c17ae86ec7c5e57b3c1989c6b71147a8` | 完整复制范围已修正；test-gate 最终通过，1452 个测试已加载 |
 | T1 | 已完成，门禁通过 | `15cdafc` | Rex lab、集成 harness、验证技能和 AGENTS.md 已完成；test-gate 与真实 Rex smoke 通过 |
-| T2 | 待开始 | | |
+| T2 | 已完成，门禁通过 | `9c12c05` | Rex provider 已入内核；Herdr/sidebar/Windows 专属路径已删除；保留 `test/verify-lab-guards.test.ts`；全部 T2 门禁通过 |
 | T2b | 待开始 | | |
 | T3 | 待开始 | | |
 | T4 | 待开始 | | |
@@ -19,6 +19,38 @@
 | T6 | 待开始 | | |
 
 ## 日志
+
+### T2：Rex provider 入内核，删除 Herdr/sidebar/Windows
+
+实现与范围：
+
+- 将 `src/rex-cli.ts`、`src/rex-surface-provider.ts`、`src/uncertainty.ts`、`src/git.ts`、`src/worktree.ts` 迁移到 `maestro/surfaces/rex/`，并更新内核与测试导入；新增 Rex provider conformance 和 fake Rex CLI provider 测试。
+- `PiRunSession` 默认从 `REX_SESSION`/`REX_BLOCK` 构造 `RexSurfaceProvider`，删除 `HERDR_SOCKET_PATH`、delegated marker 和 Herdr surface 依赖；lifecycle 状态源改为 `surface`。
+- 删除 Herdr surface、sidebar、release/role-pack 和 Windows-only 路径及其专属测试；保留 T1 已迁移的 `test/verify-lab-guards.test.ts`，它继续覆盖 `.pi/skills/verify-pi-rex-agents/scripts/path-guards.ts`。`package.json` 默认测试脚本未引用该文件，引用关系保持一致。
+- `test/test.ts` 中删除的 Herdr/role-pack 专属用例为：`discovers and launches a Pi package role pack without repeated role names`、`removes role-pack listeners when their extension instance shuts down`、`rejects ambiguous package-layer role names with actionable diagnostics`、`keeps child Herdr list formatting, handoff dispatch, and silent startup`；以及 `herdr.ts` 套件中的 CLI stderr、`isHerdrAvailable`、命令构造、响应解析、process exit confirmation 全部 Herdr-only 用例。`test/integration/` 的 persistent、placement、cancel、lifecycle 已改用 Rex harness。
+- 修复 macOS `/private/var` 与 `/var` 的语义等价路径断言：`test/maestro/audit-git-environment.test.ts` 使用 realpath，`maestro/runtime/worktree-operations.ts` 在 worktree 注册匹配时规范化 path。
+- 测试基线从 1452 调整到删除 T2 专属套件后的 554；保留 `test-gate.sh` 的双次运行和持续性失败判定。
+
+门禁结果：
+
+- `npm run typecheck`：通过。
+- `npm run lint`：通过。
+- `npm run format:check`：通过，检查 143 个文件。
+- `npm run docs:tools:check`：通过。
+- `git diff --check`：通过。
+- `docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t2-gate-final`：第 1 次 `554 tests / 551 pass / 1 fail / 2 skipped`，暂定失败为 `cancelled resume callers still retire both owners on actual lazy-read rejection without getters`；第 2 次 `554 / 552 pass / 0 fail / 2 skipped`，输出 `OK：没有持续性新增失败`。
+- `npm run test:integration:rex`：通过，Rex smoke 和 RexSurfaceProvider conformance 共 10 tests、0 failed、0 skipped。
+- T2 Herdr 扫描剩余 44 条，均为后续 T4/T6 处理的历史身份、配置命名或源头文案；扫描结果已保留在本轮 `/tmp/pi-rex-agents-p4-t2-herdr.txt`。
+
+真实 Rex 探针：
+
+- 当前 Rex 会话普通 p1：通过，父会话存活，报告为 `P1_CHILD_OK`。
+- 当前 Rex 会话 `p1:persistent`：通过，第一轮 `P1_CHILD_OK`、第二轮 `P1_SECOND_OK`，随后 `subagent_stop` 成功请求停止。
+- 当前 Rex 会话 p2：通过，`cancel=confirmed`、`interrupt=interrupt_requested`、`resume=P2_RESUMED_OK`，父会话存活。
+- 隔离 lab：`doctor`、`up`、`down` 通过；lab p1 启动子 Pi 时因隔离 `models.json` 没有 `CBAPI/cn:deepseek-v4.1-flash`，子进程报告 `Error: Model "CBAPI/cn:deepseek-v4.1-flash" not found`，未将该次作为通过证据；随后 `down` 报告 `labRootExists=false leftoverPids=none`。当前 Rex 会话探针已满足任务卡的“lab 或当前 Rex 会话”要求。
+- T2 创建的 Rex windows、blocks、lab 临时目录和进程均已清理；`rex ls` 中没有 `pira-lab-*` 资源。
+
+判断：T2 全部门禁通过，准备提交。下一任务是 T2b；按监督指令不再派出实现类子代理，代码修改在主会话完成。
 
 ### T0：门禁失败，停止
 

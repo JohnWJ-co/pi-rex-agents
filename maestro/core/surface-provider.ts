@@ -1,7 +1,6 @@
 /**
- * The SurfaceProvider seam: the multiplexer is swappable infrastructure, not
- * a foundation. pi-herdr-agents hard-requires Herdr; here Herdr is one
- * provider among many, behind this interface.
+ * The SurfaceProvider seam: Rex is the runtime surface behind this
+ * harness-neutral interface.
  *
  * Methods may be sync or async; providers choose. The CLI is the only place
  * that wires a provider to an adapter (via core's SurfaceHandle).
@@ -200,7 +199,7 @@ export interface SurfaceProcessInfo {
 }
 
 export interface SurfaceProvider {
-	/** Stable provider name, e.g. "herdr". */
+	/** Stable provider name, e.g. "rex". */
 	readonly name: string;
 
 	/** False when the multiplexer is not installed/usable. Never throws. */

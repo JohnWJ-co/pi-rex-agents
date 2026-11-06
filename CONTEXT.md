@@ -17,7 +17,7 @@ _Avoid_: Runtime selector, adapter registry, external CLI compatibility
 
 **Surface provider**:
 An object implementing the core interface for panes, commands, inspection, and
-worktree surfaces. Herdr is the only real implementation; the fake is for
+worktree surfaces. Rex is the only real implementation; the fake is for
 conformance tests.
 _Avoid_: Supported multiplexer catalog, harness adapter, security sandbox
 

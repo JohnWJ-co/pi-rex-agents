@@ -395,7 +395,7 @@ export type TurnState =
 	| {
 			kind: "active";
 			startedAt: number;
-			source: "activity" | "herdr" | "fallback";
+			source: "activity" | "surface" | "fallback";
 			activity?: ActivityDetail;
 	  }
 	| { kind: "blocked"; startedAt: number }

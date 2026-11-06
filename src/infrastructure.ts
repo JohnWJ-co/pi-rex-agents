@@ -13,7 +13,7 @@ import { launchOperationsFromSurface } from "../maestro/adapters/pi/launch-opera
 import { createWorktreeOperations } from "../maestro/runtime/worktree-operations.ts";
 import type { PiRunSessionInfrastructure } from "../maestro/runtime/index.ts";
 import { placementForLaunch } from "./placement.ts";
-import { RexSurfaceProvider } from "./rex-surface-provider.ts";
+import { RexSurfaceProvider } from "../maestro/surfaces/rex/rex-surface-provider.ts";
 
 /** Default: a block beside the parent in the current Rex tab, at most four. */
 export const REX_PANE_CONFIG: PaneConfig = {

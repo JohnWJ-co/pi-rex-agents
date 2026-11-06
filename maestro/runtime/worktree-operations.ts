@@ -58,7 +58,7 @@ async function gitRead(
 			cwd,
 			env: gitEnvironment(),
 			stdio: ["ignore", "pipe", "pipe"],
-			detached: process.platform !== "win32",
+			detached: true,
 		});
 		let settled = false,
 			bytes = 0,
@@ -70,9 +70,7 @@ async function gitRead(
 			settled = true;
 			clearTimeout(timer);
 			try {
-				if (process.platform !== "win32" && child.pid)
-					process.kill(-child.pid, "SIGKILL");
-				else child.kill("SIGKILL");
+				if (child.pid) process.kill(-child.pid, "SIGKILL");
 			} catch {
 				/* already exited */
 			}
@@ -429,6 +427,7 @@ async function inspectGit(
 	path: string,
 	sourceRepo: string,
 ): Promise<CleanupGitState> {
+	const normalizedPath = realpathWithoutOpening(path);
 	const records = git(sourceRepo, ["worktree", "list", "--porcelain", "-z"])
 		.split("\0\0")
 		.map((record) => record.split("\0"));
@@ -436,7 +435,8 @@ async function inspectGit(
 		if (!fields[0]?.startsWith("worktree ")) return false;
 		const registeredPath = fields[0].slice("worktree ".length);
 		return (
-			exists(registeredPath) && realpathWithoutOpening(registeredPath) === path
+			exists(registeredPath) &&
+			realpathWithoutOpening(registeredPath) === normalizedPath
 		);
 	});
 	// rev-parse returns HEAD for a detached checkout, without treating a valid

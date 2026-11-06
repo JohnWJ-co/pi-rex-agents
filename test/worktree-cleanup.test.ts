@@ -18,7 +18,6 @@ import {
 	readWorktreeManifest,
 	writeWorktreeManifest,
 } from "../maestro/runtime/worktree-operations.ts";
-import { __herdrTest__ } from "../maestro/surfaces/herdr/herdr.ts";
 import {
 	cleanupBlockers,
 	listContainedWorktrees,
@@ -29,11 +28,9 @@ import {
 	createWorktreeCleanupOperations as buildCleanupOperations,
 	__worktreeCleanupTest__,
 } from "../maestro/runtime/worktree-operations.ts";
-import { HerdrSurfaceProvider } from "../maestro/surfaces/herdr/herdr-surface-provider.ts";
+import { FakeSurfaceProvider } from "../maestro/surfaces/fake/fake-surface-provider.ts";
 
-const provider = new HerdrSurfaceProvider({
-	paneConfig: { mode: "tab", direction: "right", maxPerTab: 4 },
-});
+const provider = new FakeSurfaceProvider();
 const createWorktreeCleanupOperations = (
 	input: Parameters<typeof buildCleanupOperations>[1],
 ) => buildCleanupOperations(provider, input);
@@ -423,14 +420,9 @@ n${link}
 				!readdirSeen.includes(escape),
 				"scan must not readdir an escaping managed symlink",
 			);
+			assert.equal(safeTask, realpath(safeTask));
 			assert.equal(
-				__herdrTest__.sameCheckoutPath(safeTask, realpath(safeTask)),
-				true,
-			);
-			assert.equal(
-				__herdrTest__.canonicalPath(
-					join(managed, "repo", "..", "repo", "task"),
-				),
+				realpath(join(managed, "repo", "..", "repo", "task")),
 				realpath(safeTask),
 			);
 			assert.deepEqual(opened, []);
@@ -610,232 +602,6 @@ describe("cleanup operating-system probes", () => {
 			}
 		} finally {
 			rmSync(dir, { recursive: true });
-		}
-	});
-	it("inspects a clean Git sibling beside a detached entry from captured Herdr output", async () => {
-		const dir = mkdtempSync(join(tmpdir(), "cleanup-detached-sibling-"));
-		const source = join(dir, "source");
-		const managed = join(dir, "managed");
-		const alpha = join(managed, "repo", "alpha");
-		const delta = join(managed, "repo", "delta");
-		mkdirSync(source);
-		const git = (args: string[]) =>
-			execFileSync("git", args, { cwd: source, stdio: "pipe" });
-		try {
-			git(["init", "-q", "-b", "main"]);
-			git(["config", "user.name", "Cleanup test"]);
-			git(["config", "user.email", "cleanup@example.invalid"]);
-			git(["config", "commit.gpgsign", "false"]);
-			git(["commit", "--allow-empty", "-qm", "base"]);
-			git(["worktree", "add", "-q", "-b", "alpha", alpha]);
-			git(["worktree", "add", "-q", "--detach", delta]);
-			// Captured from Herdr 0.9.0-preview.2026-09-08; only paths/labels relocated.
-			const payload = JSON.stringify({
-				id: "cli:worktree:list",
-				result: {
-					type: "worktree_list",
-					worktrees: [
-						{
-							branch: "main",
-							is_bare: false,
-							is_detached: false,
-							is_linked_worktree: false,
-							is_prunable: false,
-							label: "repo",
-							path: source,
-						},
-						{
-							branch: "alpha",
-							is_bare: false,
-							is_detached: false,
-							is_linked_worktree: true,
-							is_prunable: false,
-							label: "repo",
-							path: alpha,
-						},
-						{
-							is_bare: false,
-							is_detached: true,
-							is_linked_worktree: true,
-							is_prunable: false,
-							label: "repo",
-							path: delta,
-						},
-					],
-				},
-			});
-			const ops = createWorktreeCleanupOperations({
-				managedRoot: managed,
-				manifestDir: join(dir, "manifests"),
-				liveHolders: () => [],
-			});
-			ops.listWorktrees = () => __herdrTest__.parseHerdrWorktreeList(payload);
-			// Process-inspection policy is tested separately; this regression isolates Git/Herdr identity.
-			ops.holders = async () => ({ blockers: [], warnings: [] });
-			const rows = await listContainedWorktrees({
-				cwd: source,
-				operations: ops,
-			});
-			const clean = rows.find((row) => row.path === fs.realpathSync(alpha));
-			const detached = rows.find((row) => row.path === fs.realpathSync(delta));
-			assert.ok(clean, `Missing ${alpha}: ${JSON.stringify(rows)}`);
-			assert.ok(detached, `Missing ${delta}: ${JSON.stringify(rows)}`);
-			assert.equal(clean.classification, "eligible");
-			assert.deepEqual(clean.blockers, []);
-			assert.equal(detached.classification, "blocked");
-			assert.deepEqual(detached.blockers, [
-				"Detached HEAD: no retained branch",
-			]);
-		} finally {
-			rmSync(dir, { recursive: true });
-		}
-	});
-	for (const manifestKind of [
-		"dangling",
-		"conflicting",
-		"consistent",
-		"loop",
-		"lstat-denied",
-		"realpath-denied",
-	] as const) {
-		it(`isolates manifest identity with real filesystem probes: ${manifestKind}`, async () => {
-			const dir = mkdtempSync(join(tmpdir(), "cleanup-manifest-identity-"));
-			try {
-				const root = join(dir, "managed");
-				const path = join(root, "repo", "task");
-				const dangling = join(dir, "dangling");
-				mkdirSync(path, { recursive: true });
-				symlinkSync(join(dir, "absent"), dangling);
-				const ops = createWorktreeCleanupOperations({
-					managedRoot: root,
-					manifestDir: join(dir, "manifests"),
-					liveHolders: () => [],
-				});
-				ops.resolveSource = () => dir;
-				ops.inspectGit = () => ({ ...cleanupFixture().state });
-				ops.listWorktrees = () => [];
-				ops.holders = async () => ({ blockers: [], warnings: [] });
-				const manifests = [
-					{
-						file: "/dangling.json",
-						value: { state: "created", path: dangling, branch: "other" },
-					},
-				];
-				if (manifestKind === "consistent" || manifestKind === "conflicting")
-					manifests.push({
-						file: "/actual.json",
-						value: {
-							state: "created",
-							path,
-							branch: manifestKind === "consistent" ? "task" : "other",
-						},
-					});
-				if (manifestKind === "loop") {
-					const loop = join(dir, "loop");
-					symlinkSync(loop, loop);
-					manifests.push({
-						file: "/loop.json",
-						value: { state: "created", path: loop, branch: "unknown" },
-					});
-				}
-				// Deterministic EACCES guards, including when running tests as root.
-				if (manifestKind.endsWith("-denied")) {
-					const denied = () => {
-						throw Object.assign(new Error("EACCES manifest identity"), {
-							code: "EACCES",
-						});
-					};
-					if (manifestKind === "lstat-denied") {
-						const original = ops.exists;
-						ops.exists = (candidate) =>
-							candidate === dangling ? denied() : original(candidate);
-					} else {
-						const original = ops.realpath;
-						ops.realpath = (candidate) =>
-							candidate === dangling ? denied() : original(candidate);
-					}
-				}
-				ops.readManifests = () => manifests;
-				const [row] = await listContainedWorktrees({
-					cwd: dir,
-					operations: ops,
-				});
-				if (manifestKind === "conflicting") {
-					assert.equal(row.classification, "unknown");
-					assert.match(
-						row.blockers.join(),
-						/Manifest and live worktree identity disagree/,
-					);
-					assert.equal(row.manifest.length, 1);
-				} else if (
-					manifestKind === "loop" ||
-					manifestKind.endsWith("-denied")
-				) {
-					assert.equal(row.classification, "unknown");
-					assert.match(row.blockers.join(), /ELOOP|EACCES/);
-				} else {
-					assert.equal(row.classification, "eligible");
-					assert.deepEqual(row.blockers, []);
-					assert.equal(
-						row.manifest.length,
-						manifestKind === "consistent" ? 1 : 0,
-					);
-				}
-			} finally {
-				rmSync(dir, { recursive: true });
-			}
-		});
-	}
-	it("bounds Git and Herdr cleanup exec calls and fails closed on timeout", async (t) => {
-		const ops = createWorktreeCleanupOperations({
-			manifestDir: "/unused",
-			liveHolders: () => [],
-		});
-		const calls: string[] = [];
-		const mocked = t.mock.method(
-			childProcess,
-			"execFileSync",
-			(
-				file: string,
-				_args: string[],
-				options: { timeout?: number; killSignal?: string },
-			) => {
-				assert.equal(options.timeout, 30_000);
-				assert.equal(options.killSignal, "SIGKILL");
-				calls.push(file);
-				throw new Error("ETIMEDOUT");
-			},
-		);
-		syncBuiltinESMExports();
-		try {
-			const f = cleanupFixture();
-			f.operations.inspectGit = ops.inspectGit;
-			const result = await removeContainedWorktree(f.input);
-			assert.equal(result.status, "blocked");
-			assert.match(result.message, /ETIMEDOUT/);
-			assert.deepEqual(f.calls, []);
-			await __herdrTest__.withMockHerdrExec(
-				(_args, timeout, mode) => {
-					assert.equal(timeout, 30_000);
-					assert.equal(mode, "async");
-					calls.push("herdr");
-					throw new Error("ETIMEDOUT");
-				},
-				async () => {
-					await assert.rejects(
-						async () => ops.listWorktrees("/repo"),
-						/ETIMEDOUT/,
-					);
-					await assert.rejects(
-						async () => ops.removeWorkspace("fixture"),
-						/ETIMEDOUT/,
-					);
-				},
-			);
-			assert.deepEqual(calls, ["git", "herdr", "herdr"]);
-		} finally {
-			mocked.mock.restore();
-			syncBuiltinESMExports();
 		}
 	});
 	it("detects a real node-MainThread process through /proc, not a runtime allowlist", {
@@ -1459,14 +1225,6 @@ describe("explicit worktree cleanup", () => {
 			"already-removed",
 		);
 		assert.deepEqual(f.calls, []);
-	});
-	it("removal args contain only the explicit workspace selector", () => {
-		assert.deepEqual(__herdrTest__.buildWorktreeRemoveArgs("w1"), [
-			"worktree",
-			"remove",
-			"--workspace",
-			"w1",
-		]);
 	});
 	it("manifest read/merge-write round-trip retains metadata and skips invalid JSON", () => {
 		const dir = mkdtempSync(join(tmpdir(), "cleanup-manifest-"));

@@ -7,16 +7,24 @@
  * refuses to load outside the extension host).
  */
 export type RexUncertainty =
-  | { kind: "surface-create"; placement: "tab" | "split"; observedSurfaceId?: string }
-  | { kind: "command-dispatch"; surfaceId: string };
+	| {
+			kind: "surface-create";
+			placement: "tab" | "split";
+			observedSurfaceId?: string;
+	  }
+	| { kind: "command-dispatch"; surfaceId: string };
 
 export class RexAcquisitionUncertainError extends Error {
-  readonly code = "PIHA_ACQUISITION_UNCERTAIN";
-  readonly uncertainty: RexUncertainty;
+	readonly code = "PIHA_ACQUISITION_UNCERTAIN";
+	readonly uncertainty: RexUncertainty;
 
-  constructor(message: string, uncertainty: RexUncertainty, options?: ErrorOptions) {
-    super(message, options);
-    this.name = "AcquisitionUncertainError";
-    this.uncertainty = uncertainty;
-  }
+	constructor(
+		message: string,
+		uncertainty: RexUncertainty,
+		options?: ErrorOptions,
+	) {
+		super(message, options);
+		this.name = "AcquisitionUncertainError";
+		this.uncertainty = uncertainty;
+	}
 }

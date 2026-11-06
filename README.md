@@ -69,14 +69,14 @@ bun src/wording-check.ts
 
 ## 目录
 
-- `src/rex-cli.ts`：`rex` CLI 的 argv 封装，不拼接 shell
-- `src/rex-surface-provider.ts`：Rex `SurfaceProvider`
+- `maestro/surfaces/rex/rex-cli.ts`：`rex` CLI 的 argv 封装，不拼接 shell
+- `maestro/surfaces/rex/rex-surface-provider.ts`：Rex `SurfaceProvider`
 - `src/infrastructure.ts`：把 provider 组装成内核的 `PiRunSessionInfrastructure`，`createPane` 按本次 launch 的 placement 选择 split / tab
 - `src/placement.ts`：per-launch placement 的 AsyncLocalStorage
 - `src/rex-host-api.ts`：注册边界包装（工具参数、描述、命令输出、消息）
 - `src/rex-wording.ts`：上游 Host 文案 → Rex 文案的精确替换
 - `src/extension.ts`：Pi extension 入口 + system prompt 宿主提示
-- `src/git.ts` / `src/worktree.ts`：worktree 原语与受管目录
+- `maestro/surfaces/rex/git.ts` / `maestro/surfaces/rex/worktree.ts`：worktree 原语与受管目录
 - `src/p0.ts` / `src/p1.ts` / `src/p2.ts`：P0 / P1 / P2 探针
 - `src/host-message.ts`：投递消息的 Host 文案改写
 - `src/doctor.ts`：Rex / Pi / 包冲突自检

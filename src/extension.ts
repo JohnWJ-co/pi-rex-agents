@@ -12,8 +12,8 @@ import subagentsExtension from "../pi-extension/subagents/index.ts";
 import { createWorktreeCleanupOperations } from "../maestro/runtime/worktree-operations.ts";
 import { createRexHostApi } from "./rex-host-api.ts";
 import { createRexInfrastructure } from "./infrastructure.ts";
-import { RexSurfaceProvider } from "./rex-surface-provider.ts";
-import { rexWorktreeRoot } from "./worktree.ts";
+import { RexSurfaceProvider } from "../maestro/surfaces/rex/rex-surface-provider.ts";
+import { rexWorktreeRoot } from "../maestro/surfaces/rex/worktree.ts";
 
 const REX_HOST_MARKER = "[Rex host]";
 const REX_CHILD_MARKER = "[Rex child]";

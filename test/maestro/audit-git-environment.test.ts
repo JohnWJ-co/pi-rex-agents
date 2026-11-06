@@ -5,6 +5,7 @@ import {
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
+	realpathSync,
 	rmSync,
 	writeFileSync,
 } from "node:fs";
@@ -117,7 +118,10 @@ test("host Git ignores poisoned repository while preserving linked checkout, inc
 		const poisoned = { ...process.env };
 		assert.equal(await resolveGitCommit(source, "HEAD"), expected);
 		assert.equal(await resolveGitCommit(linked, "HEAD"), expected);
-		assert.equal(await resolveWorktreeProvisionCwd(linked), source);
+		assert.equal(
+			await resolveWorktreeProvisionCwd(linked),
+			realpathSync(source),
+		);
 		const handoff = await captureWorktreeHandoff({
 			path: linked,
 			branch: "linked",
@@ -134,7 +138,7 @@ test("host Git ignores poisoned repository while preserving linked checkout, inc
 			manifestDir: root,
 			liveHolders: () => [],
 		});
-		assert.equal(ops.resolveSource(linked), source);
+		assert.equal(ops.resolveSource(linked), realpathSync(source));
 		const state = await ops.inspectGit(linked, source);
 		assert.equal(state.registered, true);
 		assert.equal(state.ignoredFiles, 1);

@@ -31,7 +31,6 @@ import {
 	pauseProviderFailures,
 	resetProviderRequests,
 } from "./fake-provider.ts";
-import { inspectPane } from "../../maestro/surfaces/herdr/terminal.ts";
 import {
 	getAvailableBackends,
 	setBackend,
@@ -43,6 +42,7 @@ import {
 	waitForScreen,
 	waitForFile,
 	waitForPaneReady,
+	inspectPane,
 	waitForPiExit,
 	sleep,
 	uniqueId,
@@ -53,7 +53,7 @@ import {
 	PI_TIMEOUT,
 	USE_TEST_PROVIDER,
 	type TestEnv,
-} from "./harness.ts";
+} from "./rex-compat.ts";
 
 // Inventory blockers are not command completion; require Pi's warning notification.
 // \s+ between words tolerates Pi's pane-width word wrap in screen captures.
