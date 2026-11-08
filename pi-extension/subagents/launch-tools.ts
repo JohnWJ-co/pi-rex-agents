@@ -209,7 +209,7 @@ export function registerSubagentTool(
 					: null;
 				const persistent = resolveEffectivePersistent(params, agentDefs);
 				if (params.accept) {
-					// Before any Herdr resource: v1 checks only auto-exit ordinary runs.
+					// Before any host resource: v1 checks only auto-exit ordinary runs.
 					normalizeAcceptSpec(params.accept);
 					const refusal = acceptLaunchRefusal({
 						persistent,

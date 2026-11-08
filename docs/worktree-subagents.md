@@ -180,7 +180,7 @@ For parallel read-only review, prepare one stable existing checkout of the pull 
 
 A `read,bash` tool allowlist does not enforce read-only behavior because Bash can mutate the checkout. Tell public reviewers to use only safe inspection, avoid artifact-generating verification, and consume supplied mechanical evidence. Public completion reports above 16,000 characters are abbreviated; when a completed report is needed, retrieve its final assistant message once from the supplied session path with bounded output. This is evidence retrieval, not live-session polling.
 
-Review workflows supplied by role packs, such as `/skill:orchestrate` in `pi-herdr-roles`, build on this public-child pattern and document their own methodology. The host provides no review runner and creates no private review checkout. Reviewers read a head checkout, so the parent must materialize the changed-file inventory and unified diff, or complete before/after excerpts, because head-checkout reads cannot recover deleted or base-only blobs. Effective tools are the resolved role allowlist and deny rules.
+Review workflows supplied by role packs, such as `/skill:orchestrate`, build on this public-child pattern and document their own methodology. The host provides no review runner and creates no private review checkout. Reviewers read a head checkout, so the parent must materialize the changed-file inventory and unified diff, or complete before/after excerpts, because head-checkout reads cannot recover deleted or base-only blobs. Effective tools are the resolved role allowlist and deny rules.
 
 ```typescript
 subagent({

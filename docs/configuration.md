@@ -10,8 +10,7 @@ agent-directory resolver. An empty `PI_CODING_AGENT_DIR` uses the default,
 and a leading `~` expands as it does in Pi. It is not read from the
 installed package root, so npm and git package upgrades do not overwrite it.
 Create it by copying the installed package's `config.json.example`, or run
-`/subagents-init` to seed and draft model task preferences. The former
-`herdr-agents/config.json` is neither read nor migrated. Without a Rex config,
+`/subagents-init` to seed and draft model task preferences. Without a Rex config,
 panes default to split, right, and `maxPerTab: 2`.
 
 ```json

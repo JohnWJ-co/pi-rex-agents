@@ -91,6 +91,6 @@ the code and the shipped-contract documents above change.
 
 - [`orchestrated-review-workflow-plan.md`](orchestrated-review-workflow-plan.md)
   — superseded workflow design, retained as history. Its `skills/orchestrate`
-  and review-evaluation paths now belong to the `pi-herdr-roles` pack.
+  and review-evaluation paths now belong to a role pack.
 - [`research/`](research/) — background evidence and alternatives, not shipped
   behavior.

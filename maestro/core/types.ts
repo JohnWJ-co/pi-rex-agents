@@ -441,7 +441,7 @@ export interface SubagentLifecycle {
 	process: ProcessState;
 	turn: TurnState;
 	activityHealth: ActivityHealth;
-	/** Latest optional Pi detail, independent of Herdr coarse turn state. */
+	/** Latest optional Pi detail, independent of the host's coarse turn state. */
 	activityDetail: ActivityDetail | null;
 	pane: PaneObservation;
 	/** Durable across unavailable/missing observations. */

@@ -2,7 +2,7 @@
 
 `pi-rex-agents` 0.4.0 是 Rex 原生的 Pi 子代理扩展。父 Pi 在当前 block 中继续工作；`subagent` 在同一 tab 的 block 或新 tab 中启动子 Pi，完成后自动把结果送回父会话。
 
-本仓库包含从上游 3.7.2 hard fork 的执行内核，不依赖 `pi-herdr-agents` npm 包。上游来源、MIT 许可证和人工移植规则见 [UPSTREAM](docs/UPSTREAM.md)。
+本仓库包含从上游 3.7.2 hard fork 的执行内核，不依赖上游 npm 包。上游来源、MIT 许可证和人工移植规则见 [UPSTREAM](docs/UPSTREAM.md)。
 
 ## 安装
 
@@ -20,7 +20,7 @@ npm run doctor
 pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 ```
 
-长期使用可运行 `pi install /absolute/path/to/pi-rex-agents`。不要同时加载未过滤的 `pi-herdr-agents`，因为两者注册同名工具。`pi list` 中带 `(filtered)` 的旧包不加载资源。安装、自检和冲突处理详见 [安装说明](docs/install.md)。
+长期使用可运行 `pi install /absolute/path/to/pi-rex-agents`。安装后 `pi list` 应显示本包，扩展入口为 `./pi-extension/subagents/index.ts`。安装、自检详见 [安装说明](docs/install.md)。
 
 ## 使用
 
@@ -36,7 +36,7 @@ pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 
 ## 配置
 
-读取 `$PI_CODING_AGENT_DIR/rex-agents/config.json`，默认 `~/.pi/agent/rex-agents/config.json`。旧的 `herdr-agents/config.json` 不读取、不迁移；新文件缺失时使用默认值。
+读取 `$PI_CODING_AGENT_DIR/rex-agents/config.json`，默认 `~/.pi/agent/rex-agents/config.json`；新文件缺失时使用默认值。
 
 ```json
 {
@@ -93,4 +93,3 @@ npm pack --dry-run
 - Rex 原生侧栏标记尚未实现；Pi 自身的状态 widget 可用。
 - 进程与 cwd 的可见性受系统权限限制。worktree 清理会披露无法确定的进程信息，并阻止存在已知占用或脏状态的删除。
 - worktree 子代理的写入保护只覆盖带显式文件路径的已知写入工具，不是安全沙箱；shell 命令的 workspace 约束是提示级的。
-- 与未过滤的 `pi-herdr-agents` 存在工具名冲突，必须禁用其中一个。

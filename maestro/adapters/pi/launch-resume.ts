@@ -43,7 +43,7 @@ export async function launchResumedPiSubagent(
 ): Promise<PiRunningChild> {
 	// Pi resolves `--session` against the pane's cwd, not the caller's. Resolve
 	// it here once, so every read, the command, and the running child's
-	// session file name the same absolute path that Pi then reports to Herdr.
+	// session file name the same absolute path that Pi then reports to the host.
 	const request = {
 		...callerRequest,
 		sessionFile: resolve(callerRequest.sessionFile),

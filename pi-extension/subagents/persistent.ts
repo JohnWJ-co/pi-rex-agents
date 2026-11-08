@@ -50,7 +50,7 @@ export function persistentSpecialistState(
 		return projection === "stalled" ? "stalled" : "working";
 	if (running.taskId) return projection === "stalled" ? "stalled" : "working";
 	// Persistent task completion is authoritative for logical specialist state.
-	// Herdr can continue reporting the long-lived Pi pane as working while the
+	// The host can continue reporting the long-lived Pi pane as working while the
 	// process remains open between turns.
 	if (running.persistent && running.tasksCompleted != null) return "idle";
 	if (projection === "stalled") return "stalled";

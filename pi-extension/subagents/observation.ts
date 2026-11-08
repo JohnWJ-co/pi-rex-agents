@@ -58,7 +58,7 @@ function hydrateLifecycle(running: AdoptedRow): SubagentLifecycle {
 		lifecycle = markInterruptRequested(lifecycle, state.localOverrideAtMs);
 	} else if (state?.phase === "done") {
 		// Legacy activity "done" means the turn ended, not that completion
-		// evidence was recorded. Hydrate as Herdr-style waiting and let the
+		// evidence was recorded. Hydrate as host-style waiting and let the
 		// preserved watcher consume sidecar/exitcode evidence.
 		const observedAt = state.lastActivityAtMs ?? running.startTime;
 		lifecycle = observePaneInspection(

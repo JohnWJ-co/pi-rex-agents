@@ -163,7 +163,7 @@ async function waitForSurfacePiReady(
 
 /**
  * Wait for the child to publish its own identity, then accept it only while
- * that process is alive in this host's namespace as the Herdr pane shell or a
+ * that process is alive in this host's namespace as the pane shell or a
  * descendant of it. Command-line text is never consulted: Pi rewrites it.
  */
 export async function captureSurfacePiProcessIdentity(
@@ -186,7 +186,7 @@ export async function captureSurfacePiProcessIdentity(
 		try {
 			const record = readProcessIdentityRecord(expected.file);
 			if (record) {
-				// The deadline bounds Herdr too; a late answer is dropped, never accepted.
+				// The deadline bounds the host too; a late answer is dropped, never accepted.
 				const info = await settleBefore(
 					Promise.resolve().then(() => {
 						const remaining = deadline - Date.now();

@@ -1,7 +1,7 @@
 import { isNonEmptyString } from "./config/type-guards.ts";
 
 /**
- * A primary workspace this process saw Herdr open while creating a worktree.
+ * A primary workspace this process saw the host open while creating a worktree.
  * The record lives only in this process. Another session is another process,
  * and a restart starts empty, so neither reports a claim. Nothing is persisted.
  */

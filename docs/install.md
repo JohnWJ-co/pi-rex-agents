@@ -1,4 +1,4 @@
-# 安装与冲突处理
+# 安装与自检
 
 ## 前提
 
@@ -35,23 +35,9 @@ pi install /absolute/path/to/pi-rex-agents
 
 打包内容仅包含运行时、README、LICENSE、示例配置和操作指南。开发测试、迁移文档和本机 `.pi` 配置留在源码检出中。
 
-## 处理工具名冲突
+## 配置
 
-**不要同时加载未过滤的 `pi-herdr-agents` 和 `pi-rex-agents`**：两者注册同名工具，包括 `subagent` 和 `worktree_list`。
-
-在 Rex 中使用本包时，用 `pi config` 禁用旧包，或使用上面的 `--no-extensions -e ...` 临时加载。检查包状态：
-
-```bash
-pi list
-```
-
-带 `(filtered)` 的旧包不加载资源、不注册工具。只有未过滤的旧包构成冲突。若要卸载旧包，可执行：
-
-```bash
-pi remove npm:pi-herdr-agents
-```
-
-本包不读取或迁移旧的 `herdr-agents/config.json`；新配置位于 `~/.pi/agent/rex-agents/config.json`，也可由 `PI_CODING_AGENT_DIR` 改变根目录。配置缺失时使用默认值。
+新配置位于 `$PI_CODING_AGENT_DIR/rex-agents/config.json`，默认 `~/.pi/agent/rex-agents/config.json`，也可由 `PI_CODING_AGENT_DIR` 改变根目录。配置缺失时使用默认值。
 
 ## 自检与验证
 
@@ -64,7 +50,7 @@ bun test/smoke-extension.ts
 npm run test:integration:rex
 ```
 
-`doctor` 检查 Rex/Pi CLI、入口和 `pi list` 包状态，并保留未过滤旧包的冲突检查。Rex 集成测试使用隔离 server 和 fake provider；跳过表示没有验证该环境。
+`doctor` 检查 Rex/Pi CLI、manifest 声明的扩展入口和 skill 入口，以及 `pi list` 中的本包状态。Rex 集成测试使用隔离 server 和 fake provider；跳过表示没有验证该环境。
 
 在交互式 Pi 中，`/subagent list` 和 `/worktree list` 应能运行。空角色目录是正常情况；本包不附带角色。默认 split 最多容纳本父进程管理的 2 个子 block，满后使用新 tab；`placement: "tab"` 和 worktree 子代理直接使用新 tab。`panes.maxPerTab` 只接受 1..8 的整数，详见 [配置说明](configuration.md#pane-placement)。
 

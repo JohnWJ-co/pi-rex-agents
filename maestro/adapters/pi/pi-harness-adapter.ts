@@ -349,7 +349,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 	/** Resolves only with termination evidence; otherwise rejects (unconfirmed). */
 	async kill(handle: AgentHandle): Promise<void> {
 		const child = this.getRunningChild(handle);
-		// A worktree root pane is the retained review workspace (Herdr refuses to
+		// A worktree root pane is the retained review workspace (the host refuses to
 		// close it): stop only the owned Pi process and keep pane and checkout.
 		if (child.worktree || !child.ownsSurface) return this.stopRetainedPi(child);
 		let closeError: unknown;
@@ -372,7 +372,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 	 * identity is not known alive. SIGTERM goes only to that identity,
 	 * re-verified first; without it nothing is signalled and the cancel stays
 	 * unconfirmed. A failed SIGTERM to a live identity stays unconfirmed unless
-	 * that identity then exits. Herdr's foreground list and argv text are never
+	 * that identity then exits. The host's foreground list and argv text are never
 	 * evidence.
 	 * Every provider await is bounded by the deadline, and a late answer is
 	 * dropped, so an unconfirmed outcome is reported on time and never flipped.

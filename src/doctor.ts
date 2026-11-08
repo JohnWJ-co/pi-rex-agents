@@ -33,13 +33,38 @@ function commandOutput(command: string, args: string[]): string | undefined {
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
-const packageJsonPath = join(here, "..", "package.json");
+const root = join(here, "..");
+const packageJsonPath = join(root, "package.json");
 const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
   version?: string;
-  pi?: { extensions?: string[] };
+  pi?: { extensions?: string[]; skills?: string[] };
 };
 
-add("package", Boolean(packageJson.pi?.extensions?.length), `version ${packageJson.version ?? "unknown"}`);
+const extensions = packageJson.pi?.extensions ?? [];
+add(
+  "package",
+  extensions.length > 0,
+  `version ${packageJson.version ?? "unknown"}`,
+  true,
+);
+
+const extensionPath = extensions[0] ? join(root, extensions[0]) : undefined;
+add(
+  "extension entry",
+  extensionPath !== undefined && existsSync(extensionPath),
+  extensionPath ?? "pi.extensions is empty",
+  true,
+);
+
+const skills = packageJson.pi?.skills ?? [];
+if (skills.length > 0) {
+  const missing = skills.filter((path) => !existsSync(join(root, path)));
+  add(
+    "skill entry",
+    missing.length === 0,
+    missing.length > 0 ? `missing: ${missing.join(", ")}` : skills.join(", "),
+  );
+}
 
 const session = process.env.REX_SESSION;
 const block = process.env.REX_BLOCK;
@@ -54,36 +79,21 @@ add(
 const piVersion = commandOutput("pi", ["--version"]);
 add("Pi CLI", Boolean(piVersion), piVersion ?? "pi is not on PATH");
 
-const extensionPath = join(here, "extension.ts");
-add("extension entry", existsSync(extensionPath), extensionPath);
-
 const installed = commandOutput("pi", ["list"]) ?? "";
-const herdrLine = installed
-  .split(/\r?\n/)
-  .find((line) => /^\s*npm:pi-herdr-agents\b/.test(line));
-// A filtered package stays in the settings list but loads no resources, so it
-// cannot register the kernel's tools. Only an unfiltered entry conflicts.
-const hasHerdr = herdrLine !== undefined && !/\(filtered\)\s*$/.test(herdrLine);
 const hasRex = /\bpi-rex-agents\b/.test(installed);
-add("pi package cache", true, hasRex ? "pi-rex-agents visible in pi list" : "pi-rex-agents not in pi list (use -e or pi install)");
-if (herdrLine !== undefined && !hasHerdr) {
-  add("tool-name conflict", true, "pi-herdr-agents is installed but filtered; it registers no tools");
-} else if (hasHerdr && hasRex) {
-  add(
-    "tool-name conflict",
-    false,
-    "both pi-herdr-agents and pi-rex-agents are installed; disable one with `pi config`",
-    true,
-  );
-} else if (hasHerdr) {
-  add(
-    "tool-name conflict",
-    true,
-    "pi-herdr-agents is installed but pi-rex-agents is not registered as a package; load pi-rex-agents with --no-extensions -e",
-  );
-} else {
-  add("tool-name conflict", true, "no pi-herdr-agents package detected");
-}
+add(
+  "pi package",
+  hasRex,
+  hasRex
+    ? "pi-rex-agents visible in pi list"
+    : "pi-rex-agents not in pi list (use -e or pi install)",
+);
 
-console.log(JSON.stringify({ ok: checks.every((check) => check.ok || !check.fatal), checks }, null, 2));
+console.log(
+  JSON.stringify(
+    { ok: checks.every((check) => check.ok || !check.fatal), checks },
+    null,
+    2,
+  ),
+);
 if (checks.some((check) => check.fatal && !check.ok)) process.exitCode = 1;
