@@ -25,7 +25,7 @@ The closest precedents for the proposed first version are:
 - **OpenWeft and Vigla:** parallel workers with serialized integration.
 - **Gas Town:** the most complete durable worker-to-merge-queue model, useful as long-term inspiration rather than a suitable first implementation.
 
-For `pi-herdr-subagents`, the research supports a managed single-call `subagent(... worktree ...)` spawn, typed completion metadata, parent-owned verification, and explicit retention/removal. PR automation, durable ticket DAGs, merge queues, and stacks should come later.
+For `upstream-package`, the research supports a managed single-call `subagent(... worktree ...)` spawn, typed completion metadata, parent-owned verification, and explicit retention/removal. PR automation, durable ticket DAGs, merge queues, and stacks should come later.
 
 ## Terminology
 
@@ -166,16 +166,16 @@ A stack therefore adds:
 
 **Recommendation:** default to independent PRs based on trunk. Allow hard-dependent work only after its predecessor merges. Add native or Graphite-backed stacks later as an explicit repository capability, not as part of worktree spawning.
 
-## Implications for `pi-herdr-subagents`
+## Implications for `upstream-package`
 
 The extension already has several pieces that comparable tools need:
 
 - asynchronous launch and parent wake-up;
 - stable child session files and resume flow;
-- Herdr pane status and interruption;
+- LegacyHost pane status and interruption;
 - a parent widget for concurrent work;
 - bounded completion delivery;
-- an internal launch path that can accept a pre-created Herdr surface;
+- an internal launch path that can accept a pre-created LegacyHost surface;
 - `cwd`-aware child execution.
 
 The missing seam is **ticket-run placement and handoff metadata**, not a new general orchestration framework.
@@ -200,8 +200,8 @@ Internally:
 
 1. Resolve the source repository and exact base SHA.
 2. Before creating resources, persist a small ownership manifest with run ID, source repository, intended branch/base SHA, and label. This need not be a database or full controller.
-3. Use `herdr worktree create --cwd ... --branch ... --base ... --label ... --no-focus`.
-4. Parse the returned Herdr workspace, root pane, worktree path, and branch. Retain the already-resolved base SHA from the manifest because the create response does not include it.
+3. Use `legacyhost worktree create --cwd ... --branch ... --base ... --label ... --no-focus`.
+4. Parse the returned LegacyHost workspace, root pane, worktree path, and branch. Retain the already-resolved base SHA from the manifest because the create response does not include it.
 5. Update the manifest with observed resource identities, then launch the child in the returned root pane and worktree cwd.
 6. Record the same worktree metadata on the running subagent for live status and delivery.
 7. On completion, verify and return machine-readable Git state alongside the prose summary.
@@ -211,7 +211,7 @@ Suggested completion metadata:
 
 ```text
 run ID
-worktree path and Herdr workspace ID
+worktree path and LegacyHost workspace ID
 branch and resolved base SHA
 HEAD/commit SHA and commits ahead
 changed files
@@ -276,10 +276,10 @@ Add each only after the atomic isolated ticket run and review/resume/cleanup pat
 
 ## Recommended implementation sequence
 
-1. **Managed worktree spawn:** one worker, one Herdr-managed worktree, one ownership manifest, one completion handoff.
+1. **Managed worktree spawn:** one worker, one LegacyHost-managed worktree, one ownership manifest, one completion handoff.
 2. **Review and resume:** parent can inspect and resume the same child/worktree without losing state.
 3. **Explicit finalization:** retain or safely remove; publication can initially use normal `git`/`gh` commands.
-4. **Run reconciliation:** recover and reconcile extension-owned worktrees after Pi/Herdr restart.
+4. **Run reconciliation:** recover and reconcile extension-owned worktrees after Pi/LegacyHost restart.
 5. **Bounded ticket fleet:** queue and concurrency cap for independent tickets.
 6. **PR adapter:** parent-owned push/create/update with exact branch/SHA metadata.
 7. **Dependency scheduling:** explicit DAG and blocked-upstream behavior.

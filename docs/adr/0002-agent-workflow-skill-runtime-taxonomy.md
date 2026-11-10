@@ -5,13 +5,13 @@
 - **Status:** Accepted in part; external CLI provisions superseded
 - **Date:** 2026-08-02
 - **Decision owners:** `acrnm`
-- **Scope:** `giuseppecrj/pi-herdr-agents`
+- **Scope:** `upstream-project`
 - **Historical tracking:** legacy issues #4 and #5 (not carried into the clean repository)
 - **Superseded in part by:** ADR-0008 removes the external CLI runtime adapter
 
 ## Decision
 
-Keep `pi-herdr-agents` small: it owns **agent execution**, not a second
+Keep `upstream-package` small: it owns **agent execution**, not a second
 skill system or a general workflow engine.
 
 Use these terms consistently:
@@ -96,7 +96,7 @@ The package already exposes these workflow surfaces:
   an ephemeral interactive side session.
 - **Adversarial review** — `adversarial-reviewer`, a user-facing orchestration
   agent that is incorrectly presented as an agent rather than a workflow.
-- **Approved review runner** — `herdr_workflow`, a low-level control tool for
+- **Approved review runner** — `legacy_workflow`, a low-level control tool for
   exact approved project-local JavaScript. It is an execution surface, not the
   user-facing workflow recipe.
 - **Orchestrated review authoring** — bundled native `/skill:orchestrate`, which
@@ -143,12 +143,12 @@ Apply these rules:
 
 1. Prefer per-invocation `model` and `thinking` for a workflow's deliberate
    diversity or cost/quality policy.
-2. Use `$PI_CODING_AGENT_DIR/herdr-agents/config.json` for a person's durable role preferences; package-root configuration is ignored, so move an older file manually or re-run `/subagents-init`.
+2. Use `$PI_CODING_AGENT_DIR/legacyhost-agents/config.json` for a person's durable role preferences; package-root configuration is ignored, so move an older file manually or re-run `/subagents-init`.
 3. Leave bundled role `model` unset unless a particular model is a functional
    prerequisite.
 4. State runtime prerequisites before launch and fail closed when a required
    Pi runtime is unavailable.
-5. Reject legacy role definitions that contain `cli` before Herdr resource
+5. Reject legacy role definitions that contain `cli` before LegacyHost resource
    creation; do not reinterpret them as Pi roles.
 
 This preserves useful multi-model review behavior without baking a particular
@@ -165,7 +165,7 @@ generic `reviewer` role and an exact authenticated Pi runtime.
 
 Every visible or hidden role executes through Pi. Claude models remain available
 through normal Pi provider/model routing. A legacy role that contains `cli`
-receives a migration diagnostic and cannot create a Herdr pane or worktree.
+receives a migration diagnostic and cannot create a LegacyHost pane or worktree.
 There is no runtime adapter registry or compatibility path.
 
 ### 6. Agent frontmatter is a constrained contract
@@ -219,7 +219,7 @@ project authors can still add their own namespaced fields.
 ## Small migration plan
 
 Phases 1 and 2 are implemented in the current package. Phase 3 remains
-conditional on repeated registry needs; the low-level `herdr_workflow` runner is
+conditional on repeated registry needs; the low-level `legacy_workflow` runner is
 not a general workflow registry.
 
 ### Phase 1 — establish the contract (documentation only)

@@ -27,7 +27,7 @@ Shipped:
 
 Package and runtime slices are shipped. Remaining work is limited to deferred writer behavior and any future workflow extensions.
 
-The required integration suite uses real Pi and Herdr processes with a deterministic local provider. Live-provider runs are optional compatibility smoke coverage, not a merge gate.
+The required integration suite uses real Pi and LegacyHost processes with a deterministic local provider. Live-provider runs are optional compatibility smoke coverage, not a merge gate.
 
 ## Outcome
 
@@ -56,8 +56,8 @@ The existing public fire-and-forget `subagent()` API does not change.
 - `pi -ne -e subagent-done.ts` launches real self-hosted children without loading both the project and globally installed subagent extensions.
 - The prototype returned four real Luna child results to JavaScript without a public parent steer.
 - A shared detached exact-base checkout worked for parallel read-only children and was removed without force.
-- A disposable Herdr probe observed a foreground `sleep` PID and process group through `pane process-info`; synchronous `pane close` removed the pane and the process was gone within 200 ms.
-- The deterministic real Pi/Herdr integration suite now proves cancellation of queued and active workflow children, process exit before checkout cleanup, and one terminal outcome.
+- A disposable LegacyHost probe observed a foreground `sleep` PID and process group through `pane process-info`; synchronous `pane close` removed the pane and the process was gone within 200 ms.
+- The deterministic real Pi/LegacyHost integration suite now proves cancellation of queued and active workflow children, process exit before checkout cleanup, and one terminal outcome.
 - Node `vm` host callbacks are escapable and are not a security boundary.
 - A `vm` timeout stops a synchronous loop but does not stop an infinite loop started after `await`; running workflow JavaScript on Pi's main event loop can freeze Pi.
 
@@ -91,9 +91,9 @@ Stop before widening scope if implementation appears to require:
 The bundled `orchestrate` skill is the user entry point. The extension provides the parent-facing control tool that skill uses:
 
 ```ts
-herdr_workflow({ action: "prepare", path: string })
-herdr_workflow({ action: "start", runId: string })
-herdr_workflow({ action: "cancel", runId: string })
+legacy_workflow({ action: "prepare", path: string })
+legacy_workflow({ action: "start", runId: string })
+legacy_workflow({ action: "cancel", runId: string })
 ```
 
 There is no list, status, resume, or history action in v1. The tool is not registered when `PI_SUBAGENT_ID` is present, so ordinary and workflow children cannot prepare, start, or cancel workflows.
@@ -102,7 +102,7 @@ There is no list, status, resume, or history action in v1. The tool is not regis
 
 `prepare` must:
 
-1. require Herdr, a persistent parent session, and a trusted project;
+1. require LegacyHost, a persistent parent session, and a trusted project;
 2. require `<cwd>/.pi/plans/<run>/workflow.js` and reject paths outside that shape or through symlinks;
 3. require that the adjacent `run.jsonl` does not already exist;
 4. parse and strictly validate metadata before compiling JavaScript;
@@ -143,7 +143,7 @@ The LLM cannot authorize execution by passing approval text in tool arguments. `
 
 1. atomically change the process-global owner from `running` to `cancelling`; if another path already won the terminal gate, return that outcome;
 2. abort the run controller and reject queued `agent()` requests as cancelled;
-3. capture each active pane's foreground PID/process group through Herdr `pane process-info`;
+3. capture each active pane's foreground PID/process group through LegacyHost `pane process-info`;
 4. call synchronous `pane close`, then await both pane absence and exit of every captured foreground PID;
 5. terminate and await the workflow Worker;
 6. suppress late agent, synthesis, and success messages after cancellation owns the gate;
@@ -157,7 +157,7 @@ If a captured process remains after the bounded wait, retain the checkout and ap
 The first bytes of `workflow.js` contain one parse-only JSON comment:
 
 ```js
-/* herdr-workflow
+/* legacyhost-workflow
 {
   "version": 1,
   "name": "review ADR 0006",
@@ -281,7 +281,7 @@ Run the restricted `vm` inside one native Node Worker thread per workflow run. T
 - sends agent requests and logs to the main extension through `MessagePort`;
 - returns one JSON-compatible task result.
 
-The main extension owns all Herdr, model, tool, checkout, journal, cancellation, and delivery effects. Cancellation terminates the Worker. A VM escape reaches the Worker host and remains trusted-code execution; it must not freeze Pi's main event loop.
+The main extension owns all LegacyHost, model, tool, checkout, journal, cancellation, and delivery effects. Cancellation terminates the Worker. A VM escape reaches the Worker host and remains trusted-code execution; it must not freeze Pi's main event loop.
 
 ### Agent execution
 
@@ -306,7 +306,7 @@ A small private FIFO inside the bridge enforces metadata concurrency. Every `age
 | Evidence | Result | Retryable |
 | --- | --- | --- |
 | Role/model/tool/policy validation failure | `policy_error` | No |
-| Herdr or command launch throws without a typed transient signal | `launch_error` | No |
+| LegacyHost or command launch throws without a typed transient signal | `launch_error` | No |
 | Completion sidecar reports protocol failure | `protocol_error` | No |
 | Child exits nonzero without structured provider evidence | `child_error` | No |
 | Pane disappears before completion evidence | `lost_child` | No |
@@ -317,7 +317,7 @@ Do not classify failures from `errorMessage` or a bare `stopReason: "error"`. Pi
 
 ### Shared reader checkout
 
-Add a separate runner-owned reader-checkout seam; existing Herdr per-child worktree creation does not provide it. For each started run:
+Add a separate runner-owned reader-checkout seam; existing LegacyHost per-child worktree creation does not provide it. For each started run:
 
 1. revalidate the approved canonical repository root and Git common directory;
 2. create one detached Git worktree under a unique temporary path at `baseSha` with an explicit Git command;
@@ -377,7 +377,7 @@ All slices are sequential because they touch the same runtime and lifecycle seam
 **Files**
 
 - Add `pi-extension/subagents/workflow.ts` for metadata, hashing, pending state, journal primitives, and control input validation.
-- Update `pi-extension/subagents/index.ts` to register `herdr_workflow` and attach workflow state to the existing process-global runtime.
+- Update `pi-extension/subagents/index.ts` to register `legacy_workflow` and attach workflow state to the existing process-global runtime.
 - Add `test/workflow.test.ts`; include it in `npm test`.
 
 **Exit criteria**
@@ -394,7 +394,7 @@ All slices are sequential because they touch the same runtime and lifecycle seam
 
 - Add `pi-extension/subagents/workflow-worker.js` for VM execution and bridge messages. Keep the Worker as plain JavaScript so it does not depend on Pi's Jiti loader or Node's TypeScript-stripping version.
 - Add the minimal internal awaitable child wrapper and workflow-only isolated launch option in `index.ts`; reuse existing watch/session/model behavior without public delivery or public `runningSubagents` registration.
-- Add the runner-owned detached reader-checkout functions in `workflow.ts`; do not route them through Herdr's per-child worktree API.
+- Add the runner-owned detached reader-checkout functions in `workflow.ts`; do not route them through LegacyHost's per-child worktree API.
 - Extend completion sidecar/result types with structured failure evidence.
 - Add `test/integration/workflow-review.test.ts`.
 
@@ -435,10 +435,10 @@ All slices are sequential because they touch the same runtime and lifecycle seam
 3. Perform preflight role/runtime discovery and record the catalog source and omissions.
 4. For adversarial review, apply `skills/orchestrate/adversarial-review.md`; otherwise use the generic independent-review flow.
 5. Create a unique `.pi/plans/<run>/workflow.js` at the committed checkout `baseSha`.
-6. Call `herdr_workflow prepare`.
+6. Call `legacy_workflow prepare`.
 7. Present the returned packet without rewriting it.
 8. Ask for `APPROVE <prefix>`.
-9. After that exact user reply, call `herdr_workflow start`.
+9. After that exact user reply, call `legacy_workflow start`.
 10. Wait for the single final workflow delivery.
 
 **Exit criteria**
@@ -474,7 +474,7 @@ All slices are sequential because they touch the same runtime and lifecycle seam
 - Worker termination stops an async post-`await` infinite loop.
 - Every test fixture that creates Git commits sets repository-local `commit.gpgsign=false`, so tests do not inherit machine signing configuration.
 
-### Real Herdr/Pi integration — deterministic required suite
+### Real LegacyHost/Pi integration — deterministic required suite
 
 Run with:
 
@@ -482,7 +482,7 @@ Run with:
 npm run test:integration
 ```
 
-The required suite uses a local scripted provider while retaining real Pi processes and Herdr resources. The optional provider-compatibility smoke test is:
+The required suite uses a local scripted provider while retaining real Pi processes and LegacyHost resources. The optional provider-compatibility smoke test is:
 
 ```bash
 PI_TEST_MODEL="openai-codex/gpt-5.6-luna" \
@@ -500,7 +500,7 @@ Scenarios:
 6. Keep an uncommitted marker only in the parent checkout and prove reviewers cannot see it.
 7. Exhaust the agent and concurrency caps without launching excess children.
 8. Prove synthesis receives every reviewer success or failure envelope and returns an incomplete task result when coverage is missing.
-9. Cancel with queued and active reviewers; capture their Herdr process IDs, prove they exit after pane closure and before checkout cleanup, and prove no synthesis or late success starts. A synthetic surviving-process case must retain the checkout and end `failed` with `cancel_termination_failed`.
+9. Cancel with queued and active reviewers; capture their LegacyHost process IDs, prove they exit after pane closure and before checkout cleanup, and prove no synthesis or late success starts. A synthetic surviving-process case must retain the checkout and end `failed` with `cancel_termination_failed`.
 10. Reload during review and during synthesis; prove exactly one final delivery through the fresh API.
 11. Simulate full restart; prove the journal becomes interrupted without replay or cleanup.
 12. Verify all ordinary panes close, `git worktree list` no longer contains a clean shared checkout, dirty or failed-removal checkouts are retained, and sessions/journal remain.

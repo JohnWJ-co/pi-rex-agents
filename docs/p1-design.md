@@ -4,13 +4,13 @@
 
 ## 目标
 
-在 Rex 中提供与 `pi-herdr-agents` 一致的子代理体验：父 Pi 异步启动子 Pi，子代理运行在独立的 Rex block 中，父代理可以查询、继续对话、停止和恢复；父 Pi 进程不阻塞，父会话在子代理运行期间保持可交互。
+在 Rex 中提供与 `upstream-package` 一致的子代理体验：父 Pi 异步启动子 Pi，子代理运行在独立的 Rex block 中，父代理可以查询、继续对话、停止和恢复；父 Pi 进程不阻塞，父会话在子代理运行期间保持可交互。
 
 ## 核心决策
 
-**复用 `pi-herdr-agents` 的编排引擎，只替换 surface 层。**
+**复用 `upstream-package` 的编排引擎，只替换 surface 层。**
 
-`pi-herdr-agents` 的 `subagentsExtension(pi, options)` 已经提供：
+`upstream-package` 的 `subagentsExtension(pi, options)` 已经提供：
 
 - 10 个父工具与 2 个子工具
 - 子代理生命周期、结果投递、持久化专家
@@ -22,7 +22,7 @@
 
 1. 实现 Rex 版 `SurfaceProvider`
 2. 组装 Rex 运行时基础设施
-3. 将 `pi-herdr-agents` 的 extension 原样注册到 Pi
+3. 将 `upstream-package` 的 extension 原样注册到 Pi
 
 伪代码：
 
@@ -57,7 +57,7 @@ export default function piRexAgents(pi: ExtensionAPI) {
 
 - `split`：`rex split --split=right|below --focus=false`
 - `tab`：`rex window new --focus=false`
-- `grouped`：Rex 没有与 Herdr「同 tab 内多 pane」完全等价的 grouping。P1 将 `grouped` 映射为独立 window，行为上仍是可管理的 surface；后续可改为同一 window 内多个 split。
+- `grouped`：Rex 没有与 LegacyHost「同 tab 内多 pane」完全等价的 grouping。P1 将 `grouped` 映射为独立 window，行为上仍是可管理的 surface；后续可改为同一 window 内多个 split。
 
 ### 子进程启动
 
@@ -67,7 +67,7 @@ export default function piRexAgents(pi: ExtensionAPI) {
 bash /tmp/pi-rex-agents/xxx.sh
 ```
 
-脚本内部包含 Pi 启动命令和 `PI_HERDR_AGENTS_SESSION` 等环境变量。这样可以避免多行命令通过 `rex send` 输入时被 shell/TUI 误解析。
+脚本内部包含 Pi 启动命令和 `PI_LEGACYHOST_AGENTS_SESSION` 等环境变量。这样可以避免多行命令通过 `rex send` 输入时被 shell/TUI 误解析。
 
 ### 状态
 
@@ -112,7 +112,7 @@ const supervision = new SupervisionCoordinator(
 );
 ```
 
-`markerWriter` / `markerSessionReader` 不注入，因此 Herdr 侧栏标记自动关闭；其余编排逻辑仍可工作。
+`markerWriter` / `markerSessionReader` 不注入，因此 LegacyHost 侧栏标记自动关闭；其余编排逻辑仍可工作。
 
 ## P1 范围
 
@@ -127,20 +127,20 @@ const supervision = new SupervisionCoordinator(
 
 ## Worktree
 
-Rex 没有 `herdr worktree` 原语，因此 provider 使用：
+Rex 没有 `legacyhost worktree` 原语，因此 provider 使用：
 
 1. `git worktree add -b <branch> <path> <base>`
 2. `rex window new --focus=false -c <path> -- <command>`
 3. `git worktree remove <path>` + `rex window close`
 
-`createWorktreeCleanupOperations(provider, { managedRoot })` 复用上游的脏工作区、未跟踪文件、冲突和进程占用检查，只把 `herdr` 的清理命令替换为 Rex provider 的 `removeWorktreeSurface`。
+`createWorktreeCleanupOperations(provider, { managedRoot })` 复用上游的脏工作区、未跟踪文件、冲突和进程占用检查，只把 `legacyhost` 的清理命令替换为 Rex provider 的 `removeWorktreeSurface`。
 
 P1 暂不承诺：
 
-- Herdr 侧栏 marker / 原生 sidebar UI
+- LegacyHost 侧栏 marker / 原生 sidebar UI
 - Rex 内完全等价的 grouped pane
 - macOS 上的 worktree 进程身份强校验
-- 与上游每个边缘行为逐条一致（例如 Herdr 的 tab 命名、workspace claim）
+- 与上游每个边缘行为逐条一致（例如 LegacyHost 的 tab 命名、workspace claim）
 
 ## 验收
 

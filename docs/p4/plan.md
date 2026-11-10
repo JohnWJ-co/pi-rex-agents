@@ -1,11 +1,11 @@
 # 计划4：内核入库、Rex 原生化、移植 Harness
 
 > 取代计划2（patch-package 方案）和计划3（未经实测）。实测证据见 [rex-facts.md](rex-facts.md)，下文以 F1–F10 引用。
-> 开发地点：`/Users/qiangwenjun/Documents/project/pi-rex-agents-p4`（分支 `p4-kernel`）。**不要修改主 checkout**（F10）。
+> 开发地点：`/path/to/pi-rex-agents-p4`（分支 `p4-kernel`）。**不要修改主 checkout**（F10）。
 
 ## 目标
 
-1. 把 `pi-herdr-agents@3.7.2`（`e1e7d72`，MIT）hard fork 进本仓库，Rex 是唯一的 surface，删除所有补丁层：`rex-host-api` 代理、`placement` ALS、`rex-wording` / `host-message` / `wording-check`，也不引入 patch-package。
+1. 把 `upstream-package@3.7.2`（`e1e7d72`，MIT）hard fork 进本仓库，Rex 是唯一的 surface，删除所有补丁层：`rex-host-api` 代理、`placement` ALS、`rex-wording` / `host-message` / `wording-check`，也不引入 patch-package。
 2. 把上游的工程 Harness 移植成 Rex 版：AGENTS.md、`.pi/skills` 验证技能、确定性 fake provider 集成测试、conformance、工具 schema 契约、重构 pin、大小规则、doctor。
 3. 按实测事实重定回传契约和状态。
 
@@ -29,7 +29,7 @@
 
 ## Harness（从上游移植，改成 Rex）
 
-- `AGENTS.md`：仓库说明、代码地图、文档同步规则、验证门禁、提交前检查（以上游为蓝本，Herdr → Rex，删去 role-pack / release 相关内容）。
+- `AGENTS.md`：仓库说明、代码地图、文档同步规则、验证门禁、提交前检查（以上游为蓝本，LegacyHost → Rex，删去 role-pack / release 相关内容）。
 - `CONTEXT.md`：领域术语表（Surface provider = Rex）。
 - `.pi/skills/verify-pi-rex-agents/`：按变更类型列门禁；`scripts/lab.ts`（Rex lab：`doctor/up/drive/down`）；`scripts/pin.ts`（重构行为 pin）；大小规则（`pi-extension/subagents` 下单文件 < 32KB）；变异证明。
 - `.pi/skills/run-integration-tests/`：在 Rex lab 中跑确定性集成套件，以及 postflight 清理检查。
@@ -40,7 +40,7 @@
 
 ## 配置
 
-- 路径：`~/.pi/agent/rex-agents/config.json`（内核自带的 `config.json` 机制，不另读 `settings.json`）。配置路径隔离提前在 T3 完成；不读取、不迁移旧的 `herdr-agents/config.json`，其余命名收尾仍属 T6。
+- 路径：`~/.pi/agent/rex-agents/config.json`（内核自带的 `config.json` 机制，不另读 `settings.json`）。配置路径隔离提前在 T3 完成；不读取、不迁移旧的 `legacyhost-agents/config.json`，其余命名收尾仍属 T6。
 - `panes.mode`：`"split" | "tab"`，默认 `"split"`（删除 `grouped`）。`panes.maxPerTab`：默认 **2**，只接受 1..8 的整数；非法值走内核现有的报错路径。`/reload` 生效。
 - split 计数归内核 placement reservation 负责，按"父 block 所在 window 中仍然存活的本父进程子 block"计数，`/reload` 后计数不归零。
 
@@ -50,7 +50,7 @@
 |---|---|---|
 | [T0](tasks/T0-vendor-baseline.md) | 原样入库内核 + 上游 Harness 工具，行为不变 | typecheck、`npm test` 全绿 |
 | [T1](tasks/T1-rex-harness.md) | Rex lab、Rex 集成 harness、AGENTS.md、验证技能、doctor | lab 自检、1 条端到端冒烟 |
-| [T2](tasks/T2-rex-surface.md) | Rex provider 入内核，删除 Herdr/sidebar/Windows | conformance（fake + lab）、集成套件 |
+| [T2](tasks/T2-rex-surface.md) | Rex provider 入内核，删除 LegacyHost/sidebar/Windows | conformance（fake + lab）、集成套件 |
 | [T2b](tasks/T2b-context-tools.md) | 子代理自动带上已安装的压缩工具（billion-context），没装时依赖 Pi 原生压缩 | 单测、真实子代理调用 acp_status |
 | [T3](tasks/T3-placement-config.md) | placement 原生参数、maxPerTab=2、split 计数下沉、配置路径隔离 | schema 契约、placement 集成用例 |
 | [T4](tasks/T4-wording-entry.md) | 源头文案、删除替换层、入口切换、宿主提示 | no-foreign-host、pin 对比 |
@@ -64,5 +64,5 @@
 - Hard fork 之后不再自动获得上游修复；`docs/UPSTREAM.md` 记录基线，需要时手动 cherry-pick。
 - result 文件只由正常结束的子代理写；handoff/fork、崩溃、取消路径回退到 JSONL 或 `.exitcode`。
 - OSC 是 best-effort，只影响可观测性。
-- 旧的 `herdr-agents/config.json` 不会迁移（在 README 中说明）。
+- 旧的 `legacyhost-agents/config.json` 不会迁移（在 README 中说明）。
 - 删除 Windows 支持（Rex 只在 macOS/Linux 上运行）。

@@ -3,7 +3,7 @@
 - **Status:** Superseded by [ADR-0013](0013-pack-neutral-execution-host.md); `/btw` and `/btw-close` were removed, not relocated
 - **Date:** 2026-07-31
 - **Decision owners:** `acrnm`
-- **Scope:** `giuseppecrj/pi-herdr-agents`
+- **Scope:** `upstream-project`
 - **Decision baseline:** legacy source commit `77d7d029312880f63b29838b3c329a1e4059e029` (not carried into the clean repository history)
 
 ## Context
@@ -38,7 +38,7 @@ Add two direct extension commands:
 2. Captures the parent's current active leaf.
 3. Uses a detached `SessionManager` to create a child session containing only
    that active branch.
-4. Opens a non-focused Herdr tab.
+4. Opens a non-focused LegacyHost tab.
 5. Starts an interactive Pi process in the parent's working directory, using the
    parent model and thinking level.
 6. Sends the Nanocodex boundary and the question as the child's first new user
@@ -62,7 +62,7 @@ parent transcript.
 
 The extension keeps one in-memory record containing:
 
-- Herdr pane ID
+- LegacyHost pane ID
 - child session path
 - launch-script path
 
@@ -83,7 +83,7 @@ open. Successful close removes it.
 
 - Side questions do not consume a parent-agent turn.
 - The current conversation remains available as context.
-- The implementation reuses Pi session branching and existing Herdr helpers.
+- The implementation reuses Pi session branching and existing LegacyHost helpers.
 - The feature is independent from worker tracking and completion delivery.
 
 ### Negative
@@ -116,7 +116,7 @@ Unit tests must prove:
   boundary without worker-control arguments;
 - empty `/btw` and idle `/btw-close` are harmless and do not steer the parent.
 
-Herdr integration must prove:
+LegacyHost integration must prove:
 
 - `/btw` opens a non-focused tab;
 - the child can answer from the latest completed parent context;
@@ -136,7 +136,7 @@ npm pack --dry-run
 
 ## References
 
-- [Pi Herdr Agents](https://github.com/giuseppecrj/pi-herdr-agents)
+- upstream project
 - [Nanocodex BTW controller](https://github.com/gakonst/nanocodex/blob/b1314ebcd602b77af7d2ab5153286f3a1795bbfe/web/src/agentController.ts)
 - [Pi extension API](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md)
 - [Pi session format](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/session-format.md)

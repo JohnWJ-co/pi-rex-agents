@@ -4,7 +4,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-03
-- **Scope:** `giuseppecrj/pi-herdr-agents`
+- **Scope:** `upstream-project`
 
 ## Context
 

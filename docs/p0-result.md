@@ -85,7 +85,7 @@ npm run p0 -- --keep
 
 P0 的核心假设成立：
 
-- Rex 可以作为 `pi-herdr-agents` 的 surface 执行宿主；
+- Rex 可以作为 `upstream-package` 的 surface 执行宿主；
 - 子 Pi 的 `working` / `done` 状态可以通过 Rex 的 `program_status` 可靠观察；
 - 文本输入、屏幕读取、关闭和父会话存活都满足后续适配所需的最小语义；
 - `rex split --focus=false` 保持父块焦点，这是多代理场景能成立的关键行为。
@@ -93,6 +93,6 @@ P0 的核心假设成立：
 ## 遗留风险
 
 1. **进程身份**：已确认 `program_status.owner.pid` 与 `foreground.pid` 一致，且 `foreground.argv0` 为 `pi`。但 `info.child` 在本机是 root 的 `login`，不是 shell；`shellPid` 需要从 ancestors/foreground 中查找 shell，不能直接使用 `child.pid`。
-2. **状态语义**：Herdr 的 `agentStatus` 只有 `idle | working | blocked | done | unknown`；Rex 额外有 `error`。P1 需要决定 `error` 是映射到 `unknown` 还是 `blocked`。
-3. **Herdr 专有 UI**：sidebar marker、pane title、focus workspace 等不在 P0 的 seam 内，P1 需要用 Rex 的 label / session / client API 重新实现。
+2. **状态语义**：LegacyHost 的 `agentStatus` 只有 `idle | working | blocked | done | unknown`；Rex 额外有 `error`。P1 需要决定 `error` 是映射到 `unknown` 还是 `blocked`。
+3. **LegacyHost 专有 UI**：sidebar marker、pane title、focus workspace 等不在 P0 的 seam 内，P1 需要用 Rex 的 label / session / client API 重新实现。
 4. **worktree**：Rex 没有内建的 worktree surface，P1 需要组合 `git worktree` 和 Rex session/window 管理。

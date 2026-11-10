@@ -1,7 +1,6 @@
 /** Deterministic end-to-end coverage for persistent specialist turns. */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -22,15 +21,12 @@ import {
 	type TestEnv,
 } from "./rex-compat.ts";
 import { resetProviderRequests } from "./fake-provider.ts";
+import { childBlocks } from "./rex-harness.ts";
 import { isString } from "../../maestro/core/config/type-guards.ts";
 
-function workspacePanes(workspaceId: string): string[] {
-	const result = JSON.parse(
-		execFileSync("herdr", ["pane", "list", "--workspace", workspaceId], {
-			encoding: "utf8",
-		}),
-	);
-	return result.result.panes.map((pane: { pane_id: string }) => pane.pane_id);
+function workspacePanes(env: TestEnv): Promise<string[]> {
+	if (!env.resolvedLab) throw new Error("Rex lab is not ready");
+	return childBlocks(env.resolvedLab);
 }
 
 type SessionEntry = {
@@ -74,12 +70,12 @@ async function waitForEntries(
 }
 
 async function waitForCondition(
-	predicate: () => boolean,
+	predicate: () => boolean | Promise<boolean>,
 	message: string,
 ): Promise<void> {
 	const deadline = Date.now() + PI_TIMEOUT;
 	while (Date.now() < deadline) {
-		if (predicate()) return;
+		if (await predicate()) return;
 		await sleep(100);
 	}
 	throw new Error(message);
@@ -112,7 +108,7 @@ for (const backend of backends) {
 			trackTempFile(env, startFile);
 			const parent = await createTrackedSurface(env, `persistent-parent-${id}`);
 			await waitForPaneReady(parent);
-			const baselinePanes = new Set(workspacePanes(env.workspaceId));
+			const baselinePanes = new Set(await workspacePanes(env));
 
 			await startPi(
 				parent,
@@ -173,7 +169,7 @@ for (const backend of backends) {
 				"persistent child must not write an exit sidecar after task 1",
 			);
 			assert.ok(
-				workspacePanes(env.workspaceId).length > baselinePanes.size,
+				(await workspacePanes(env)).length > baselinePanes.size,
 				"persistent child pane must remain open after delivery",
 			);
 
@@ -232,7 +228,7 @@ for (const backend of backends) {
 			);
 
 			const policy = JSON.parse(
-				readFileSync(`${sessionFile}.pi-herdr-subagent-policy.json`, "utf8"),
+				readFileSync(`${sessionFile}.pi-rex-subagent-policy.json`, "utf8"),
 			);
 			assert.equal(policy.version, 2);
 			assert.equal(policy.persistent, true);
@@ -249,8 +245,8 @@ for (const backend of backends) {
 						JSON.stringify(entry).includes("PERSISTENT_LIFECYCLE_COMPLETE"),
 					),
 			);
-			await waitForCondition(() => {
-				const panes = workspacePanes(env.workspaceId);
+			await waitForCondition(async () => {
+				const panes = await workspacePanes(env);
 				return (
 					panes.length === baselinePanes.size &&
 					panes.every((pane) => baselinePanes.has(pane))
@@ -273,7 +269,7 @@ for (const backend of backends) {
 				"stopped session must be retained",
 			);
 			assert.equal(
-				existsSync(`${sessionFile}.pi-herdr-subagent-policy.json`),
+				existsSync(`${sessionFile}.pi-rex-subagent-policy.json`),
 				true,
 				"stopped policy must be retained",
 			);

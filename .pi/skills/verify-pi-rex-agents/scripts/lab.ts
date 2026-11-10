@@ -1,7 +1,7 @@
 #!/usr/bin/env -S node --experimental-strip-types
 /**
  * Isolated Rex verification lab. The lab server, fake provider, parent Pi and
- * child blocks all run under one pira-lab-* root. No Herdr APIs are used.
+ * child blocks all run under one pira-lab-* root. No legacy host APIs are used.
  */
 import { execFileSync, spawn } from "node:child_process";
 import {

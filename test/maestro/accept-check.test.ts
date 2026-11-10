@@ -173,7 +173,7 @@ describe("accept parameter", () => {
 			assert.equal(result.details.error, "accept-unsupported");
 			assert.match(result.content[0].text, /^Error: accept /);
 		}
-		// An auto-exit bare launch passes the refusal and stops at Herdr.
+		// An auto-exit bare launch passes the refusal and stops at Rex.
 		const passed = await launch({ accept: { run: "true" } });
 		assert.equal(passed.details.error, "rex not available");
 		await assert.rejects(

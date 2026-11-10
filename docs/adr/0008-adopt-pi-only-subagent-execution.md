@@ -2,14 +2,14 @@
 
 - **Status:** Accepted (implemented)
 - **Date:** 2026-08-10
-- **Scope:** `giuseppecrj/pi-herdr-agents`
+- **Scope:** `upstream-project`
 - **Supersedes:** The external CLI runtime-adapter provisions of ADR-0002
 
 ## Decision
 
 Make every public subagent run Pi-backed. Remove the Claude terminal adapter and its `cli`, `cli-model`, and `resumeSessionId` interface fields. Existing role files that request an external CLI must fail with a clear error instead of silently running through Pi.
 
-A single deep launch module will own the complete launch transaction behind one small interface. Pi and Herdr remain implementation details of that module; do not add a runtime adapter seam without a second real execution path.
+A single deep launch module will own the complete launch transaction behind one small interface. Pi and LegacyHost remain implementation details of that module; do not add a runtime adapter seam without a second real execution path.
 
 Completion delivery will use one custom message whose content contains the bounded result and triggers the parent turn. Completion detection will keep the Pi sidecar as primary evidence and the terminal exit marker as its best-effort fallback.
 

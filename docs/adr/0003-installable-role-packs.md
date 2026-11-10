@@ -3,7 +3,7 @@
 - **Status:** Accepted; bundled-role provisions superseded by [ADR-0013](0013-pack-neutral-execution-host.md)
 - **Date:** 2026-08-02 (bundled layer retired 2026-10-05)
 - **Decision owners:** `acrnm`
-- **Scope:** `giuseppecrj/pi-herdr-agents`
+- **Scope:** `upstream-project`
 
 ## Decision
 
@@ -12,7 +12,7 @@ A role pack ships Markdown role definitions plus a small Pi extension that
 responds synchronously to:
 
 ```text
-pi-herdr-subagents:roles:discover:v1
+upstream-package:roles:discover:v1
 ```
 
 That event name is a stable protocol identifier and is not renamed with the package.
@@ -24,7 +24,7 @@ register(path: string): void
 ```
 
 `path` is an absolute Markdown file or a directory whose direct `.md` children
-are role definitions. `pi-herdr-agents` reads and validates those files when
+are role definitions. `upstream-package` reads and validates those files when
 roles are listed or launched.
 
 Role packs use the existing agent-definition format. The filename stem is the
@@ -88,7 +88,7 @@ Within the package layer:
 Earlier versions collected an enabled bundled layer first, rejected role packs
 that collided with it, and let `roles.bundled: false` remove it. ADR-0013
 retires that layer. Valid `roles.bundled` booleans in
-`$PI_CODING_AGENT_DIR/herdr-agents/config.json` are now accepted as deprecated
+`$PI_CODING_AGENT_DIR/legacyhost-agents/config.json` are now accepted as deprecated
 no-ops with one parent-session warning per extension load; malformed values and
 unknown `roles` keys remain errors, and the file is never rewritten. Package-root
 configuration is still ignored.
@@ -98,7 +98,7 @@ concise diagnostics, and an exact-name launch reports the matching diagnostic
 instead of treating an invalid contribution as a bare agent. An invalid
 capability declaration makes that role name unavailable at its precedence layer
 rather than falling through to a lower-priority role, and launch rejects it
-before Herdr creates a pane or worktree. Local definitions with unreadable files
+before LegacyHost creates a pane or worktree. Local definitions with unreadable files
 or missing frontmatter likewise block their filename-derived role name without
 preventing unrelated definitions from loading. Role text accepts LF or CRLF
 line endings and an optional leading UTF-8 BOM.

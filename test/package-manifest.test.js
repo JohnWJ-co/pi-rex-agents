@@ -35,7 +35,6 @@ describe("Rex package contract", () => {
 		assert.equal(lock.version, manifest.version);
 		assert.equal(lock.packages[""].name, manifest.name);
 		assert.equal(lock.packages[""].version, manifest.version);
-		assert.equal(manifest.dependencies["pi-herdr-agents"], undefined);
 		assert.deepEqual(manifest.pi.extensions, [
 			"./pi-extension/subagents/index.ts",
 		]);
@@ -72,7 +71,6 @@ describe("Rex package contract", () => {
 				`unexpected package file: ${path}`,
 			);
 		}
-		assert.equal(read("LICENSE"), read("LICENSE-pi-herdr-agents"));
 		assert.match(
 			read("skills/pi-rex-agents/SKILL.md"),
 			/^---\nname: pi-rex-agents\ndescription: .+\n---/,

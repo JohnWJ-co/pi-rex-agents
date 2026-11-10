@@ -8,20 +8,20 @@
 
 ## Context
 
-Runtimes such as herdr-core now launch agents, place panes, and report process
+Runtimes such as legacyhost-core now launch agents, place panes, and report process
 state. Starting and supervising a child is becoming a commodity. These runtimes
 leave out what happens after the child stops. They do not say whether the
 outcome is correct, who wrote each line of the report, or which verdict the
 parent should act on.
 
-`pi-herdr-agents` already answers part of that. It wraps child text in a
+`upstream-package` already answers part of that. It wraps child text in a
 `subagent_report` envelope, records whether a summary came from the child or
 the host, bounds every delivery, and attaches model, worktree, and cancel
 evidence. It also guards its tool schemas against breaking changes. These rules
 live in code, tests, and `docs/tools.md`, but no document states them as one
 contract another host could implement.
 
-Methodology packs such as `pi-herdr-pstack` depend on these rules. A pack
+Methodology packs such as `pstack-pack` depend on these rules. A pack
 cannot rely on behavior that only one host's code defines and that can change
 without notice.
 
@@ -31,13 +31,13 @@ without notice.
    starting at `delegation-outcome/v0`. It covers the report envelope,
    provenance, size bounds, host evidence, and tool-schema compatibility. It
    stays small enough for another host to implement in an afternoon.
-2. `pi-herdr-agents` is the reference implementation. The contract describes
+2. `upstream-package` is the reference implementation. The contract describes
    only behavior this package ships and tests. Designs that are not shipped,
    such as the [accept check](../accept-check-design.md), appear as proposed
    items.
-3. The contract does not depend on a terminal surface. It names no Herdr panes,
+3. The contract does not depend on a terminal surface. It names no LegacyHost panes,
    workspaces, or CLI commands as requirements, so it survives a move from
-   Herdr 1 to herdr-core.
+   LegacyHost 1 to legacyhost-core.
 4. The host ships mechanisms and packs ship policy, as in
    [ADR-0013](0013-pack-neutral-execution-host.md). The host frames, bounds,
    attributes, and attaches evidence. The parent or its pack decides whether to

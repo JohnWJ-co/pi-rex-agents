@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-05
-- **Scope:** `giuseppecrj/pi-herdr-agents`
+- **Scope:** `upstream-project`
 - **Supersedes:** [ADR-0001](0001-btw-ephemeral-side-questions.md); the bundled-role
   provisions of [ADR-0003](0003-installable-role-packs.md); the shipped role and
   workflow mapping in [ADR-0002](0002-agent-workflow-skill-runtime-taxonomy.md)
@@ -10,25 +10,25 @@
 
 ## Decision
 
-`pi-herdr-agents` is an execution host. It owns child execution, supervision,
+`upstream-package` is an execution host. It owns child execution, supervision,
 sessions, persistence, worktrees, model routing, role parsing and discovery, and
 parent delivery. It ships no agent roles and no planning or review workflows.
-The only Pi skill it ships is `pi-herdr-agents`, a general operating guide to its
+The only Pi skill it ships is `upstream-package`, a general operating guide to its
 own control tools; methodology and workflow skills stay in separate packs.
 
 - The seven formerly bundled roles move to separately installed role packs:
   `scout`, `planner`, `worker`, `reviewer`, `adversarial-reviewer`, and
-  `visual-tester` to the optional general-purpose `pi-herdr-roles` pack, and
-  `poteto` to `pi-herdr-pstack`. Neither pack has privileged discovery status.
+  `visual-tester` to the optional general-purpose `roles-pack` pack, and
+  `poteto` to `pstack-pack`. Neither pack has privileged discovery status.
 - `/plan`, its plan prompt, and the top-level `orchestrate` skill with its
-  supporting resources and evaluation corpus move to `pi-herdr-roles`.
+  supporting resources and evaluation corpus move to `roles-pack`.
 - `/iterate`, `/btw`, and `/btw-close` are removed, not relocated, together with
   their exclusive session snapshot, surface, and launch code. Direct
   `subagent({ fork: true, interactive: true, ... })` launches, resume,
   persistent specialists, and `/worktree` handoff remain.
 - Registered role packs are the entire package layer. Effective precedence stays
   project > global > package. An empty catalog is valid; bare launches need no
-  role; a missing or invalid named role fails before Herdr creates resources.
+  role; a missing or invalid named role fails before LegacyHost creates resources.
 - Existing valid `roles.bundled` booleans are accepted as deprecated no-ops. A
   parent session reports one warning per extension load and never rewrites the
   file. Malformed values and unknown `roles` keys remain errors.

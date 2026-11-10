@@ -1,6 +1,6 @@
 # ADR-0009: Remove the workflow subsystem
 
-**Status:** Accepted; the `orchestrate` skill described below has since moved to the `pi-herdr-roles` pack ([ADR-0013](0013-pack-neutral-execution-host.md))
+**Status:** Accepted; the `orchestrate` skill described below has since moved to the `roles-pack` pack ([ADR-0013](0013-pack-neutral-execution-host.md))
 
 ## Context
 
@@ -11,7 +11,7 @@ security risk without providing a needed product capability.
 
 ## Decision
 
-Remove `herdr_workflow`, its Worker, workflow tests, and runner-owned review
+Remove `legacy_workflow`, its Worker, workflow tests, and runner-owned review
 checkout. The bundled `orchestrate` skill now has the parent materialize pinned
 evidence, fan out fresh public read-only reviewers through `subagent()`, wait
 for automatic completion delivery, and synthesize outcomes in the parent.

@@ -2,12 +2,12 @@
 
 > 历史记录：保留 P0–P2 当时的适配层实现与验收证据。当前 hard fork 内核、命名、配置和回传行为以 [README](../README.md) 与 [P4 状态](p4/STATUS.md) 为准。
 
-日期：2026-11-04（Rex 0.0.1793645657-gd018d2，Pi + `pi-herdr-agents` 3.7.2）
+日期：2026-11-04（Rex 0.0.1793645657-gd018d2，Pi + `upstream-package` 3.7.2）
 
 ## 环境
 
 - 父 Pi：Rex session `silent-delta` 的 block 中
-- 子 Pi：由 `pi-herdr-agents` 的 `subagent` 工具在 Rex 新 block 中启动
+- 子 Pi：由 `upstream-package` 的 `subagent` 工具在 Rex 新 block 中启动
 - 默认模型：`CBAPI/cn:deepseek-v4.1-flash`
 - 测试入口：`src/p1.ts`（真实 provider + 真实 `subagent` 工具链，只把 Pi extension host 替换为测试 harness）
 
@@ -55,7 +55,7 @@ worktree：
 ```json
 {
   "worktreeResult": {
-    "before": "p1-wt-... — /Users/qiangwenjun/.pi/rex-agents/worktrees/pi-rex-agents/p1-wt-...",
+    "before": "p1-wt-... — ~/.pi/rex-agents/worktrees/pi-rex-agents/p1-wt-...",
     "removed": "worktree_remove({ target: ... })",
     "after": "No managed worktrees found."
   }
@@ -67,12 +67,12 @@ worktree：
 1. **`rex send` 不自动回车**：provider 在文本输入后补发 `rex send-key enter`。
 2. **`grouped` 没有 Rex 等价物**：映射为独立 window，而不是假装同 tab 多 pane。
 3. **Rex 不暴露 PGID**：`foregroundProcessGroupId` 只在空闲 shell 场景填写；有前台子进程时留空，避免上游 worktree 清理误删忙碌的 checkout。
-4. **worktree 的宿主文案**：P1 时上游 `presentation.ts` 仍打印 `herdr worktree remove`；P2 已在扩展投递前改写为 `rex window close`，实际清理仍由 `worktree_remove` 工具完成。
-5. **持久化第二轮的 settle 竞态**：如果 `subagents_list` 刚显示 idle 就立即 `subagent_send`，子 Pi 可能还在 `agent_settled` 边界；测试等待 2 秒后稳定通过。没有修改上游投递逻辑，避免破坏 Herdr 行为。
+4. **worktree 的宿主文案**：P1 时上游 `presentation.ts` 仍打印 `legacyhost worktree remove`；P2 已在扩展投递前改写为 `rex window close`，实际清理仍由 `worktree_remove` 工具完成。
+5. **持久化第二轮的 settle 竞态**：如果 `subagents_list` 刚显示 idle 就立即 `subagent_send`，子 Pi 可能还在 `agent_settled` 边界；测试等待 2 秒后稳定通过。没有修改上游投递逻辑，避免破坏 LegacyHost 行为。
 
 ## 尚未覆盖
 
-- Herdr 侧栏 marker / 原生 sidebar
+- LegacyHost 侧栏 marker / 原生 sidebar
 - workspace claim 语义
 - `grouped` 真同 tab 多 pane
 - macOS 上 worktree handoff 的强进程身份校验

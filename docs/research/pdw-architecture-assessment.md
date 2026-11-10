@@ -9,7 +9,7 @@
 
 ## 1. Executive verdict
 
-**Do not port either PDW implementation into `pi-herdr-subagents`, and do not make this package a general workflow engine.** That would contradict the accepted boundary that this package owns agent execution while workflows remain the user-intent layer, and that a registry is justified only after repeated shared mechanics appear ([ADR-0002 execution boundary](../adr/0002-agent-workflow-skill-runtime-taxonomy.md#decision), [small migration plan](../adr/0002-agent-workflow-skill-runtime-taxonomy.md#small-migration-plan)).
+**Do not port either PDW implementation into `upstream-package`, and do not make this package a general workflow engine.** That would contradict the accepted boundary that this package owns agent execution while workflows remain the user-intent layer, and that a registry is justified only after repeated shared mechanics appear ([ADR-0002 execution boundary](../adr/0002-agent-workflow-skill-runtime-taxonomy.md#decision), [small migration plan](../adr/0002-agent-workflow-skill-runtime-taxonomy.md#small-migration-plan)).
 
 The smallest coherent direction is narrower:
 
@@ -131,17 +131,17 @@ The plural project credits Michael Livs’ earlier project and Claude Code, not 
 
 **Controls and restart.** Pause aborts and journals; resume reconstructs run settings and replays the unchanged prefix; stop can mark a live or persisted run aborted ([`workflow-manager.ts` lines 1113–1329](https://github.com/QuintinShaw/pi-dynamic-workflows/blob/0363b0400b217e66a9c14425747a32b5a5fbe93f/src/workflow-manager.ts#L1113-L1329)). Same-version `/reload` hands the live manager through a process-global slot; mismatch or unclaimed handoff pauses runs ([`extension-reload.ts` lines 11–105](https://github.com/QuintinShaw/pi-dynamic-workflows/blob/0363b0400b217e66a9c14425747a32b5a5fbe93f/src/extension-reload.ts#L11-L105)). Cold-start recovery marks stale `running` records `paused`, but catches and suppresses all recovery errors ([`workflow-manager.ts` lines 360–382](https://github.com/QuintinShaw/pi-dynamic-workflows/blob/0363b0400b217e66a9c14425747a32b5a5fbe93f/src/workflow-manager.ts#L360-L382)). Result delivery failures are swallowed, with the persisted run view as fallback ([`task-panel.ts` lines 140–233](https://github.com/QuintinShaw/pi-dynamic-workflows/blob/0363b0400b217e66a9c14425747a32b5a5fbe93f/src/task-panel.ts#L140-L233)).
 
-**Critical worktree defect.** `createWorktree()` falls back to `isolated: false` and the shared base checkout on any Git/worktree failure ([`worktree.ts` lines 41–59](https://github.com/QuintinShaw/pi-dynamic-workflows/blob/0363b0400b217e66a9c14425747a32b5a5fbe93f/src/worktree.ts#L41-L59)). That is unacceptable for an explicit writer isolation request: a collision, stale branch, missing Git, or command error silently moves writes into the shared tree. After every isolated agent attempt, the runtime calls cleanup in `finally`; cleanup uses `git worktree remove --force` and `git branch -D`, swallowing errors ([`workflow.ts` lines 873–879](https://github.com/QuintinShaw/pi-dynamic-workflows/blob/0363b0400b217e66a9c14425747a32b5a5fbe93f/src/workflow.ts#L873-L879), [`worktree.ts` lines 62–76](https://github.com/QuintinShaw/pi-dynamic-workflows/blob/0363b0400b217e66a9c14425747a32b5a5fbe93f/src/worktree.ts#L62-L76)). This can discard dirty files and unique local commits. It also means the advertised “path surfaced for inspection” is not a retained review handoff. This mechanism does not fit Herdr’s retained workspace model.
+**Critical worktree defect.** `createWorktree()` falls back to `isolated: false` and the shared base checkout on any Git/worktree failure ([`worktree.ts` lines 41–59](https://github.com/QuintinShaw/pi-dynamic-workflows/blob/0363b0400b217e66a9c14425747a32b5a5fbe93f/src/worktree.ts#L41-L59)). That is unacceptable for an explicit writer isolation request: a collision, stale branch, missing Git, or command error silently moves writes into the shared tree. After every isolated agent attempt, the runtime calls cleanup in `finally`; cleanup uses `git worktree remove --force` and `git branch -D`, swallowing errors ([`workflow.ts` lines 873–879](https://github.com/QuintinShaw/pi-dynamic-workflows/blob/0363b0400b217e66a9c14425747a32b5a5fbe93f/src/workflow.ts#L873-L879), [`worktree.ts` lines 62–76](https://github.com/QuintinShaw/pi-dynamic-workflows/blob/0363b0400b217e66a9c14425747a32b5a5fbe93f/src/worktree.ts#L62-L76)). This can discard dirty files and unique local commits. It also means the advertised “path surfaced for inspection” is not a retained review handoff. This mechanism does not fit LegacyHost’s retained workspace model.
 
-### 2.4 Current `pi-herdr-subagents`: strong execution and handoff, no workflow runtime
+### 2.4 Current `upstream-package`: strong execution and handoff, no workflow runtime
 
 ```text
 subagent({...})
   └─ resolve role + exact authenticated model/thinking + cwd/session mode
-       ├─ ordinary run: create no-focus Herdr tab/pane
+       ├─ ordinary run: create no-focus LegacyHost tab/pane
        └─ writer run: resolve base ref -> exact SHA
-            ├─ write ownership manifest before Herdr resource creation
-            └─ Herdr creates no-focus managed worktree workspace
+            ├─ write ownership manifest before LegacyHost resource creation
+            └─ LegacyHost creates no-focus managed worktree workspace
                  └─ launch Pi or Claude command into explicit pane ID
                       ├─ current public tool returns acknowledgement immediately
                       ├─ watcher combines exit sidecar/sentinel/pane inspection
@@ -154,24 +154,24 @@ subagent({...})
 
 **Launch and model policy.** The launch path resolves a role, exact runtime, session placement, worktree, command, control extension, tool allowlist, and watcher record in one large function ([`index.ts`](../../pi-extension/subagents/index.ts)). A workflow SDK should extract a narrow private execution seam; it should not invoke the public tool, which intentionally returns before results exist.
 
-**Worktree ownership.** For an isolated run, the extension resolves the requested base to a SHA, writes a `provisioning` manifest, asks Herdr to create the workspace, records observed path/workspace/pane/branch, and launches in that root ([`index.ts`](../../pi-extension/subagents/index.ts)). On completion it captures head SHA, commits ahead, staged/unstaged/untracked/conflicted files, and reports unknown rather than guessing if inspection fails ([`index.ts`](../../pi-extension/subagents/index.ts)). Worktree runs are retained in success, failure, and help states; non-worktree panes are closed ([`index.ts`](../../pi-extension/subagents/index.ts)).
+**Worktree ownership.** For an isolated run, the extension resolves the requested base to a SHA, writes a `provisioning` manifest, asks LegacyHost to create the workspace, records observed path/workspace/pane/branch, and launches in that root ([`index.ts`](../../pi-extension/subagents/index.ts)). On completion it captures head SHA, commits ahead, staged/unstaged/untracked/conflicted files, and reports unknown rather than guessing if inspection fails ([`index.ts`](../../pi-extension/subagents/index.ts)). Worktree runs are retained in success, failure, and help states; non-worktree panes are closed ([`index.ts`](../../pi-extension/subagents/index.ts)).
 
-**Lifecycle and errors.** Completion checks an exit sidecar, Claude sentinel, terminal sentinel, and Herdr pane state. A disappeared pane without completion evidence is an explicit failure after a bounded artifact grace period ([`completion.ts`](../../pi-extension/subagents/completion.ts)). The lifecycle separates process state, turn state, health, completion, and delivery ([`lifecycle.ts`](../../pi-extension/subagents/lifecycle.ts)). `subagent_interrupt` sends Escape and leaves the process/session/pane alive; it is not a full run stop.
+**Lifecycle and errors.** Completion checks an exit sidecar, Claude sentinel, terminal sentinel, and LegacyHost pane state. A disappeared pane without completion evidence is an explicit failure after a bounded artifact grace period ([`completion.ts`](../../pi-extension/subagents/completion.ts)). The lifecycle separates process state, turn state, health, completion, and delivery ([`lifecycle.ts`](../../pi-extension/subagents/lifecycle.ts)). `subagent_interrupt` sends Escape and leaves the process/session/pane alive; it is not a full run stop.
 
-**Reload and restart.** Watchers and their map are process-global, so `/reload`, `/new`, `/resume`, and `/fork` preserve active workers; quit suppresses delivery and aborts watchers ([`index.ts`](../../pi-extension/subagents/index.ts)). A full restart retains Herdr worktrees and manifests but does not reconcile watchers; worktree-aware resume is absent ([worktree guide](../worktree-subagents.md)).
+**Reload and restart.** Watchers and their map are process-global, so `/reload`, `/new`, `/resume`, and `/fork` preserve active workers; quit suppresses delivery and aborts watchers ([`index.ts`](../../pi-extension/subagents/index.ts)). A full restart retains LegacyHost worktrees and manifests but does not reconcile watchers; worktree-aware resume is absent ([worktree guide](../worktree-subagents.md)).
 
 **Delivery and data loss.** The child’s full session remains on disk. The parent receives a bounded result directly in the wake-up message, with a display-only custom message beside it ([`index.ts`](../../pi-extension/subagents/index.ts)). This avoids the plural PDW’s “swallow delivery and make the user find the run” default. Git inspection failures become unknown, not clean. The main remaining data-loss risk is operator cleanup after the handoff, not automatic extension deletion.
 
-**Security boundary.** Herdr panes and Git worktrees are not sandboxes. The Pi path runs with the user’s permissions; the Claude adapter currently uses `--dangerously-skip-permissions` and only checks workspace drift afterward ([`index.ts`](../../pi-extension/subagents/index.ts)). A workflow private SDK should exclude that adapter from the first version unless the user explicitly chooses its different permission contract.
+**Security boundary.** LegacyHost panes and Git worktrees are not sandboxes. The Pi path runs with the user’s permissions; the Claude adapter currently uses `--dangerously-skip-permissions` and only checks workspace drift afterward ([`index.ts`](../../pi-extension/subagents/index.ts)). A workflow private SDK should exclude that adapter from the first version unless the user explicitly chooses its different permission contract.
 
 ## 3. Evidence-backed comparison table
 
-| Concern | Claude Code docs | Singular PDW source | Mature plural PDW source | Current `pi-herdr-subagents` source |
+| Concern | Claude Code docs | Singular PDW source | Mature plural PDW source | Current `upstream-package` source |
 | --- | --- | --- | --- | --- |
 | Trigger / authoring | Prompt, keyword/ultracode, bundled or saved command; Claude writes script | `/workflow` injects a guide, then model calls tool | Keyword/effort/command authorizes tool; model or saved workflow supplies script | No general workflow trigger; `/plan` is prompt orchestration |
 | Approval | Conditional phase/script card; absent in bypass, `-p`, SDK | None | None bound to exact bytes | No workflow approval; worktree spawn is a tool call |
 | Script format | Metadata plus plain JS body | Plain async JS body | First statement must be literal `export const meta` | Not applicable |
-| Runtime boundary | Docs say isolated environment; implementation closed | `node:vm`; explicitly escapable through host functions | `node:vm`; explicitly not security sandbox | Separate OS processes in Herdr; same user permissions |
+| Runtime boundary | Docs say isolated environment; implementation closed | `node:vm`; explicitly escapable through host functions | `node:vm`; explicitly not security sandbox | Separate OS processes in LegacyHost; same user permissions |
 | Direct script I/O | Contract says no direct FS/shell | VM omits direct FS/shell but host escape exists | VM omits direct FS/shell but host escape exists | Child agents have configured Pi/CLI tools |
 | Agent API | `agent()` plus orchestration helpers; errors can become null | `agent(prompt, opts)` → text/structured/null | Large API; `agent()` → text/structured/null | Public `subagent()` → immediate acknowledgement; result arrives later |
 | Structured output | Documented schema option/structured workflow patterns | Temporary `emit_result` extension | Tool capture, two repairs, schema extraction fallback | Completion is prose plus structured metadata; no workflow schema contract |
@@ -180,7 +180,7 @@ subagent({...})
 | Concurrency | 16 concurrent; 1,000 total | CPU-derived 2–8 default; 200 total | Up to 16; 1,000 total | No central cap; callers may spawn many fire-and-forget children |
 | Budget | Usage warning and plan rate limits; size guideline is advice | Optional soft token/cost pre-spawn gate | Optional soft token/phase budgets; usage-limit scheduler | No run-wide token/cost budget |
 | Journal / replay | Ordered completed prefix; same session only | Best-effort hash multiset, 50 runs | Durable positional prefix with hashes, leases, settings carryover | Child sessions and worktree manifests, not workflow replay |
-| Background lifecycle | `/workflows`; session remains responsive | Detached promise; dies with Pi | Managed run, task panel, reload handoff, cold pause | Herdr child process, watcher, process/turn widget |
+| Background lifecycle | `/workflows`; session remains responsive | Detached promise; dies with Pi | Managed run, task panel, reload handoff, cold pause | LegacyHost child process, watcher, process/turn widget |
 | Pause / resume / stop | Pause/resume, agent/workflow stop, agent restart | Stop only; resume means a new run using cached calls | List/status/pause/resume/stop; usage-limit auto-resume | Interrupt active Pi turn; resume opens ordinary pane, not worktree-aware |
 | Reload / restart | Workflow resume only in same session; exit starts fresh | Shutdown aborts | Same-version reload carries live manager; restart marks stale run paused | Reload/new/resume/fork preserve watcher; full restart does not reconcile |
 | Worktree base | Default branch unless `baseRef=head` | None | Current `HEAD`; not recorded as approved SHA | Requested ref resolved and recorded as exact SHA |
@@ -227,7 +227,7 @@ subagent({...})
 | VM as a security claim | Both source implementations admit host-function escape. Use approval and capabilities; call the VM hygiene only. |
 | Failure-to-`null` as the default | It invites `.filter(Boolean)` to erase missing coverage. Failures must remain named and countable. |
 | Writer isolation fallback to shared checkout | Violates the explicit isolation request and can corrupt the user’s working tree. |
-| Automatic `--force` worktree removal or `branch -D` | Can destroy uncommitted files and unique commits. It directly conflicts with Herdr’s retained lifecycle. |
+| Automatic `--force` worktree removal or `branch -D` | Can destroy uncommitted files and unique commits. It directly conflicts with LegacyHost’s retained lifecycle. |
 | Automatic push/PR/merge/cherry-pick | Adds irreversible shared side effects before run assembly and review are settled. |
 | Model tiers and heuristic fallback | The current exact authenticated model resolver is safer and already sufficient. |
 | General workflow package/role contribution manifest | ADR-0003 intentionally limits the contribution seam to roles ([ADR-0003](../adr/0003-installable-role-packs.md)). |
@@ -344,7 +344,7 @@ The runner owns only the operational envelope. A `completed` run means the appro
 The private executor should reuse current implementation behavior but change policy:
 
 - `read`: use a new, clean shared run-base checkout only after Stage 0 proves its create/pin/fail/dispose lifecycle; deny mutation tools and workflow spawning, and fail closed rather than falling back to the parent checkout.
-- `write`: create one Herdr-managed worktree from approved `baseSha`; fail closed on any creation error; retain it and return the full Git handoff.
+- `write`: create one LegacyHost-managed worktree from approved `baseSha`; fail closed on any creation error; retain it and return the full Git handoff.
 - `review`: start a fresh context on every run, after the writer when one exists; inspect the retained candidate for a writing run. It must not share a prior agent’s conversation or be able to mutate.
 - all kinds: exact authenticated model only; no Claude CLI adapter in v1; no public `subagent_result` steer for each child.
 
@@ -424,7 +424,7 @@ Add:
 - fresh read-only review;
 - `ready_for_integration` terminal state.
 
-**Verification:** use a dirty parent checkout and prove it is unchanged; prove uncommitted parent files are absent from the writer base; inject worktree creation failure and prove no writer starts; leave staged/unstaged/untracked/conflicted files and verify accurate handoff; kill the child and prove retention; fail review and prove readiness is withheld. Run the repository’s normal `npm test`, `npm run lint`, `git diff --check`, and real Herdr integration suite.
+**Verification:** use a dirty parent checkout and prove it is unchanged; prove uncommitted parent files are absent from the writer base; inject worktree creation failure and prove no writer starts; leave staged/unstaged/untracked/conflicted files and verify accurate handoff; kill the child and prove retention; fail review and prove readiness is withheld. Run the repository’s normal `npm test`, `npm run lint`, `git diff --check`, and real LegacyHost integration suite.
 
 ### Stage 3 — reload and interruption hardening
 
@@ -480,11 +480,11 @@ If real workflows are expensive enough that restart loss matters, add a minimal 
 19. **Approved scripts are the trust boundary.** V1 does not attempt to run unreviewed third-party scripts safely inside Node `vm`.
 20. **Dirty-parent semantics are settled.** Execution reads and writers use the approved base commit; parent uncommitted changes are not copied implicitly.
 21. **The runtime/task boundary is settled.** The runner returns a small fixed operational envelope; `workflow.js` may return any JSON-compatible task result. Review receipts, verdict vocabularies, retry loops, and synthesis semantics are script-owned rather than runtime APIs.
-22. **KISS is a design constraint.** Prefer ordinary JavaScript and existing Herdr seams; do not add helpers or state machines for behavior a parent-authored script can express directly.
+22. **KISS is a design constraint.** Prefer ordinary JavaScript and existing LegacyHost seams; do not add helpers or state machines for behavior a parent-authored script can express directly.
 23. **Approval is single-use.** `APPROVE <hash-prefix>` authorizes one whole run. Script-owned reviewer replacement remains inside that run; rerunning the workflow creates a new run and requires approval again.
-24. **The Code Mode analogy is useful but bounded.** Both approaches keep intermediate calls in model-authored code behind a narrow capability API ([Cloudflare Code Mode](https://blog.cloudflare.com/code-mode/)). Herdr adds exact-byte human approval and long-running subagent lifecycle, while its Node `vm` is not Cloudflare's secure isolate and its SDK must not expand into a broad generated tool catalog.
+24. **The Code Mode analogy is useful but bounded.** Both approaches keep intermediate calls in model-authored code behind a narrow capability API ([Cloudflare Code Mode](https://blog.cloudflare.com/code-mode/)). LegacyHost adds exact-byte human approval and long-running subagent lifecycle, while its Node `vm` is not Cloudflare's secure isolate and its SDK must not expand into a broad generated tool catalog.
 25. **Tool policy is settled.** The runner derives effective tools from resolved role tools, the hard kind maximum, and extension deny rules. `agent()` has no script-controlled `tools` option.
-26. **Terminal lifecycle is settled.** Reuse current Herdr behavior: close completed ordinary read/review panes after result capture, retain child session files and run evidence, and retain writer worktree workspaces.
+26. **Terminal lifecycle is settled.** Reuse current LegacyHost behavior: close completed ordinary read/review panes after result capture, retain child session files and run evidence, and retain writer worktree workspaces.
 27. **Restart behavior is settled.** Same-process Pi lifecycle transitions such as `/reload` preserve active ownership. A full process restart marks a stale workflow interrupted, retains artifacts, performs no replay, and requires a new approved run.
 28. **The first runtime adapter is Pi-only.** Private workflow `agent()` launches only Pi-backed agents in the first flow. Existing public Claude-backed `subagent()` behavior remains unchanged; a workflow adapter waits until it can enforce the same model, tool, and result contracts.
 

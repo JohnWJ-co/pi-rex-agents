@@ -902,7 +902,7 @@ describe("PiHarnessAdapter retained worktree kill", () => {
 		f.surface.closeSurface = (id) => {
 			closes.push(id);
 		};
-		// Herdr's foreground list is never evidence: show an owned-looking Pi
+		// Rex's foreground list is never evidence: show an owned-looking Pi
 		// in every case so no result can depend on it.
 		f.surface.getProcessInfo = () => ({
 			shellPid: 10,
@@ -1107,7 +1107,7 @@ describe("PiHarnessAdapter retained worktree kill", () => {
 		usingFixture(async (f) => {
 			const w = await worktreeChild(f, { captureError: "not recorded" });
 			f.surface.inspectSurface = () => {
-				throw new Error("herdr unavailable");
+				throw new Error("rex unavailable");
 			};
 			await assert.rejects(
 				w.adapter.kill(w.h),

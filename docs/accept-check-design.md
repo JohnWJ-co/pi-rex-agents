@@ -357,8 +357,8 @@ Unit cases:
 - Schema validation rejects `accept` with `persistent: true` or a
   non-auto-exit child before any Rex call.
 
-One deterministic integration scenario in
-`test/integration/subagent-lifecycle.test.ts`:
+The deterministic accept flow is retained as a fake-provider fixture in
+`test/integration/fake-provider.ts`:
 
 1. The parent spawns a child with `accept: { run: "test -f done.txt",
    maxRetries: 1 }`.

@@ -4,7 +4,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-03
-- **Scope:** `giuseppecrj/pi-herdr-agents`
+- **Scope:** `upstream-project`
 - **Filename note:** The historical filename still says `isolated-worktrees`; the decision is the read-only first-flow effect boundary.
 
 ## Context

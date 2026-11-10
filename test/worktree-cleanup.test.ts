@@ -953,10 +953,10 @@ describe("explicit worktree cleanup", () => {
 		);
 		assert.deepEqual(f.calls, []);
 	});
-	for (const source of ["Herdr", "manifest"]) {
+	for (const source of ["surface", "manifest"]) {
 		it(`blocks ${source} identity disagreements`, async () => {
 			const f = cleanupFixture();
-			if (source === "Herdr")
+			if (source === "surface")
 				f.operations.listWorktrees = () => [
 					{
 						path: "/managed/repo/task",
@@ -992,7 +992,7 @@ describe("explicit worktree cleanup", () => {
 			assert.deepEqual(f.calls, []);
 		}
 	});
-	it("uses Herdr for an open workspace and merges the reachable manifest", async () => {
+	it("uses the surface for an open workspace and merges the reachable manifest", async () => {
 		const f = cleanupFixture();
 		f.operations.listWorktrees = () => [
 			{
@@ -1016,7 +1016,7 @@ describe("explicit worktree cleanup", () => {
 		const result = await removeContainedWorktree(f.input);
 		assert.equal(result.status, "removed");
 		assert.equal(result.entry?.manifest[0].value.baseSha, "base");
-		assert.deepEqual(f.calls, ["herdr:w1", "manifest:removed"]);
+		assert.deepEqual(f.calls, ["surface:w1", "manifest:removed"]);
 		assert.match(result.message, /Branch task and its commits retained/);
 	});
 	it("uses Git for an orphan, then prunes only after absence is verified", async () => {
@@ -1035,13 +1035,13 @@ describe("explicit worktree cleanup", () => {
 		assert.equal((await removeContainedWorktree(f.input)).status, "blocked");
 		assert.deepEqual(f.calls, []);
 	});
-	for (const kind of ["herdr", "git", "checkout-present", "prune"] as const) {
+	for (const kind of ["surface", "git", "checkout-present", "prune"] as const) {
 		it(`reports ${kind} failure without marking manifests removed`, async () => {
 			const f = cleanupFixture();
 			const fail = () => {
 				throw new Error("refused");
 			};
-			if (kind === "herdr") {
+			if (kind === "surface") {
 				f.operations.listWorktrees = () => [
 					{
 						path: "/managed/repo/task",

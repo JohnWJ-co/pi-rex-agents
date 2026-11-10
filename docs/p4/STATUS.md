@@ -1,7 +1,7 @@
 # P4 进度
 
 规则：
-- 只在 `/Users/qiangwenjun/Documents/project/pi-rex-agents-p4`（分支 `p4-kernel`）中工作，绝不修改主 checkout `/Users/qiangwenjun/Documents/project/pi-rex-agents`，也不修改上游 `/Users/qiangwenjun/Documents/project/pi-herdr-agents`。
+- 只在 `/path/to/pi-rex-agents-p4`（分支 `p4-kernel`）中工作，绝不修改主 checkout `/path/to/pi-rex-agents`，也不修改上游 `/path/to/upstream-package`。
 - 按 T0→T6 顺序执行。每个任务完成后：更新本文件（完成项、门禁结果、提交 hash、偏差说明），然后提交。
 - 门禁失败若由本任务改动直接造成且修法机械（类型收窄、import、格式、同步新行为的测试期望），可修复后继续，并在本文件记录。原因不明、需要弱化或跳过断言、涉及删除测试、涉及 `released.json` 或与任务卡冲突时，记录失败命令、输出摘要、判断与建议，停止等待指示。不得弱化门禁。
 - 真实 Rex 测试结束后清理所有自己创建的 block/window/lab，不要动用户的其他 block。
@@ -11,7 +11,7 @@
 |---|---|---|---|
 | T0 | 已完成，门禁通过 | `41af43a2c17ae86ec7c5e57b3c1989c6b71147a8` | 完整复制范围已修正；test-gate 最终通过，1452 个测试已加载 |
 | T1 | 已完成，门禁通过 | `15cdafc` | Rex lab、集成 harness、验证技能和 AGENTS.md 已完成；test-gate 与真实 Rex smoke 通过 |
-| T2 | 已完成返工，门禁通过 | `6202306` | 恢复通用测试并迁移 audit-stop 到 Rex harness；Rex provider 已入内核；Herdr/sidebar/Windows 专属路径已删除；保留 `test/verify-lab-guards.test.ts` |
+| T2 | 已完成返工，门禁通过 | `6202306` | 恢复通用测试并迁移 audit-stop 到 Rex harness；Rex provider 已入内核；LegacyHost/sidebar/Windows 专属路径已删除；保留 `test/verify-lab-guards.test.ts` |
 | T2b | 已完成，门禁通过 | `74be436` | 父端白名单覆盖 fresh/resume/persistent/handoff；真实 acp_status 调用及 block 清理通过 |
 | T3 | 已完成，门禁通过 | `da8f08a22a09e547d6109083a5eef32779e9fa86` | 原生 placement、split 上限 2、Rex 配置隔离；真实集成 11/11 通过 |
 | T4 | 已验收 | `ed85215`、`b0bf830` | 监督在 Rex 外独立复核 test-gate（1186 项、无持续新增失败）、typecheck、lint 通过 |
@@ -26,8 +26,8 @@
 
 完成内容：
 
-- 版本为 **0.4.0**，保留 `private: true`。实际重命名 **113** 处 `pi-herdr-agents extension` 边界标记，加上原有 4 处 Rex 标记共 **117** 处；`docs/UPSTREAM.md` 明确它们标注相对上游 **3.7.2** 的改动点，供未来手动 cherry-pick 定位。错误码统一为 `PIRA_*`；环境变量、symbol、事件与配置目录的 Rex 命名均已核对。
-- README、安装、当前运行时文档、历史记录标记、AGENTS、CONTEXT 和验证技能完成同步。旧配置不读取、不迁移；保留与未过滤 `pi-herdr-agents` 的同名工具冲突提示及 doctor 检查。
+- 版本为 **0.4.0**，保留 `private: true`。实际重命名 **113** 处 `upstream-package extension` 边界标记，加上原有 4 处 Rex 标记共 **117** 处；`docs/UPSTREAM.md` 明确它们标注相对上游 **3.7.2** 的改动点，供未来手动 cherry-pick 定位。错误码统一为 `PIRA_*`；环境变量、symbol、事件与配置目录的 Rex 命名均已核对。
+- README、安装、当前运行时文档、历史记录标记、AGENTS、CONTEXT 和验证技能完成同步。旧配置不读取、不迁移；保留与未过滤 `upstream-package` 的同名工具冲突提示及 doctor 检查。
 - 新增运行时 `files` 白名单、MIT LICENSE 和 5 项包契约测试，`pi.skills` 指向唯一操作 skill。lockfile 同步包身份及已声明的 Node 24 类型依赖；`npm ci --ignore-scripts --offline --no-audit --no-fund` 成功，无安装脚本执行。
 - macOS 路径断言与夹具使用 canonical path，保留原断言和截止；另同步此前被路径失败遮蔽的 T5 退出码包装前缀断言。原 inherited 列表中仍存在的用例 **8/8** 通过；其余 8 个标题已无当前测试对应，清理历史例外，没有删除测试。`inherited-failures.txt` 不再含有效例外，`expected-identity.txt` 为 **0 字节**；仅按监督授权添加 full-load coordinator 抖动到 `flaky.txt`，原有 3 秒截止不变。
 
@@ -196,11 +196,11 @@ T5 按任务卡推进，代码修改全部由主会话完成；每个提交前�
 
 composition 迁入内核后，依赖规则仅允许 `pi-extension/subagents/index.ts` 和 `rex-composition.ts` 直接组装 Rex surface；其他扩展业务文件仍禁止导入 surface，所有扩展文件仍禁止直接导入 Pi adapter。负向夹具同时覆盖这些边界，没有取消依赖检查。
 
-- 默认配置执行监督指定的 RPC `get_commands` 流程；stdout/stderr 均无 `Failed to load extension`。`subagent`、`subagents-init`、`worktree` 各出现一次，三个 `sourceInfo.path` 全部为 `/Users/qiangwenjun/Documents/project/pi-rex-agents-p4/pi-extension/subagents/index.ts`。证据为 `rpc.jsonl`、`rpc.stderr`、`rpc-evidence.json`。
+- 默认配置执行监督指定的 RPC `get_commands` 流程；stdout/stderr 均无 `Failed to load extension`。`subagent`、`subagents-init`、`worktree` 各出现一次，三个 `sourceInfo.path` 全部为 `/path/to/pi-rex-agents-p4/pi-extension/subagents/index.ts`。证据为 `rpc.jsonl`、`rpc.stderr`、`rpc-evidence.json`。
 - `bash docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t4-namespace.AJpGEW`：**通过，退出码 0**，默认 `MIN_TESTS=1155` 未改。第 1 轮 **1184 tests / 1166 pass / 8 fail / 10 skipped**；暂定新增失败 `launches a frontmatter-only named role without a caller systemPrompt` 在第 2 轮消失，第 2 轮 **1184 tests / 1167 pass / 7 fail / 10 skipped**，最终输出 `OK：没有持续性新增失败`。7 个 raw npm test 失败仍属于基线允许集合，不报告为零失败。
 - `npm run typecheck`、`npm run lint`、`npm run format:check`、`npm run docs:tools:check`、`git diff --check`：全部通过。`node --experimental-strip-types --test test/no-foreign-host.test.ts`：**3 tests / 3 pass / 0 fail / 0 skipped**。`bun test/smoke-extension.ts`：通过，输出 `Rex kernel entry smoke OK`。
 - `npm run test:integration:rex`：**11 tests / 11 pass / 0 fail / 0 skipped**，退出码 0，总耗时 **11231.291792ms**；覆盖真实 report/session/block 清理、split/split/tab、关闭后名额复用、显式 tab 和 Rex surface conformance。没有延长超时、改动状态等待协议或减少断言。
-- `lab.ts doctor`、`up`、`drive`、`down`：全部通过。`evidence.json` 确认 socket endpoint 相符、真实子 session 存在、子 block 出现后消失、父会话继续；报告包含 `REX_SMOKE_CHILD` 且没有 Herdr 字样。before/after 仅保留父 block `block:01a1b031-d585-7c6f-92ae-b06df6562ad5`，during 另有子 block `block:01a1b032-3e59-79c0-9d1f-6e6995354a91`。清理前已把原始 evidence 和父/子 session 复制到日志目录。
+- `lab.ts doctor`、`up`、`drive`、`down`：全部通过。`evidence.json` 确认 socket endpoint 相符、真实子 session 存在、子 block 出现后消失、父会话继续；报告包含 `REX_SMOKE_CHILD` 且没有 LegacyHost 字样。before/after 仅保留父 block `block:01a1b031-d585-7c6f-92ae-b06df6562ad5`，during 另有子 block `block:01a1b032-3e59-79c0-9d1f-6e6995354a91`。清理前已把原始 evidence 和父/子 session 复制到日志目录。
 - 重新运行 T3/current pin：132 行 diff；父工具 10 项、子工具 5 项、命令 3 项及 schema 结构、导出、测试表面、renderer 和 shortcut 保持一致。预期差异是 Rex 文案，以及父/子各一个 `before_agent_start` handler（任务卡第 2 步的宿主提示），没有额外结构变化。保留 `pin-t3.json`、`pin-t4.json`、`pin.diff`。
 - `npm pack --dry-run --json`：通过，157 个文件；已检查完整文件清单，包含新入口、composition、host notice 和 Rex 技能，不含已删除的代理/旧入口、本机配置、session 或 evidence。同步配置文档中的默认 `spawning.maxDepth=1`、Rex ledger 路径和入口使用说明。`released.json` 比较用例通过，文件本身、test-gate 脚本和允许集合均未修改。
 
@@ -224,8 +224,8 @@ composition 迁入内核后，依赖规则仅允许 `pi-extension/subagents/inde
 
 - 内核源头文案改为 Rex block/window；工具描述、参数、报告与控制输出直接使用新文案，删除运行时文案代理。删除 `src/extension.ts`、`src/infrastructure.ts`、`src/rex-host-api.ts`、`src/rex-wording.ts`、`src/host-message.ts`、`src/host-message-check.ts`、`src/wording-check.ts`；原 smoke 迁入 `test/smoke-extension.ts`，保留并补充断言。
 - `package.json` 的 `pi.extensions` 已切为 `./pi-extension/subagents/index.ts`；新增 `rex-composition.ts` 组装 Rex provider、worktree 和 supervision，`host-notice.ts` 注册父/子宿主提示。缺少 Rex 环境时不注册工具；默认 delegation depth 为 1，子代理通过内核深度决策拒绝继续派生。
-- 删除 `skills/pi-herdr-agents/SKILL.md`，保留 Rex 技能；新增 `test/no-foreign-host.test.ts`，覆盖字符串、模板片段、转义字符串和 Markdown，并保留扫描范围与防空跑断言。相关文档、schema current 快照、harness 入口和测试期望已同步，未删除测试或弱化断言。
-- T3/current pin 已保存并核对：父工具 10 项、子工具 5 项、命令 3 项的名称、顺序和 schema 结构保持一致；diff 是 pane/workspace/Herdr 到 Rex block/window 的预期文案变化，另有父、子各新增一个 `before_agent_start` handler，用于任务卡第 2 步要求的宿主提示。完整 diff 在本轮日志目录的 `pin.diff`。
+- 删除 `skills/upstream-package/SKILL.md`，保留 Rex 技能；新增 `test/no-foreign-host.test.ts`，覆盖字符串、模板片段、转义字符串和 Markdown，并保留扫描范围与防空跑断言。相关文档、schema current 快照、harness 入口和测试期望已同步，未删除测试或弱化断言。
+- T3/current pin 已保存并核对：父工具 10 项、子工具 5 项、命令 3 项的名称、顺序和 schema 结构保持一致；diff 是 pane/workspace/LegacyHost 到 Rex block/window 的预期文案变化，另有父、子各新增一个 `before_agent_start` handler，用于任务卡第 2 步要求的宿主提示。完整 diff 在本轮日志目录的 `pin.diff`。
 
 已执行的本轮门禁：
 
@@ -241,7 +241,7 @@ composition 迁入内核后，依赖规则仅允许 `pi-extension/subagents/inde
 
 ```text
 pi -p --no-session --model CBAPI/cn:deepseek-v4.1-flash '只回复 OK'
-Error: Failed to load extension "/Users/qiangwenjun/Documents/project/pi-rex-agents-p4/pi-extension/subagents/index.ts": Failed to load extension: Previous PiRunSession does not carry its owning composition.
+Error: Failed to load extension "/path/to/pi-rex-agents-p4/pi-extension/subagents/index.ts": Failed to load extension: Previous PiRunSession does not carry its owning composition.
 Hint: Start without extensions using "pi -ne".
 ```
 
@@ -270,7 +270,7 @@ Hint: Start without extensions using "pi -ne".
 T3 实现和交接：
 
 - placement 已成为 `subagent` / `subagent_resume` 的原生参数，显式沿 launch/resume 链传递；split 名额由内核的父进程 reservation 和登记表维护，默认 2，覆盖并发、关闭后复用、reload 和 resume。宿主 ALS、参数注入和 split 计数已删除。
-- 配置隔离为 `$PI_CODING_AGENT_DIR/rex-agents/config.json`；缺省 split/right/2，`maxPerTab` 只接受 1..8 的整数。不读取、不迁移旧 Herdr 配置，并覆盖旧路径存在 grouped 配置的加载回归。
+- 配置隔离为 `$PI_CODING_AGENT_DIR/rex-agents/config.json`；缺省 split/right/2，`maxPerTab` 只接受 1..8 的整数。不读取、不迁移旧 LegacyHost 配置，并覆盖旧路径存在 grouped 配置的加载回归。
 - 已逐文件核对 `t3-build` 的 `24ec41242faeaa872f0f9706984dab605a264507` 并人工纳入当前 T3 工作区：`maestro/core/config/pane-config.ts` 和 `config.json.example` 与该提交完全一致；`test/test.ts` 保留其全部修改，再加 Rex 配置隔离回归。没有 merge 或 cherry-pick。受管 worktree 仍保留，管理清单标记其 source 为主 checkout、位于当前 cwd 清理范围外；未绕过管理工具删除。
 - postflight 确认无 `pira-lab-*` / `pi-integ-*` 根、测试进程或测试 Rex session；原 session 只剩父 block。`.pi/settings.json` 仍为 `S`（skip-worktree），`released.json` 和基线没有 diff，无根目录空目录或待提交证据/凭据。
 - 未派遣被禁用的 `gpt-6-astra`，未修改主 checkout、上游或旧用户配置；不合并、不推送。仅提交 T3，完成后停止，不开始 T4。
@@ -342,7 +342,7 @@ test/maestro/accept-recheck.test.ts(501,10): error TS2532: Object is possibly 'u
 - `subagent` / `subagent_resume` 的 catalog 与 TypeBox schema 原生加入 `placement`，经 task、run session、Pi adapter、fresh/resume launch 传到 `createPane`。删除 `src/placement.ts`、宿主 infrastructure split 计数和 API proxy 参数注入，保留文案代理到 T4。
 - 新增 `maestro/runtime/pi-placement.ts`：按本父进程登记、仍存活且在父 window 内的普通子 block 计数；队列覆盖 inventory 和 create，并预留等待注册的 split，超额转 tab。run-session owner 在 reload 时保留 registry 和 reservation；worktree 保持独立 tab。
 - `PaneMode` 仅保留 split/tab，默认 split/right/2；`maxPerTab` 校验整数 1..8。已核对 `t3-pane-config` 的 `24ec412` 配置改动后按文件应用，没有合并整个 worktree。
-- 按监督追加要求提前隔离配置：`pi-extension/subagents/config-path.ts` 改读 `$PI_CODING_AGENT_DIR/rex-agents/config.json`；不读取、不迁移旧 `herdr-agents/config.json`。新增旧路径含 grouped 配置仍可加载内核的回归测试。plan、任务卡及路径文档同步；其余改名留 T6，outcome ledger 路径不在本轮改动中。
+- 按监督追加要求提前隔离配置：`pi-extension/subagents/config-path.ts` 改读 `$PI_CODING_AGENT_DIR/rex-agents/config.json`；不读取、不迁移旧 `legacyhost-agents/config.json`。新增旧路径含 grouped 配置仍可加载内核的回归测试。plan、任务卡及路径文档同步；其余改名留 T6，outcome ledger 路径不在本轮改动中。
 - 新增 `test/integration/rex-placement.test.ts`，通过 fresh parent Pi 的 `-e <checkout>/src/extension.ts` 加载当前代码，检查 split/split/tab、关闭后复用、显式 tab、报告与子 session 及清理；已加入 `test:integration:rex`。本轮尚未执行该真实集成用例。
 - 同步 README、配置、worktree、Rex surface 文档、代码地图和两项验证技能。`npm run docs:tools` 已重新生成文档与 `current.json`；`released.json` 没有修改。
 
@@ -369,7 +369,7 @@ src/infrastructure.ts(27,3): error TS2741: Property 'launchOperations' is missin
 
 - 本轮没有启动 placement lab；`rex ls --json` 无测试会话，系统临时目录无 `pira-lab-*` / `pi-integ-*`，无集成或 lab 进程残留；只保留既有 Rex 主服务器。检查结果保存在同一门禁目录的 `postflight.json`。
 - `t3-build` 完成后保留的 block `block:01a1af84-e09c-7d59-a556-a527e7252d78` 已按明确 ID 关闭；复查本 session 只剩父 block `block:01a1af49-22e2-7bfe-b2e6-2984426ea5df`。前后快照保存在门禁目录的 `parent-blocks.json` / `parent-blocks-after.json`。未修改其他 session。
-- `t3-pane-config` worktree 保留在 `/Users/qiangwenjun/.pi/rex-agents/worktrees/pi-rex-agents/t3-pane-config`；管理器报告 source repo 在当前 cwd containment 之外，因此未删除。没有修改该 worktree、主 checkout 或上游 checkout。
+- `t3-pane-config` worktree 保留在 `~/.pi/rex-agents/worktrees/pi-rex-agents/t3-pane-config`；管理器报告 source repo 在当前 cwd containment 之外，因此未删除。没有修改该 worktree、主 checkout 或上游 checkout。
 - `.pi/settings.json` 保持 `S`（skip-worktree），未修改、未暂存；`released.json` 未修改；无暂存改动、无根目录空目录。T3 不提交，按规则停止等待下一步指示。
 
 ### T2b 完成：按 F11 统一父端白名单，真实压缩工具验证通过
@@ -391,8 +391,8 @@ src/infrastructure.ts(27,3): error TS2741: Property 'launchOperations' is missin
 真实门禁（当前 Rex 会话，本轮仅一个只读验证子代理）：
 
 - `t2b-f11-test`，ID `0943a09b-ef89-4596-9fe6-6629701b82b4`；请求和实际模型均为 `CBAPI/cn:deepseek-v4.1-flash`，`thinking=low`、`tools=read,bash`、`fork=false`。没有派出实现子代理，所有代码修改均由主会话完成。
-- 先检查启动脚本 `/Users/qiangwenjun/.pi/agent/sessions/--Users-qiangwenjun-Documents-project-pi-rex-agents-p4--/artifacts/01a1af49-443d-73f4-b681-23609c7191c0/subagent-scripts/t2b-f11-test-0943a09b-ef89-4596-9fe6-6629701b82b4.sh`，实际参数为 `--tools 'read,bash,compress,decompress,search_context,acp_status,caller_ping'`。
-- 再核验 session `/Users/qiangwenjun/.pi/agent/sessions/--Users-qiangwenjun-Documents-project-pi-rex-agents-p4--/2026-11-06T06-11-48-855Z_0943a09b-ef89-4596-9fe6-6629701b82b4-34cd4783-30728f76-7120.jsonl`：第 2 行模型记录匹配指定模型；第 4 行首轮工具快照包含上述全部工具。
+- 先检查启动脚本 `~/.pi/agent/sessions/--Users-qiangwenjun-Documents-project-pi-rex-agents-p4--/artifacts/01a1af49-443d-73f4-b681-23609c7191c0/subagent-scripts/t2b-f11-test-0943a09b-ef89-4596-9fe6-6629701b82b4.sh`，实际参数为 `--tools 'read,bash,compress,decompress,search_context,acp_status,caller_ping'`。
+- 再核验 session `~/.pi/agent/sessions/--Users-qiangwenjun-Documents-project-pi-rex-agents-p4--/2026-11-06T06-11-48-855Z_0943a09b-ef89-4596-9fe6-6629701b82b4-34cd4783-30728f76-7120.jsonl`：第 2 行模型记录匹配指定模型；第 4 行首轮工具快照包含上述全部工具。
 - 第 6 行：`toolCall name=acp_status arguments={}`，ID `call_00_DMDh25vaksAmeRCtc10e4525`。第 7 行：对应 `toolResult toolCallId=call_00_DMDh25vaksAmeRCtc10e4525 toolName=acp_status isError=false`。结果摘录：`ACTIVE SURFACE: pack=lean v1.0.0 | host=billion-context-pi 0.1.83`，`Estimate: 13.5k (4%)`。全文件恰好一次 toolCall 和一次 toolResult，没有其他工具调用。
 - 子 block `block:01a1af7c-1aaa-772f-b2f9-bf06505d2596` 已自动清理。只读核对前后 block 列表完全一致，均仅包含父 block `block:01a1af49-22e2-7bfe-b2e6-2984426ea5df`；没有关闭任何其他 block。
 - 筛选证据及前后快照保存在同一门禁目录的 `live-evidence.json`、`blocks-before.json`、`blocks-after.json`、`rex-before.json`、`rex-after.json`、`postflight.json`，原始会话和这些证据均未暂存入库。
@@ -421,10 +421,10 @@ src/infrastructure.ts(27,3): error TS2741: Property 'launchOperations' is missin
 真实验证证据：
 
 - 子代理：`t2b-test`，ID `3e364dd2-a552-4124-b8ad-518165c9c644`；请求和实际模型均为 `CBAPI/cn:deepseek-v4.1-flash`，`thinking=low`，`tools=read,bash`，`fork=false`。任务仅要求一次 `acp_status({})` 后退出，不允许其他工具调用或实现工作。
-- 子 session：`/Users/qiangwenjun/.pi/agent/sessions/--Users-qiangwenjun-Documents-project-pi-rex-agents-p4--/2026-11-06T05-45-45-170Z_3e364dd2-a552-4124-b8ad-518165c9c644-e88864bc-bc6697c6-eaca.jsonl`。
+- 子 session：`~/.pi/agent/sessions/--Users-qiangwenjun-Documents-project-pi-rex-agents-p4--/2026-11-06T05-45-45-170Z_3e364dd2-a552-4124-b8ad-518165c9c644-e88864bc-bc6697c6-eaca.jsonl`。
 - JSONL 第 2 行确认 `provider=CBAPI`、`modelId=cn:deepseek-v4.1-flash`。第 4 行首轮 system 工具快照摘录：`message.toolsAdded[*].name = ["read", "bash", "caller_ping"]`；没有 `compress`、`decompress`、`search_context` 或 `acp_status`。
 - 全文件统计：所有 toolCall 为 0、所有 toolResult 为 0；`acp_status` toolCall 和结果均为 0，不能提供成功调用摘录。第 6 行子代理返回：`acp_status 未启用：我的工具清单只有 read、bash、caller_ping`，并报告验证失败，没有尝试替代工具。
-- 启动脚本：`/Users/qiangwenjun/.pi/agent/sessions/--Users-qiangwenjun-Documents-project-pi-rex-agents-p4--/artifacts/01a1af49-443d-73f4-b681-23609c7191c0/subagent-scripts/t2b-test-3e364dd2-a552-4124-b8ad-518165c9c644.sh`。明确加载 `-e '/Users/qiangwenjun/Documents/project/pi-rex-agents-p4/maestro/adapters/pi/child/subagent-done.ts'`，实际启动白名单是 `--tools 'read,bash,caller_ping'`。父端本次未追加压缩工具；尚未通过重载父会话验证父端新代码。
+- 启动脚本：`~/.pi/agent/sessions/--Users-qiangwenjun-Documents-project-pi-rex-agents-p4--/artifacts/01a1af49-443d-73f4-b681-23609c7191c0/subagent-scripts/t2b-test-3e364dd2-a552-4124-b8ad-518165c9c644.sh`。明确加载 `-e '/path/to/pi-rex-agents-p4/maestro/adapters/pi/child/subagent-done.ts'`，实际启动白名单是 `--tools 'read,bash,caller_ping'`。父端本次未追加压缩工具；尚未通过重载父会话验证父端新代码。
 - activity 证据的 `phase=done`、`turnIndex=0`，确认首轮已正常结束；模型完成不等于上下文工具门禁通过。
 - 子 block：`block:01a1af64-3e88-75b4-8190-ebd89407e438`。返回报告后执行只读 `rex block ls -s "$REX_SESSION" --json`，确认该 block 已消失；`blocks-before.json` 与 `blocks-after.json` 均只包含父 block `block:01a1af49-22e2-7bfe-b2e6-2984426ea5df`，不需要额外关闭其他 block。
 - 筛选后的会话证据与 block 前后快照保存在 `/tmp/pi-rex-agents-p4-t2b-fixed-gate.DWhoCZ/live-evidence.json`、`blocks-before.json`、`blocks-after.json`；原始会话和证据均未暂存入库。
@@ -476,15 +476,15 @@ src/infrastructure.ts(27,3): error TS2741: Property 'launchOperations' is missin
 - `.pi/settings.json` 仍为 `S`（skip-worktree），本轮没有修改或暂存。没有修改主 checkout 或上游 checkout，没有合并或推送。
 - 根目录空目录检查通过。T2b 保持未提交、未完成状态；不开始 T3。
 
-### T2：Rex provider 入内核，删除 Herdr/sidebar/Windows
+### T2：Rex provider 入内核，删除 LegacyHost/sidebar/Windows
 
 实现与范围：
 
 - 将 `src/rex-cli.ts`、`src/rex-surface-provider.ts`、`src/uncertainty.ts`、`src/git.ts`、`src/worktree.ts` 迁移到 `maestro/surfaces/rex/`，并更新内核与测试导入；新增 Rex provider conformance 和 fake Rex CLI provider 测试。
-- `PiRunSession` 默认从 `REX_SESSION`/`REX_BLOCK` 构造 `RexSurfaceProvider`，删除 `HERDR_SOCKET_PATH`、delegated marker 和 Herdr surface 依赖；lifecycle 状态源改为 `surface`。
-- 删除 Herdr surface、sidebar、release/role-pack 和 Windows-only 路径及其专属测试；保留 T1 已迁移的 `test/verify-lab-guards.test.ts`，它继续覆盖 `.pi/skills/verify-pi-rex-agents/scripts/path-guards.ts`。`package.json` 默认测试脚本现明确包含 `test/test.ts`、`test/worktree-cleanup.test.ts`、`test/launch.test.ts` 和 `test/verify-lab-guards.test.ts`；此前漏掉这些通用测试是本次返工修正的原因。恢复 `test/integration/hang-advisory.test.ts`，并将 `test/integration/audit-stop.test.ts` 及其 child-only shutdown fixture 迁移到 Rex harness。
-- `test/test.ts` 中删除的 Herdr/role-pack 专属用例为：`discovers and launches a Pi package role pack without repeated role names`、`removes role-pack listeners when their extension instance shuts down`、`rejects ambiguous package-layer role names with actionable diagnostics`、`keeps child Herdr list formatting, handoff dispatch, and silent startup`；以及 `herdr.ts` 套件中的 CLI stderr、`isHerdrAvailable`、命令构造、响应解析、process exit confirmation 全部 Herdr-only 用例。T2 还改写了 `test/test.ts` 的 subagent discovery 和 self-spawn fixture：显式注入不可用 fake surface，并隔离全局 runtime/`REX_*` 环境，以继续验证 role precedence、self-spawn 和 depth guard，不删除这些通用用例。`test/integration/` 的 persistent、placement、cancel、lifecycle 已改用 Rex harness。
-- 从 T1 到 T2 删除的专属测试文件及用例数（按源文件中的 `it`/`test` 用例统计）为：`test/integration/harness-conformance.test.ts` 4（旧 Harness conformance）、`test/integration/mux-surface.test.ts` 10（Herdr/mux surface）、`test/integration/sidebar-lifecycle.test.ts` 7、`test/integration/sidebar.test.ts` 9（sidebar）、`test/integration/surface-conformance.test.ts` 1（旧 surface）、`test/maestro/async-io.test.ts` 3（旧异步 I/O）、`test/maestro/audit-herdr-dispatch.test.ts` 2、`test/maestro/audit-ownership.test.ts` 12、`test/maestro/delegated-marker.test.ts` 21、`test/maestro/git-handoff-async.test.ts` 4、`test/maestro/herdr-cli.test.ts` 5、`test/maestro/herdr-lab.test.ts` 14、`test/maestro/herdr-placement-async.test.ts` 10、`test/maestro/herdr-socket.test.ts` 14、`test/maestro/herdr-surface-provider.test.ts` 13、`test/maestro/opened-primary-workspace.test.ts` 18、`test/maestro/script-launch.test.ts` 33、`test/maestro/sidebar-fixture-ownership.test.ts` 22、`test/package-manifest.test.js` 11（Herdr package manifest）、`test/release-workflow.test.ts` 7（release workflow）、`test/sidebar-plugin.test.js` 24（sidebar plugin），合计 246 个。另删除 T2 专属 fixture/helper `test/fake-herdr-socket.ts`，以及 `test/bench/` 基准、Herdr lab/sidebar fixture；这些不计入测试用例数。`test/integration/audit-stop.test.ts` 与 `test/integration/hang-advisory.test.ts` 曾随旧 Harness 删除，现已恢复/迁移，因此不计为删除。
+- `PiRunSession` 默认从 `REX_SESSION`/`REX_BLOCK` 构造 `RexSurfaceProvider`，删除 `LEGACYHOST_SOCKET_PATH`、delegated marker 和 LegacyHost surface 依赖；lifecycle 状态源改为 `surface`。
+- 删除 LegacyHost surface、sidebar、release/role-pack 和 Windows-only 路径及其专属测试；保留 T1 已迁移的 `test/verify-lab-guards.test.ts`，它继续覆盖 `.pi/skills/verify-pi-rex-agents/scripts/path-guards.ts`。`package.json` 默认测试脚本现明确包含 `test/test.ts`、`test/worktree-cleanup.test.ts`、`test/launch.test.ts` 和 `test/verify-lab-guards.test.ts`；此前漏掉这些通用测试是本次返工修正的原因。恢复 `test/integration/hang-advisory.test.ts`，并将 `test/integration/audit-stop.test.ts` 及其 child-only shutdown fixture 迁移到 Rex harness。
+- `test/test.ts` 中删除的 LegacyHost/role-pack 专属用例为：`discovers and launches a Pi package role pack without repeated role names`、`removes role-pack listeners when their extension instance shuts down`、`rejects ambiguous package-layer role names with actionable diagnostics`、`keeps child LegacyHost list formatting, handoff dispatch, and silent startup`；以及 `legacyhost.ts` 套件中的 CLI stderr、`isLegacyHostAvailable`、命令构造、响应解析、process exit confirmation 全部 LegacyHost-only 用例。T2 还改写了 `test/test.ts` 的 subagent discovery 和 self-spawn fixture：显式注入不可用 fake surface，并隔离全局 runtime/`REX_*` 环境，以继续验证 role precedence、self-spawn 和 depth guard，不删除这些通用用例。`test/integration/` 的 persistent、placement、cancel、lifecycle 已改用 Rex harness。
+- 从 T1 到 T2 删除的专属测试文件及用例数（按源文件中的 `it`/`test` 用例统计）为：`test/integration/harness-conformance.test.ts` 4（旧 Harness conformance）、`test/integration/mux-surface.test.ts` 10（LegacyHost/mux surface）、`test/integration/sidebar-lifecycle.test.ts` 7、`test/integration/sidebar.test.ts` 9（sidebar）、`test/integration/surface-conformance.test.ts` 1（旧 surface）、`test/maestro/async-io.test.ts` 3（旧异步 I/O）、`test/maestro/audit-legacyhost-dispatch.test.ts` 2、`test/maestro/audit-ownership.test.ts` 12、`test/maestro/delegated-marker.test.ts` 21、`test/maestro/git-handoff-async.test.ts` 4、`test/maestro/legacyhost-cli.test.ts` 5、`test/maestro/legacyhost-lab.test.ts` 14、`test/maestro/legacyhost-placement-async.test.ts` 10、`test/maestro/legacyhost-socket.test.ts` 14、`test/maestro/legacyhost-surface-provider.test.ts` 13、`test/maestro/opened-primary-workspace.test.ts` 18、`test/maestro/script-launch.test.ts` 33、`test/maestro/sidebar-fixture-ownership.test.ts` 22、`test/package-manifest.test.js` 11（LegacyHost package manifest）、`test/release-workflow.test.ts` 7（release workflow）、`test/sidebar-plugin.test.js` 24（sidebar plugin），合计 246 个。另删除 T2 专属 fixture/helper `test/fake-legacyhost-socket.ts`，以及 `test/bench/` 基准、LegacyHost lab/sidebar fixture；这些不计入测试用例数。`test/integration/audit-stop.test.ts` 与 `test/integration/hang-advisory.test.ts` 曾随旧 Harness 删除，现已恢复/迁移，因此不计为删除。
 - 修复 macOS `/private/var` 与 `/var` 的语义等价路径断言：`test/maestro/audit-git-environment.test.ts` 使用 realpath，`maestro/runtime/worktree-operations.ts` 在 worktree 注册匹配时规范化 path。
 
 门禁结果：
@@ -495,9 +495,9 @@ src/infrastructure.ts(27,3): error TS2741: Property 'launchOperations' is missin
 - `npm run docs:tools:check`：通过。
 - `git diff --check`：通过。
 - `docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t2-restore-gate2`：两次均加载 `1155 tests / 1136 pass / 9 fail / 10 skipped`；第 1 次的两个暂定失败 `a fallback owner transferred after the cancel shows its own unconfirmed kill and stays live`、`public launch owns the four-argument advisory route and keeps duplicate and fresh evaluations cold` 未在第 2 次持续，输出 `OK：没有持续性新增失败`。`MIN_TESTS` 已从 554 调整为 1155。
-- `node --experimental-strip-types --test --test-concurrency=1 test/integration/audit-stop.test.ts`：通过，macOS 按任务中的 Linux process identity 条件跳过 1 个测试；测试已使用 Rex compat harness，不再依赖 Herdr/mux。
+- `node --experimental-strip-types --test --test-concurrency=1 test/integration/audit-stop.test.ts`：通过，macOS 按任务中的 Linux process identity 条件跳过 1 个测试；测试已使用 Rex compat harness，不再依赖 LegacyHost/mux。
 - `npm run test:integration:rex`：通过，Rex smoke 和 RexSurfaceProvider conformance 共 10 tests、0 failed、0 skipped。
-- T2 Herdr 扫描剩余 44 条，均为后续 T4/T6 处理的历史身份、配置命名或源头文案；扫描结果已保留在本轮 `/tmp/pi-rex-agents-p4-t2-herdr.txt`。
+- T2 LegacyHost 扫描剩余 44 条，均为后续 T4/T6 处理的历史身份、配置命名或源头文案；扫描结果已保留在本轮 `/tmp/pi-rex-agents-p4-t2-legacyhost.txt`。
 
 真实 Rex 探针：
 
@@ -511,11 +511,11 @@ src/infrastructure.ts(27,3): error TS2741: Property 'launchOperations' is missin
 
 ### T0：门禁失败，停止
 
-本轮在 `/Users/qiangwenjun/Documents/project/pi-rex-agents-p4`（分支 `p4-kernel`）执行了 T0 的本地化实现：复制 T0 要求的 `pi-herdr-agents 3.7.2` 基线内容，写入 `docs/UPSTREAM.md`，建立本地 `package.json`、`tsconfig.json` 和 `package-lock.json`，并将 `src/extension.ts`、`src/infrastructure.ts`、`src/placement.ts` 的上游包名导入改为本地相对导入。上游 `/Users/qiangwenjun/Documents/project/pi-herdr-agents` 在执行前核验为干净的 `main` 分支，HEAD 为 `e1e7d72834bfaff70ba39a7ec2ffd437b44c2134`；没有修改上游或主 checkout。
+本轮在 `/path/to/pi-rex-agents-p4`（分支 `p4-kernel`）执行了 T0 的本地化实现：复制 T0 要求的 `upstream-package 3.7.2` 基线内容，写入 `docs/UPSTREAM.md`，建立本地 `package.json`、`tsconfig.json` 和 `package-lock.json`，并将 `src/extension.ts`、`src/infrastructure.ts`、`src/placement.ts` 的上游包名导入改为本地相对导入。上游 `/path/to/upstream-package` 在执行前核验为干净的 `main` 分支，HEAD 为 `e1e7d72834bfaff70ba39a7ec2ffd437b44c2134`；没有修改上游或主 checkout。
 
 依赖安装：
 
-- 命令：`cd /Users/qiangwenjun/Documents/project/pi-rex-agents-p4 && npm install`
+- 命令：`cd /path/to/pi-rex-agents-p4 && npm install`
 - 结果：成功，新增 142 个包，审计发现 0 个漏洞；npm 提示 2 个包的 install scripts 尚未授权，但不影响安装完成。
 
 按 T0 任务卡执行的门禁结果：
@@ -525,9 +525,9 @@ src/infrastructure.ts(27,3): error TS2741: Property 'launchOperations' is missin
 - `npm run lint`：通过。
 - `npm run format:check`：通过。
 - `bun src/smoke-extension.ts`：通过，输出 21 passed、0 failed。
-- `src` 导入扫描：通过，未发现 `from "pi-herdr-agents...` 导入。
+- `src` 导入扫描：通过，未发现 `from "upstream-package...` 导入。
 
-按 T0 任务卡要求，对照执行上游 `cd /Users/qiangwenjun/Documents/project/pi-herdr-agents && npm test`：上游依赖未安装，结果为 `403` 个测试、`370` 通过、`27` 失败、`6` 跳过；失败主要是缺少 `typescript`、`@earendil-works/pi-coding-agent`、`@earendil-works/pi-ai`、`@sinclair/typebox`、`@earendil-works/pi-tui` 等依赖。该对照结果不能使目标 worktree 的 T0 门禁通过。
+按 T0 任务卡要求，对照执行上游 `cd /path/to/upstream-package && npm test`：上游依赖未安装，结果为 `403` 个测试、`370` 通过、`27` 失败、`6` 跳过；失败主要是缺少 `typescript`、`@earendil-works/pi-coding-agent`、`@earendil-works/pi-ai`、`@sinclair/typebox`、`@earendil-works/pi-tui` 等依赖。该对照结果不能使目标 worktree 的 T0 门禁通过。
 
 判断：T0 门禁未通过，按照工作规则停止，不开始 T1，不提交本轮未完成的 T0。当前目标 worktree 保留实现改动和失败记录，等待后续指示。
 
@@ -535,7 +535,7 @@ src/infrastructure.ts(27,3): error TS2741: Property 'launchOperations' is missin
 
 根据任务卡提交 `2fa8ac8`，重新读取了 `docs/p4/tasks/T0-vendor-baseline.md` 以及 `docs/p4/baseline/check-failures.sh`、`inherited-failures.txt`、`flaky.txt`、`expected-identity.txt`。未在上游 checkout 安装依赖或运行测试。
 
-在目标 worktree 中按上游 `e1e7d72` 的 `git ls-files` 完整复制了 264 个文件，保留目标仓库的 `package.json`、`tsconfig.json`、`README.md`、`.gitignore`，并保留 `LICENSE-pi-herdr-agents` 的改名规则。缺失的 `scripts/tool-docs.ts`、`examples/role-pack/`、`docs/roles.md`、`plugins/sidebar/`、`.github/workflows/`、`CHANGELOG.md`、`RELEASING.md` 等文件均已补齐。
+在目标 worktree 中按上游 `e1e7d72` 的 `git ls-files` 完整复制了 264 个文件，保留目标仓库的 `package.json`、`tsconfig.json`、`README.md`、`.gitignore`，并保留 `LICENSE-upstream-package` 的改名规则。缺失的 `scripts/tool-docs.ts`、`examples/role-pack/`、`docs/roles.md`、`plugins/sidebar/`、`.github/workflows/`、`CHANGELOG.md`、`RELEASING.md` 等文件均已补齐。
 
 门禁结果：
 
@@ -552,7 +552,7 @@ src/infrastructure.ts(27,3): error TS2741: Property 'launchOperations' is missin
 
 根据提交 `4dc8c26` 更新后的判定规则，运行了：
 
-`cd /Users/qiangwenjun/Documents/project/pi-rex-agents-p4 && docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t0-gate`
+`cd /path/to/pi-rex-agents-p4 && docs/p4/baseline/test-gate.sh /tmp/pi-rex-agents-p4-t0-gate`
 
 结果：
 
@@ -566,7 +566,7 @@ src/infrastructure.ts(27,3): error TS2741: Property 'launchOperations' is missin
 - `npm run lint`：通过。
 - `npm run format:check`：通过，检查 170 个文件，无需修改。
 - `bun src/smoke-extension.ts`：通过，工具清单完整，`missing` 为空。
-- `grep -rn 'from "pi-herdr-agents' src`：通过，无匹配。
+- `grep -rn 'from "upstream-package' src`：通过，无匹配。
 
 提交前的附加 `git diff --cached --check` 检查发现两个原样复制的上游文档存在既有行尾空格：`docs/research/pi-worktree-session-handoff.md:3` 和 `docs/research/worktree-subagent-orchestration.md:5`。T0 要求原样入库且不改文档行为，因此保留该上游内容；它不属于 T0 任务卡门禁。
 
@@ -579,7 +579,7 @@ src/infrastructure.ts(27,3): error TS2741: Property 'launchOperations' is missin
 - `src/rex-cli.ts` 新增 `buildRexArgv()`；所有 Rex CLI 调用显式加入 `--autostart=false`，并在 `REX_SERVER` 存在时显式加入 `-S <endpoint>`，保持 shell-free 和用户参数顺序。
 - 新增 `test/rex-cli.test.ts`，覆盖有/无 `REX_SERVER`、argv 顺序和用户参数不被改写。
 - 新增 `test/integration/rex-harness.ts` 与 `test/integration/rex-smoke.test.ts`，使用 deterministic fake-provider，通过真实父 Pi、`subagent` 工具、报告投递、子 session 和 block 生命周期验证 Rex 路径。
-- 新增 `.pi/skills/verify-pi-rex-agents/`（含 `lab.ts`、`path-guards.ts`、`pin.ts` 和验证说明），删除复制来的 `.pi/skills/verify-pi-herdr-agents/`；更新 `.pi/skills/run-integration-tests/SKILL.md` 为 Rex preflight/postflight。
+- 新增 `.pi/skills/verify-pi-rex-agents/`（含 `lab.ts`、`path-guards.ts`、`pin.ts` 和验证说明），删除复制来的 `.pi/skills/verify-upstream-package/`；更新 `.pi/skills/run-integration-tests/SKILL.md` 为 Rex preflight/postflight。
 - `lab.ts` 遵守 F8：使用 `mkdtemp(join(tmpdir(), "pira-lab-"))`，短 Unix socket，以 `REX_SERVER=unix://<lab>/s` 启动独立 Rex server，并在 lab block 内执行 `rex whoami --json` 校验 endpoint；`down` 清理 lab server、session、block 和临时目录。
 - 重写 `AGENTS.md` 为 Rex 版本，增加代码地图、验证流程和提交检查。
 - `package.json` 增加 `test:integration:rex`（`--test-concurrency=1`），并把 Rex CLI 单测加入默认测试脚本。
@@ -593,7 +593,7 @@ T1 门禁：
 - `npm run docs:tools:check`：通过。
 - `node --experimental-strip-types --test test/rex-cli.test.ts test/verify-lab-guards.test.ts`：22 passed、0 failed。
 - `node --experimental-strip-types .pi/skills/verify-pi-rex-agents/scripts/pin.ts`：通过，生成 `/tmp/pi-rex-agents-t1-pin.json`。
-- `npm pack --dry-run`：通过；当前仍包含 T0 基线中的 Herdr、sidebar、role-pack 和 release 文件，按计划留待 T2/T6 删除和收尾。
+- `npm pack --dry-run`：通过；当前仍包含 T0 基线中的 LegacyHost、sidebar、role-pack 和 release 文件，按计划留待 T2/T6 删除和收尾。
 - `git diff --check`：通过。
 
 真实 Rex lab 门禁：

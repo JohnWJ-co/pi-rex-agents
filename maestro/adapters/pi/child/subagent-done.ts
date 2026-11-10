@@ -3,7 +3,10 @@
  * - Shows agent identity + available tools as a compact styled widget above the editor
  * - Provides a `subagent_done` tool for interactive agents to self-terminate
  */
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type {
+	ExtensionAPI,
+	ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import { Box, Text } from "@earendil-works/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { renameSync, rmSync, writeFileSync } from "node:fs";
@@ -322,7 +325,9 @@ export default function (pi: ExtensionAPI) {
 	let agentStarted = false;
 	let latestAgentMessages: any[] | undefined;
 	let completionFinalized = false;
-	let sessionContext: { shutdown(): void } | undefined;
+	let sessionContext:
+		| Pick<ExtensionContext, "isIdle" | "abort" | "shutdown">
+		| undefined;
 	// A child without auto-exit closes only through subagent_done, so one that
 	// forgets it is asked once whether its task is complete.
 	const doneNudge =
@@ -539,7 +544,8 @@ export default function (pi: ExtensionAPI) {
 		name: "caller_ping",
 		label: "Caller Ping",
 		description:
-			"Send a help request to the parent agent and exit this session. " +
+			"Send a help request to the parent agent. " +
+			"For a persistent specialist this ends the current task and keeps the session available; otherwise it exits this session. " +
 			"The parent will be notified with your message and can resume this session with a response. " +
 			"Use when you're stuck, need clarification, or need the parent to take action.",
 		parameters: Type.Object({
@@ -562,6 +568,10 @@ export default function (pi: ExtensionAPI) {
 					generation,
 					message: params.message,
 				});
+				// The help request ends this task. The parent's answer arrives as a
+				// new task through the inbox, so the poller must be free to take it
+				// while the run that asked for help is still streaming.
+				currentTask = "";
 				return {
 					content: [
 						{
@@ -606,6 +616,11 @@ export default function (pi: ExtensionAPI) {
 			}
 			completionFinalized = true;
 			recorder.subagentDone();
+			// The run that asked for help belongs to no task, and shutdown waits
+			// for idle. Abort it so stop does not time out on an orphaned turn.
+			if (!sessionContext.isIdle()) {
+				sessionContext.abort();
+			}
 			sessionContext.shutdown();
 			return;
 		}
@@ -622,8 +637,9 @@ export default function (pi: ExtensionAPI) {
 		name: "subagent_done",
 		label: "Subagent Done",
 		description:
-			"Call this tool when you have completed your task. " +
-			"It will close this session and return your results to the main session. " +
+			"Call this tool when you have completed the current task. " +
+			"For a persistent specialist it returns the task result and keeps the session available for subagent_send; " +
+			"otherwise it closes this session and returns your results to the main session. " +
 			"Your LAST assistant message before calling this becomes the summary returned to the caller.",
 		parameters: Type.Object({}),
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
@@ -640,7 +656,21 @@ export default function (pi: ExtensionAPI) {
 				// Use agent_end evidence if the session branch is unavailable.
 			}
 			recorder.subagentDone();
-			if (persistent && sessionFile && currentTask) {
+			if (persistent) {
+				// A persistent child outlives its tasks. With no current task (for
+				// example right after caller_ping) it must stay available instead of
+				// writing .exit and shutting down.
+				if (!sessionFile || !currentTask) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: "No current task. Staying available for subagent_send.",
+							},
+						],
+						details: {},
+					};
+				}
 				appendPersistentTaskEvent(
 					sessionFile,
 					buildPersistentTaskEvent(currentTask, generation),

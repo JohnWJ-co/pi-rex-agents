@@ -27,7 +27,7 @@ configuration directory.
 
 1. `subagent` accepts an optional `accept: { run, maxRetries?, timeoutSec?,
    paths? }`. The host ships no checks and no default command; the caller or
-   its pack supplies the command (ADR-0013). v1 refuses it, before any Herdr
+   its pack supplies the command (ADR-0013). v1 refuses it, before any LegacyHost
    resource exists, for persistent specialists and non-auto-exit children.
 2. The auto-exit child runs the check in `agent_before_settle` and, while
    retries remain, works another turn with the bounded failing output. Its
@@ -58,7 +58,7 @@ configuration directory.
    fallback and changes neither the sidebar status nor the worktree manifest
    state. The verdict appears in the delivery, its details, and the ledger.
 7. The parent appends one outcome-ledger line per model attempt to
-   `herdr-agents/outcomes.jsonl`, on by default with `outcomeLedger: false` to
+   `legacyhost-agents/outcomes.jsonl`, on by default with `outcomeLedger: false` to
    turn it off. A line never holds task text, check output, environment
    values, or the command (only its SHA-256). Nothing reads it yet.
 

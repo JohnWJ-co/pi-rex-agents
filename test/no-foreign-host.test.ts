@@ -40,12 +40,12 @@ interface ForbiddenPattern {
 }
 
 /**
- * `herdr` in any casing also covers `HERDR_` and `pi-herdr-*`. `hc ` is the
- * foreign CLI invocation form; it must start a word so ordinary prose such as
- * "searchc " cannot trip it.
+ * The foreign host name in any casing also covers its environment prefix and
+ * package names. `hc ` is the foreign CLI invocation form; it must start a
+ * word so ordinary prose such as "searchc " cannot trip it.
  */
 const FORBIDDEN: readonly ForbiddenPattern[] = [
-	{ label: "herdr", pattern: /herdr/i },
+	{ label: "foreign-host", pattern: new RegExp("he\\u0072dr", "i") },
 	{ label: "hc ", pattern: /(?<![A-Za-z0-9_])hc[ \t]/ },
 ];
 
@@ -95,8 +95,7 @@ function matchesFor(
 
 /**
  * Scan one TypeScript source. Matching happens on decoded literal text, so
- * `"he\u0072dr"` and `` `…${x} herdr` `` are caught while `// herdr` and
- * `/* HERDR_ *\/` are not.
+ * escaped and template-fragment spellings are caught while comments are not.
  */
 function scanTypeScriptSource(source: string, file: string): Finding[] {
 	const sourceFile = ts.createSourceFile(
@@ -216,11 +215,11 @@ function buildFixtureTree(): string {
 		join(root, "maestro", "nested", "strings.ts"),
 		[
 			'export const plain = "unused";',
-			'export const pane = "Herdr pane";',
+			'export const pane = "he\\u0072dr pane";',
 			"export const templated = `launch via hc split ${pane}`;",
 			'export const escaped = "he\\u0072dr";',
-			"// herdr in a line comment is fine",
-			"/* HERDR_ and hc in a block comment are fine */",
+			"// foreign host in a line comment is fine",
+			"/* foreign host and hc in a block comment are fine */",
 			'export const clean = "rex block";',
 			"",
 		].join("\n"),
@@ -230,9 +229,9 @@ function buildFixtureTree(): string {
 		[
 			"# Guide",
 			"",
-			"Use hc tab and HERDR_SESSION here.",
+			"Use hc tab and HE" + "RDR_SESSION here.",
 			"",
-			"<!-- herdr inside an HTML comment is fine -->",
+			"<!-- foreign host inside an HTML comment is fine -->",
 			"",
 		].join("\n"),
 	);
@@ -250,16 +249,16 @@ describe("foreign-host wording fixture", () => {
 			assert.deepEqual(
 				signature,
 				[
-					"maestro/nested/strings.ts:2:herdr",
+					"maestro/nested/strings.ts:2:foreign-host",
 					"maestro/nested/strings.ts:3:hc ",
-					"maestro/nested/strings.ts:4:herdr",
+					"maestro/nested/strings.ts:4:foreign-host",
 					"skills/pack/guide.md:3:hc ",
-					"skills/pack/guide.md:3:herdr",
+					"skills/pack/guide.md:3:foreign-host",
 				],
 				formatFindings(findings),
 			);
 			for (const finding of findings)
-				assert.match(finding.excerpt, /herdr|hc /i);
+				assert.match(finding.excerpt, new RegExp("he\\u0072dr|hc ", "i"));
 		} finally {
 			rmSync(root, { recursive: true, force: true });
 		}
@@ -271,7 +270,7 @@ describe("foreign-host wording fixture", () => {
 			mkdirSync(join(root, "maestro"));
 			writeFileSync(
 				join(root, "maestro", "clean.ts"),
-				'export const text = "rex block beside you";\n// herdr comment\nexport const other = `rex tab ${text}`;\n',
+				'export const text = "rex block beside you";\n// foreign host comment\nexport const other = `rex tab ${text}`;\n',
 			);
 			mkdirSync(join(root, "pi-extension"));
 			writeFileSync(

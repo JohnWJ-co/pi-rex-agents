@@ -2914,11 +2914,11 @@ describe("subagent_cancel public tool", { timeout: 20_000 }, () => {
 			});
 			const close = f.surface.closeSurface;
 			f.surface.closeSurface = async () => {
-				throw new Error("herdr pane close timed out");
+				throw new Error("rex block close timed out");
 			};
 			const first = await cancel(f, { id: child.id });
 			assert.equal(first.details.status, "unconfirmed");
-			assert.match(first.details.error, /herdr pane close timed out/);
+			assert.match(first.details.error, /rex block close timed out/);
 			assert.match(first.content[0].text, /The run stays live and owned/);
 			assert.equal(f.runtime.runningSubagents.get(child.id), child);
 			assert.equal(child.cancelState, "unconfirmed");
@@ -3072,7 +3072,7 @@ describe("subagent_cancel public tool", { timeout: 20_000 }, () => {
 	it("a worktree child without a captured process identity stays unconfirmed; shutdown never records cancelled", async () =>
 		withAdapterHost(async (f) => {
 			const { retained } = await worktreeHost(f);
-			// Herdr's idle shell is never exit evidence: only the identity is.
+			// Rex's idle shell is never exit evidence: only the identity is.
 			const kernel = identityKernel(f);
 			f.patch(f.launchOperations, "captureProcessIdentity", async () => {
 				throw new Error("Process identity not captured within 15000ms");
@@ -3140,7 +3140,7 @@ describe("subagent_cancel public tool", { timeout: 20_000 }, () => {
 			assert.equal(first.cancelState, "requested");
 			// The transferred owner's automatic kill cannot confirm termination.
 			f.patch(f.surface, "closeSurface", async () => {
-				throw new Error("herdr pane close timed out");
+				throw new Error("rex block close timed out");
 			});
 			release();
 			let second: any;
@@ -4890,7 +4890,7 @@ describe("runtime reload configuration", () => {
 		const beforeRuntime = runtimeSlot[runtimeKey];
 		const dir = createTestDir();
 		const mock = createMockExtensionApi();
-		const legacyPath = join(dir, "herdr-agents", "config.json");
+		const legacyPath = join(dir, "legacy-agents", "config.json");
 		const legacy = '{"panes":{"mode":"grouped","maxPerTab":4}}\n';
 		try {
 			process.env.PI_CODING_AGENT_DIR = dir;
@@ -5389,7 +5389,7 @@ describe("model configuration", () => {
 
 	it("seeds from the packaged example and keeps every config section loadable", () => {
 		withTempDir((dir) => {
-			const configPath = join(dir, "herdr-agents", "config.json");
+			const configPath = join(dir, "legacy-agents", "config.json");
 			const examplePath = getSubagentsConfigExamplePath();
 			writeTaskModelConfig(
 				configPath,
@@ -5424,7 +5424,7 @@ describe("model configuration", () => {
 
 	it("writes only validated task preferences into a seeded user config", () => {
 		withTempDir((dir) => {
-			const configPath = join(dir, "herdr-agents", "config.json");
+			const configPath = join(dir, "legacy-agents", "config.json");
 			const examplePath = join(dir, "config.json.example");
 			writeFileSync(
 				examplePath,
@@ -6538,14 +6538,14 @@ describe("role configuration", () => {
 		for (const bundled of [true, false]) {
 			const { deprecations } = parseRoleConfig(
 				{ roles: { bundled } },
-				"/agent/herdr-agents/config.json",
+				"/agent/rex-agents/config.json",
 			);
 			assert.equal(deprecations.length, 1);
 			assert.match(
 				deprecations[0],
 				new RegExp(`roles\\.bundled \\(${bundled}\\).*is ignored`),
 			);
-			assert.match(deprecations[0], /\/agent\/herdr-agents\/config\.json/);
+			assert.match(deprecations[0], /\/agent\/rex-agents\/config\.json/);
 			assert.match(deprecations[0], /Install a role pack/);
 			assert.match(deprecations[0], /The file was not changed/);
 		}
@@ -7405,8 +7405,8 @@ describe("subagent discovery", () => {
 				(tool) => tool.name === "subagent",
 			);
 			assert.ok(subagentTool, "expected subagent to be registered");
-			const previousHerdrEnv = process.env.HERDR_ENV;
-			delete process.env.HERDR_ENV;
+			const previousLegacyEnv = process.env.LEGACY_HOST_ENV;
+			delete process.env.LEGACY_HOST_ENV;
 			try {
 				const launch = await subagentTool.execute(
 					"call-1",
@@ -7418,7 +7418,7 @@ describe("subagent discovery", () => {
 				assert.equal(launch.details.error, "invalid-capability-declaration");
 				assert.match(launch.content[0].text, /tools/i);
 			} finally {
-				restoreEnvVar("HERDR_ENV", previousHerdrEnv);
+				restoreEnvVar("LEGACY_HOST_ENV", previousLegacyEnv);
 			}
 		});
 	});
@@ -7518,13 +7518,13 @@ describe("subagent discovery", () => {
 						(tool) => tool.name === "subagent",
 					);
 					assert.ok(subagentTool, "expected subagent to be registered");
-					const previousHerdrEnv = process.env.HERDR_ENV;
+					const previousLegacyEnv = process.env.LEGACY_HOST_ENV;
 					const previousRexEnv = {
 						session: process.env.REX_SESSION,
 						block: process.env.REX_BLOCK,
 						server: process.env.REX_SERVER,
 					};
-					delete process.env.HERDR_ENV;
+					delete process.env.LEGACY_HOST_ENV;
 					delete process.env.REX_SESSION;
 					delete process.env.REX_BLOCK;
 					delete process.env.REX_SERVER;
@@ -7548,7 +7548,7 @@ describe("subagent discovery", () => {
 							);
 						}
 					} finally {
-						restoreEnvVar("HERDR_ENV", previousHerdrEnv);
+						restoreEnvVar("LEGACY_HOST_ENV", previousLegacyEnv);
 						restoreEnvVar("REX_SESSION", previousRexEnv.session);
 						restoreEnvVar("REX_BLOCK", previousRexEnv.block);
 						restoreEnvVar("REX_SERVER", previousRexEnv.server);
@@ -7608,8 +7608,8 @@ describe("subagent discovery", () => {
 					(tool) => tool.name === "subagent",
 				);
 				assert.ok(subagentTool, "expected subagent to be registered");
-				const previousHerdrEnv = process.env.HERDR_ENV;
-				delete process.env.HERDR_ENV;
+				const previousLegacyEnv = process.env.LEGACY_HOST_ENV;
+				delete process.env.LEGACY_HOST_ENV;
 				try {
 					const launch = await subagentTool.execute(
 						"call-1",
@@ -7626,7 +7626,7 @@ describe("subagent discovery", () => {
 					assert.equal(launch.details.error, "external-cli-unsupported");
 					assert.match(launch.content[0].text, /Pi-only/i);
 				} finally {
-					restoreEnvVar("HERDR_ENV", previousHerdrEnv);
+					restoreEnvVar("LEGACY_HOST_ENV", previousLegacyEnv);
 				}
 			},
 		);
@@ -7756,7 +7756,7 @@ describe("self-spawn guard", () => {
 		const previous = {
 			agent: process.env.PI_SUBAGENT_AGENT,
 			selfSpawn: process.env.PI_SUBAGENT_SELF_SPAWN,
-			herdr: process.env.HERDR_ENV,
+			legacy: process.env.LEGACY_HOST_ENV,
 			rexSession: process.env.REX_SESSION,
 			rexBlock: process.env.REX_BLOCK,
 			rexServer: process.env.REX_SERVER,
@@ -7764,7 +7764,7 @@ describe("self-spawn guard", () => {
 		process.env.PI_SUBAGENT_AGENT = currentAgent;
 		restoreEnvVar("PI_SUBAGENT_SELF_SPAWN", selfSpawn);
 		// Keep the kernel on the Rex path while preventing any real server access.
-		delete process.env.HERDR_ENV;
+		delete process.env.LEGACY_HOST_ENV;
 		process.env.REX_SESSION = "session:test-self-spawn";
 		process.env.REX_BLOCK = "block:test-self-spawn";
 		process.env.REX_SERVER = "unix:///tmp/pi-rex-agents-no-server";
@@ -7798,7 +7798,7 @@ describe("self-spawn guard", () => {
 		} finally {
 			restoreEnvVar("PI_SUBAGENT_AGENT", previous.agent);
 			restoreEnvVar("PI_SUBAGENT_SELF_SPAWN", previous.selfSpawn);
-			restoreEnvVar("HERDR_ENV", previous.herdr);
+			restoreEnvVar("LEGACY_HOST_ENV", previous.legacy);
 			restoreEnvVar("REX_SESSION", previous.rexSession);
 			restoreEnvVar("REX_BLOCK", previous.rexBlock);
 			restoreEnvVar("REX_SERVER", previous.rexServer);
@@ -7849,14 +7849,14 @@ describe("self-spawn guard", () => {
 		const previous = {
 			depth: process.env.PI_SUBAGENT_DEPTH,
 			agent: process.env.PI_SUBAGENT_AGENT,
-			herdr: process.env.HERDR_ENV,
+			legacy: process.env.LEGACY_HOST_ENV,
 			rexSession: process.env.REX_SESSION,
 			rexBlock: process.env.REX_BLOCK,
 			rexServer: process.env.REX_SERVER,
 		};
 		restoreEnvVar("PI_SUBAGENT_DEPTH", depth);
 		delete process.env.PI_SUBAGENT_AGENT;
-		delete process.env.HERDR_ENV;
+		delete process.env.LEGACY_HOST_ENV;
 		process.env.REX_SESSION = "session:test-depth";
 		process.env.REX_BLOCK = "block:test-depth";
 		process.env.REX_SERVER = "unix:///tmp/pi-rex-agents-no-server";
@@ -7894,7 +7894,7 @@ describe("self-spawn guard", () => {
 		} finally {
 			restoreEnvVar("PI_SUBAGENT_DEPTH", previous.depth);
 			restoreEnvVar("PI_SUBAGENT_AGENT", previous.agent);
-			restoreEnvVar("HERDR_ENV", previous.herdr);
+			restoreEnvVar("LEGACY_HOST_ENV", previous.legacy);
 			restoreEnvVar("REX_SESSION", previous.rexSession);
 			restoreEnvVar("REX_BLOCK", previous.rexBlock);
 			restoreEnvVar("REX_SERVER", previous.rexServer);
@@ -9110,6 +9110,173 @@ describe("subagent-done.ts", () => {
 		}
 	});
 
+	it("ends a persistent task at caller_ping without settling it twice", async () => {
+		const dir = createTestDir();
+		const previousPersistent = process.env.PI_SUBAGENT_PERSISTENT;
+		const previousSession = process.env.PI_SUBAGENT_SESSION;
+		const previousTask = process.env.PI_SUBAGENT_TASK_ID;
+		const previousGeneration = process.env.PI_SUBAGENT_GENERATION_ID;
+		const previousAutoExit = process.env.PI_SUBAGENT_AUTO_EXIT;
+		const sessionFile = join(dir, "persistent-ping.jsonl");
+		process.env.PI_SUBAGENT_PERSISTENT = "1";
+		process.env.PI_SUBAGENT_SESSION = sessionFile;
+		process.env.PI_SUBAGENT_TASK_ID = "task-1";
+		process.env.PI_SUBAGENT_GENERATION_ID = "generation";
+		delete process.env.PI_SUBAGENT_AUTO_EXIT;
+		let shutdown: Function | undefined;
+		try {
+			const { api, eventHandlers, registeredTools } = createMockExtensionApi();
+			subagentDoneExtension(api);
+			shutdown = eventHandlers.get("session_shutdown")?.[0];
+			const ping = registeredTools.find((tool) => tool.name === "caller_ping");
+			assert.ok(ping);
+			const ctx = {
+				ui: { setWidget() {} },
+				shutdown() {},
+				sessionManager: { getBranch: () => [] },
+			};
+			await ping.execute(
+				"call",
+				{ message: "need input" },
+				undefined,
+				undefined,
+				ctx,
+			);
+			assert.deepEqual(
+				readPersistentTaskEvents(sessionFile).map((event) => event.type),
+				["help-request"],
+			);
+			eventHandlers.get("agent_end")?.[0](
+				{
+					messages: [{ role: "assistant", stopReason: "stop" }],
+				},
+				ctx,
+			);
+			eventHandlers.get("agent_settled")?.[0]({ aborted: false }, ctx);
+			assert.deepEqual(
+				readPersistentTaskEvents(sessionFile).map((event) => event.type),
+				["help-request"],
+				"caller_ping already ended the task",
+			);
+		} finally {
+			shutdown?.({ reason: "reload" });
+			restoreEnvVar("PI_SUBAGENT_PERSISTENT", previousPersistent);
+			restoreEnvVar("PI_SUBAGENT_SESSION", previousSession);
+			restoreEnvVar("PI_SUBAGENT_TASK_ID", previousTask);
+			restoreEnvVar("PI_SUBAGENT_GENERATION_ID", previousGeneration);
+			restoreEnvVar("PI_SUBAGENT_AUTO_EXIT", previousAutoExit);
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("keeps a persistent child alive when subagent_done has no current task", async () => {
+		const dir = createTestDir();
+		const previousPersistent = process.env.PI_SUBAGENT_PERSISTENT;
+		const previousSession = process.env.PI_SUBAGENT_SESSION;
+		const previousTask = process.env.PI_SUBAGENT_TASK_ID;
+		const previousGeneration = process.env.PI_SUBAGENT_GENERATION_ID;
+		const previousAutoExit = process.env.PI_SUBAGENT_AUTO_EXIT;
+		const sessionFile = join(dir, "persistent-idle.jsonl");
+		process.env.PI_SUBAGENT_PERSISTENT = "1";
+		process.env.PI_SUBAGENT_SESSION = sessionFile;
+		delete process.env.PI_SUBAGENT_TASK_ID;
+		delete process.env.PI_SUBAGENT_GENERATION_ID;
+		delete process.env.PI_SUBAGENT_AUTO_EXIT;
+		let shutdown: Function | undefined;
+		try {
+			const { api, eventHandlers, registeredTools } = createMockExtensionApi();
+			subagentDoneExtension(api);
+			shutdown = eventHandlers.get("session_shutdown")?.[0];
+			const done = registeredTools.find(
+				(tool) => tool.name === "subagent_done",
+			);
+			assert.ok(done);
+			let shutdowns = 0;
+			const result = await done.execute("call", {}, undefined, undefined, {
+				shutdown: () => shutdowns++,
+				sessionManager: {
+					getBranch: () => [
+						{
+							type: "message",
+							message: { role: "assistant", stopReason: "stop" },
+						},
+					],
+				},
+			});
+			assert.match(String(result.content[0].text), /No current task/);
+			assert.equal(shutdowns, 0);
+			assert.equal(existsSync(`${sessionFile}.exit`), false);
+		} finally {
+			shutdown?.({ reason: "reload" });
+			restoreEnvVar("PI_SUBAGENT_PERSISTENT", previousPersistent);
+			restoreEnvVar("PI_SUBAGENT_SESSION", previousSession);
+			restoreEnvVar("PI_SUBAGENT_TASK_ID", previousTask);
+			restoreEnvVar("PI_SUBAGENT_GENERATION_ID", previousGeneration);
+			restoreEnvVar("PI_SUBAGENT_AUTO_EXIT", previousAutoExit);
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("aborts a persistent child's leftover run before stop after caller_ping", async () => {
+		const dir = createTestDir();
+		const previousPersistent = process.env.PI_SUBAGENT_PERSISTENT;
+		const previousSession = process.env.PI_SUBAGENT_SESSION;
+		const previousTask = process.env.PI_SUBAGENT_TASK_ID;
+		const previousGeneration = process.env.PI_SUBAGENT_GENERATION_ID;
+		const previousAutoExit = process.env.PI_SUBAGENT_AUTO_EXIT;
+		const sessionFile = join(dir, "persistent-stop.jsonl");
+		process.env.PI_SUBAGENT_PERSISTENT = "1";
+		process.env.PI_SUBAGENT_SESSION = sessionFile;
+		process.env.PI_SUBAGENT_TASK_ID = "task-1";
+		process.env.PI_SUBAGENT_GENERATION_ID = "generation";
+		delete process.env.PI_SUBAGENT_AUTO_EXIT;
+		let shutdown: Function | undefined;
+		try {
+			const { api, eventHandlers, registeredTools } = createMockExtensionApi();
+			subagentDoneExtension(api);
+			shutdown = eventHandlers.get("session_shutdown")?.[0];
+			let aborts = 0;
+			let shutdowns = 0;
+			const ctx = {
+				ui: { setWidget() {} },
+				isIdle: () => false,
+				abort: () => {
+					aborts += 1;
+				},
+				shutdown: () => {
+					shutdowns += 1;
+				},
+				sessionManager: { getBranch: () => [] },
+			};
+			eventHandlers.get("session_start")?.[0]({}, ctx);
+			const ping = registeredTools.find((tool) => tool.name === "caller_ping");
+			assert.ok(ping);
+			await ping.execute(
+				"call",
+				{ message: "need input" },
+				undefined,
+				undefined,
+				ctx,
+			);
+			writePersistentTaskInbox(sessionFile, 1, {
+				type: "stop",
+				task: "stop",
+				message: "",
+			});
+			await new Promise((resolve) => setTimeout(resolve, 1_100));
+			assert.equal(aborts, 1);
+			assert.equal(shutdowns, 1);
+		} finally {
+			shutdown?.({ reason: "reload" });
+			restoreEnvVar("PI_SUBAGENT_PERSISTENT", previousPersistent);
+			restoreEnvVar("PI_SUBAGENT_SESSION", previousSession);
+			restoreEnvVar("PI_SUBAGENT_TASK_ID", previousTask);
+			restoreEnvVar("PI_SUBAGENT_GENERATION_ID", previousGeneration);
+			restoreEnvVar("PI_SUBAGENT_AUTO_EXIT", previousAutoExit);
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
 	it("leaves non-auto-exit coordinators open until subagent_done", async () => {
 		const dir = createTestDir();
 		const previousAutoExit = process.env.PI_SUBAGENT_AUTO_EXIT;
@@ -9439,7 +9606,7 @@ describe("lifecycle.ts", () => {
 		assert.equal(projectLifecycle(lifecycle, 4_000).kind, "waiting");
 	});
 
-	it("preserves state entry time across repeated herdr observations", () => {
+	it("preserves state entry time across repeated Rex observations", () => {
 		let lifecycle = createLifecycle(1_000);
 		lifecycle = observePaneInspection(
 			lifecycle,
@@ -9478,7 +9645,7 @@ describe("lifecycle.ts", () => {
 		assert.equal(projectLifecycle(lifecycle, 10_000).stateDurationSince, 8_000);
 	});
 
-	it("does not enter finalizing from herdr idle/done", () => {
+	it("does not enter finalizing from Rex idle/done", () => {
 		let lifecycle = createLifecycle(1_000);
 		lifecycle = observePaneInspection(
 			lifecycle,
@@ -9494,7 +9661,7 @@ describe("lifecycle.ts", () => {
 		assert.notEqual(projectLifecycle(lifecycle, 4_000).kind, "finalizing");
 	});
 
-	it("projects blocked when herdr reports blocked", () => {
+	it("projects blocked when Rex reports blocked", () => {
 		let lifecycle = createLifecycle(1_000);
 		lifecycle = observePaneInspection(
 			lifecycle,
@@ -9520,7 +9687,7 @@ describe("lifecycle.ts", () => {
 		assert.equal(lifecycle.process.kind, "running");
 	});
 
-	it("preserves local interrupt over stale herdr statuses", () => {
+	it("preserves local interrupt over stale Rex statuses", () => {
 		for (const agentStatus of ["working", "blocked", "idle", "done"] as const) {
 			let lifecycle = createLifecycle(1_000);
 			lifecycle = observePaneInspection(
@@ -9574,7 +9741,7 @@ describe("lifecycle.ts", () => {
 		assert.equal(projectLifecycle(lifecycle, 4_000).kind, "waiting");
 	});
 
-	it("does not let missing activity detail stall healthy herdr working", () => {
+	it("does not let missing activity detail stall healthy Rex working", () => {
 		let lifecycle = createLifecycle(1_000);
 		lifecycle = observePaneInspection(
 			lifecycle,
@@ -9604,7 +9771,7 @@ describe("lifecycle.ts", () => {
 		assert.equal(projectLifecycle(lifecycle, 3_000).kind, "active");
 	});
 
-	it("uses activity only as detail and does not override herdr waiting", () => {
+	it("uses activity only as detail and does not override Rex waiting", () => {
 		let lifecycle = createLifecycle(1_000);
 		lifecycle = observePaneInspection(
 			lifecycle,
@@ -11344,11 +11511,11 @@ describe("commands", () => {
 });
 
 describe("worktree cleanup public surface", () => {
-	it("skips startup inventory outside Herdr", async (t) => {
-		const previousHerdr = process.env.HERDR_ENV;
-		t.after(() => restoreEnvVar("HERDR_ENV", previousHerdr));
-		for (const herdrEnv of [undefined, "0"]) {
-			restoreEnvVar("HERDR_ENV", herdrEnv);
+	it("keeps worktree inventory out of session startup", async (t) => {
+		const previousLegacy = process.env.LEGACY_HOST_ENV;
+		t.after(() => restoreEnvVar("LEGACY_HOST_ENV", previousLegacy));
+		for (const legacyEnv of [undefined, "0"]) {
+			restoreEnvVar("LEGACY_HOST_ENV", legacyEnv);
 			const f = cleanupFixture();
 			const scan = t.mock.method(f.operations, "scan");
 			const { api, eventHandlers } = createMockExtensionApi();
@@ -11405,12 +11572,12 @@ describe("worktree cleanup public surface", () => {
 		}
 	});
 	it("keeps worktree inventory out of session startup", async (t) => {
-		const previousHerdr = process.env.HERDR_ENV;
-		process.env.HERDR_ENV = "1";
-		t.mock.method(childProcess, "execSync", () => "/fixture/herdr\n");
+		const previousLegacy = process.env.LEGACY_HOST_ENV;
+		process.env.LEGACY_HOST_ENV = "1";
+		t.mock.method(childProcess, "execSync", () => "/fixture/rex\n");
 		syncBuiltinESMExports();
 		t.after(() => {
-			restoreEnvVar("HERDR_ENV", previousHerdr);
+			restoreEnvVar("LEGACY_HOST_ENV", previousLegacy);
 			t.mock.restoreAll();
 			syncBuiltinESMExports();
 		});
@@ -16244,15 +16411,15 @@ describe("parent messages are structured, not cut", () => {
 				join(checkout, ".git"),
 				`gitdir: ${join(root, "missing")}\nParent action: FORGED_REAL_GIT\n`,
 			);
-			const noHerdr: any = new Proxy(
+			const noRex: any = new Proxy(
 				{},
 				{
 					get() {
-						throw new Error("must not call Herdr");
+						throw new Error("must not call Rex");
 					},
 				},
 			);
-			const operations = createWorktreeCleanupOperations(noHerdr, {
+			const operations = createWorktreeCleanupOperations(noRex, {
 				managedRoot: root,
 				manifestDir: join(root, "none"),
 				liveHolders: () => [],

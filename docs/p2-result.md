@@ -26,7 +26,7 @@ rex new p2-smoke -c "$PWD" --json -- \
 ╰────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
-widget 由 `pi-herdr-agents` 自带，Rex 适配层不需要重复实现。
+widget 由 `upstream-package` 自带，Rex 适配层不需要重复实现。
 
 ## P2-3 cancel / interrupt / resume
 
@@ -45,10 +45,10 @@ widget 由 `pi-herdr-agents` 自带，Rex 适配层不需要重复实现。
 
 ## P2-4 worktree 展示文案
 
-worktree 结果中原来的 Herdr 专用行：
+worktree 结果中原来的 LegacyHost 专用行：
 
 ```text
-herdr worktree remove --workspace window:...
+legacyhost worktree remove --workspace window:...
 ```
 
 现在会被扩展在投递前改写为：
@@ -57,11 +57,11 @@ herdr worktree remove --workspace window:...
 rex window close window:...
 ```
 
-`bun src/p1.ts --worktree` 验证了结果正文和 `details.resultContent` 都不再包含 `herdr worktree remove`；实际清理仍通过 `worktree_remove` 工具或 `/worktree remove` 完成。
+`bun src/p1.ts --worktree` 验证了结果正文和 `details.resultContent` 都不再包含 `legacyhost worktree remove`；实际清理仍通过 `worktree_remove` 工具或 `/worktree remove` 完成。
 
 ## P2-5 安装与冲突
 
-见 [install.md](install.md)。核心结论：Pi 不允许两个扩展注册同名工具，因此不能同时加载 `pi-herdr-agents` 和 `pi-rex-agents`；Rex 场景应二选一。
+见 [install.md](install.md)。核心结论：Pi 不允许两个扩展注册同名工具，因此不能同时加载 `upstream-package` 和 `pi-rex-agents`；Rex 场景应二选一。
 
 ## P2-6 文档与打包
 
@@ -75,7 +75,7 @@ rex window close window:...
 |---|---|
 | `npm run check` | typecheck、host 文案检查、P0 全部通过 |
 | `bun src/p1.ts` | `ok: true`，`parentSurvived: true` |
-| `bun src/p1.ts --worktree` | 通过；结果正文和 `details.resultContent` 均无 `herdr worktree remove` |
+| `bun src/p1.ts --worktree` | 通过；结果正文和 `details.resultContent` 均无 `legacyhost worktree remove` |
 | `bun src/p1.ts --persistent` | 通过；第二轮 `P1_SECOND_OK`，随后 stop |
 | `bun src/p2.ts` | `ok: true`，cancel `confirmed`，interrupt `interrupt_requested`，resume `P2_RESUMED_OK` |
 | `npm run doctor` | `ok: true`，Rex/Pi CLI、入口和包冲突检查正常 |

@@ -3,7 +3,7 @@
 		{
 			"name": "caller_ping",
 			"scopes": ["child"],
-			"description": "Send a help request to the parent agent and exit this session. The parent will be notified with your message and can resume this session with a response. Use when you're stuck, need clarification, or need the parent to take action.",
+			"description": "Send a help request to the parent agent. For a persistent specialist this ends the current task and keeps the session available; otherwise it exits this session. The parent will be notified with your message and can resume this session with a response. Use when you're stuck, need clarification, or need the parent to take action.",
 			"parameters": {
 				"type": "object",
 				"required": ["message"],
@@ -160,7 +160,7 @@
 		{
 			"name": "subagent_done",
 			"scopes": ["child"],
-			"description": "Call this tool when you have completed your task. It will close this session and return your results to the main session. Your LAST assistant message before calling this becomes the summary returned to the caller.",
+			"description": "Call this tool when you have completed the current task. For a persistent specialist it returns the task result and keeps the session available for subagent_send; otherwise it closes this session and returns your results to the main session. Your LAST assistant message before calling this becomes the summary returned to the caller.",
 			"parameters": { "type": "object", "properties": {} }
 		},
 		{

@@ -423,7 +423,7 @@ for (const [process, lifecycle] of Object.entries(exited))
 			assert.deepEqual(f.outcomes(), ["rejected-busy"]);
 		});
 
-test("open process idle after a completed task accepts work despite a stale Herdr working status", (t) => {
+test("open process idle after a completed task accepts work despite a stale Rex working status", (t) => {
 	const f = specialist(t);
 	f.running.tasksCompleted = 1;
 	f.running.lifecycle = observePaneInspection(

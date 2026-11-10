@@ -58,20 +58,20 @@ kernel producer, adapter, and finalization. It is not a second engine.
    a worktree manifest records what a plain shutdown would, never
    `cancelled`.
 7. **Surface ownership.** Pi `kill` closes an ordinary pane and confirms its
-   absence through Herdr; a close error on an already-absent pane is still
+   absence through LegacyHost; a close error on an already-absent pane is still
    confirmed by that absence. A managed-worktree root pane is the retained
-   review workspace, and Herdr refuses to close it. For that child, `kill`
+   review workspace, and LegacyHost refuses to close it. For that child, `kill`
    acts only on the child's **process identity**, established at launch from
    immutable kernel facts, never from command-line text: Pi assigns
    `process.title`, which rewrites `/proc/<pid>/cmdline` and erases
-   `--session`, and Herdr lists foreground processes only.
+   `--session`, and LegacyHost lists foreground processes only.
    - *Capture.* The child protocol extension records its own PID, `/proc`
      start time, boot ID, and PID-namespace link into a once-only sidecar
      beside its session (`<session>.process.json`). In the background after
      launch, the parent accepts the record only for this run and session,
      only while that PID is alive with that start time on this boot in the
      parent's own PID namespace (also proven by `/proc/self` naming the
-     parent), and only as Herdr's pane shell or a descendant of it. The
+     parent), and only as LegacyHost's pane shell or a descendant of it. The
      identity lives on the run record. A shell PID merely existing locally is
      not namespace evidence; the recorded namespace link is.
    - *Signal.* SIGTERM goes only to that identity, re-read (PID and start
@@ -88,7 +88,7 @@ kernel producer, adapter, and finalization. It is not a second engine.
      or resumed child), unreadable, from another boot or PID namespace, or
      whose PID now has another start time is not signalled and is
      unconfirmed unless pane absence confirms termination.
-   - *Bound.* Every provider await (Herdr process info during capture, pane
+   - *Bound.* Every provider await (LegacyHost process info during capture, pane
      inspection during cancel) is bounded by the remaining capture or kill
      deadline, so `unconfirmed` is reported on time; a late answer is
      dropped and never flips a reported outcome. A cancel after the launch
@@ -103,7 +103,7 @@ kernel producer, adapter, and finalization. It is not a second engine.
 
 ## Consequences
 
-- Cancel never confirms more than its evidence: ordinary confirmation is Herdr
+- Cancel never confirms more than its evidence: ordinary confirmation is LegacyHost
   pane absence, which terminates the pane's PTY, not an OS PID check. Worktree
   confirmation is the launch-captured process identity ceasing to exist; a
   stopped Pi keeps SIGTERM pending and stays unconfirmed until it is resumed

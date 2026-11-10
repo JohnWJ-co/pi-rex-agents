@@ -1,7 +1,7 @@
 /**
  * Deterministic component integration for the completion, file-wake, and
  * shared-reconciliation seams. Real parent/child lifecycle coverage remains in
- * subagent-lifecycle.test.ts and persistent-specialist.test.ts.
+ * rex-smoke.test.ts and persistent-specialist.test.ts.
  *
  * A real Pi parent cannot deterministically publish an error or caller_ping
  * sidecar in the same event-loop turn as a terminal read. The unit reproducer

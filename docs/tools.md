@@ -34,8 +34,8 @@ This page is the detailed reference for the tools, commands, and run lifecycle o
 
 | Pi child-only tool | Description |
 | --- | --- |
-| `caller_ping` | Send a help request to the parent agent and exit this session. |
-| `subagent_done` | Call this tool when you have completed your task. |
+| `caller_ping` | Send a help request to the parent agent. |
+| `subagent_done` | Call this tool when you have completed the current task. |
 <!-- generated:child-tools:end -->
 
 <!-- generated:commands:start -->

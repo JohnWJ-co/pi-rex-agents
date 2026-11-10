@@ -14,11 +14,11 @@ longer reachable. A reachable owned manifest enriches inventory and is marked
 removed after successful cleanup, but is not the authorization boundary.
 
 Discovery joins the managed filesystem root, Git registration and working-tree
-state, live Herdr workspace state, and current-session manifests. Unknown or
+state, live LegacyHost workspace state, and current-session manifests. Unknown or
 conflicting eligibility evidence blocks removal, subject to the approved
 individual process-visibility exception below. Detected same-user process
 holders, known live children, and persistent leases block removal; process
-names are not a runtime allowlist. Only Herdr-confirmed idle retained shell
+names are not a runtime allowlist. Only LegacyHost-confirmed idle retained shell
 PIDs are exempt, never active runtimes at those PIDs. Dirty work requires an
 explicit WIP preservation commit on the retained branch; detached HEAD,
 conflicts, locks, and initialized submodules cannot be bypassed.
@@ -41,11 +41,11 @@ SHA remains in the report even when subsequent removal fails.
 
 Removed manifests are no-op evidence only and never classify a recreated
 checkout. Post-removal manifest-write failures are warnings, not removal
-failures. Cleanup Git and Herdr calls have bounded 30-second timeouts. Child
+failures. Cleanup Git and LegacyHost calls have bounded 30-second timeouts. Child
 sessions retain their existing `/worktree list` and `/worktree <name>` surfaces;
 only the cleanup tools and removal subcommand are parent-only.
 
-Open workspaces are removed through Herdr. Git-only orphans use Git removal,
+Open workspaces are removed through LegacyHost. Git-only orphans use Git removal,
 verify checkout absence, and then prune stale registrations. Branches and their
 commits are retained. Session startup does not scan worktree inventory, avoiding blocking Pi initialization; use `/worktree list` or `worktree_list` for an explicit inventory.
 

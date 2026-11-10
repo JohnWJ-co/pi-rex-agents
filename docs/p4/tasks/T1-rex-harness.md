@@ -1,10 +1,10 @@
 # T1 Rex lab、Rex 集成 harness、AGENTS.md、验证技能
 
 ## 目标
-在删除 Herdr 之前，先搭好 Rex 版的验证体系，让 T2–T6 每一步都有端到端门禁。
+在删除 LegacyHost 之前，先搭好 Rex 版的验证体系，让 T2–T6 每一步都有端到端门禁。
 
 ## 必读
-`docs/p4/rex-facts.md` 中的 F3、F4、F8；上游 `.pi/skills/verify-pi-herdr-agents/SKILL.md`、`scripts/lab.ts`、`scripts/pin.ts`、`.pi/skills/run-integration-tests/SKILL.md`、`test/integration/harness.ts`、`test/integration/fake-provider.ts`。
+`docs/p4/rex-facts.md` 中的 F3、F4、F8；上游 `.pi/skills/verify-upstream-package/SKILL.md`、`scripts/lab.ts`、`scripts/pin.ts`、`.pi/skills/run-integration-tests/SKILL.md`、`test/integration/harness.ts`、`test/integration/fake-provider.ts`。
 
 ## 步骤
 1. `src/rex-cli.ts`：所有 rex 调用都显式带 `-S "$REX_SERVER"`（存在时）和 `--autostart=false`。补单测（argv 构造）。
@@ -17,7 +17,7 @@
 4. 新增 `test/integration/rex-smoke.test.ts`：父 Pi 发起 1 个普通子代理 → 父进程收到报告 → 子 block 被清理。不需要 REX 环境时用 `skip` 并在输出中注明原因（skip 不算通过）。
 5. 加 npm 脚本 `test:integration:rex`（`--test-concurrency=1`）。
 6. 新写 `AGENTS.md`（以上游 AGENTS.md 为蓝本）：本包是什么（Rex 宿主的 Pi 子代理扩展，hard fork）、必读文档、代码地图（当前状态，后续任务同步更新）、文档同步规则、验证门禁、提交前检查。删除 role-pack/release/sidebar 相关内容。
-7. 新写 `.pi/skills/verify-pi-rex-agents/SKILL.md` 与 `.pi/skills/run-integration-tests/SKILL.md`（Rex 版：preflight 检查 `REX_SESSION`，postflight 检查 `rex ls` 中没有残留的 `pira-lab-*`/`pi-integ-*`）。删除复制过来的 `verify-pi-herdr-agents`。
+7. 新写 `.pi/skills/verify-pi-rex-agents/SKILL.md` 与 `.pi/skills/run-integration-tests/SKILL.md`（Rex 版：preflight 检查 `REX_SESSION`，postflight 检查 `rex ls` 中没有残留的 `pira-lab-*`/`pi-integ-*`）。删除复制过来的 `verify-upstream-package`。
 8. `scripts/pin.ts` 移到新技能目录，确认能对当前树产出 pin JSON。
 
 ## 门禁

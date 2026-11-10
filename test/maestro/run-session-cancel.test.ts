@@ -50,7 +50,7 @@ function deferred<T = void>() {
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 /**
- * The fake's kill settles error evidence, exactly like a closed Herdr pane that
+ * The fake's kill settles error evidence, exactly like a closed Rex block that
  * the watcher reports as "pane disappeared": the incident's fallback trigger.
  */
 class Adapter extends FakeHarnessAdapter {

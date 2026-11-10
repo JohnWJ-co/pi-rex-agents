@@ -436,10 +436,10 @@ describe("Pi launch", () => {
 					"/repo",
 				),
 				new RegExp(
-					`Timed out waiting for Pi session /tmp/child\\.jsonl in Herdr pane fake-surface-1: ${reason.source}`,
+					`Timed out waiting for Pi session /tmp/child\\.jsonl in Rex block fake-surface-1: ${reason.source}`,
 				),
 			);
-			assert.equal(answered, true, "the rejection judged a Herdr answer");
+			assert.equal(answered, true, "the rejection judged a Rex answer");
 		} finally {
 			clock.mock.restore();
 		}
@@ -473,8 +473,8 @@ describe("Pi launch", () => {
 	const linuxOnly = { skip: process.platform !== "linux" };
 
 	it("Pi readiness matches the launched session by environment, not rewritten argv", () => {
-		// Herdr 0.9.3 pane process-info for a live Pi: its title rewrite leaves no `--session`.
-		const herdrReported = {
+		// Rex block process-info for a live Pi: its title rewrite leaves no `--session`.
+		const rexReported = {
 			pid: 42,
 			name: "pi",
 			argv: ["pi"],
@@ -487,20 +487,20 @@ describe("Pi launch", () => {
 		]);
 		const read = (pid: number) => environments.get(pid);
 		assert.equal(
-			isExpectedPiProcess(herdrReported, "/tmp/child.jsonl", "/repo", read),
+			isExpectedPiProcess(rexReported, "/tmp/child.jsonl", "/repo", read),
 			true,
 		);
 		for (const process of [
-			{ ...herdrReported, pid: 43 },
-			{ ...herdrReported, pid: 44 },
-			{ ...herdrReported, pid: 45 },
+			{ ...rexReported, pid: 43 },
+			{ ...rexReported, pid: 44 },
+			{ ...rexReported, pid: 45 },
 			{
-				...herdrReported,
+				...rexReported,
 				pid: 43,
 				argv: ["pi", "--session", "/tmp/child.jsonl"],
 			},
-			{ ...herdrReported, cwd: "/wrong" },
-			{ ...herdrReported, name: "node" },
+			{ ...rexReported, cwd: "/wrong" },
+			{ ...rexReported, name: "node" },
 		]) {
 			assert.equal(
 				isExpectedPiProcess(process, "/tmp/child.jsonl", "/repo", read),

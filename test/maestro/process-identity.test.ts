@@ -104,7 +104,7 @@ const [launch, file, stall] = process.argv.slice(1);
 const { captureSurfacePiProcessIdentity } = await import(launch);
 const provider = {
 	getProcessInfo: () =>
-		stall === "herdr"
+		stall === "rex"
 			? new Promise(() => {})
 			: { shellPid: process.pid, pids: [], foregroundProcesses: [] },
 };
@@ -118,7 +118,7 @@ captureSurfacePiProcessIdentity(
 	() => process.stdout.write("settled\\n"),
 );
 `;
-async function captureDrains(file: string, stall: "record" | "herdr") {
+async function captureDrains(file: string, stall: "record" | "rex") {
 	const child = spawn(
 		process.execPath,
 		[
@@ -379,7 +379,7 @@ describe("process identity", () => {
 	);
 
 	it(
-		"refuses a real record outside the pane shell, for another run, or without a Herdr shell",
+		"refuses a real record outside the pane shell, for another run, or without a Rex shell",
 		withDir(async (dir) => {
 			if (!linux) return;
 			const sessionFile = join(dir, "s.jsonl");
@@ -400,7 +400,7 @@ describe("process identity", () => {
 				await assert.rejects(
 					capture(sibling.pid),
 					new RegExp(
-						`not the Herdr pane shell ${sibling.pid} or its descendant`,
+						`not the Rex block shell ${sibling.pid} or its descendant`,
 					),
 				);
 				await assert.rejects(capture(process.pid, "other"), /another run/);
@@ -505,11 +505,11 @@ describe("process identity", () => {
 	);
 
 	it(
-		"never holds the process open while waiting for Herdr process info",
+		"never holds the process open while waiting for Rex process info",
 		withDir(async (dir) => {
 			const file = join(dir, "s.jsonl.process.json");
 			writeProcessIdentityRecord(file, record());
-			const exit = await captureDrains(file, "herdr");
+			const exit = await captureDrains(file, "rex");
 			assert.deepEqual(exit, { code: 0, signal: null, output: "" });
 		}),
 	);

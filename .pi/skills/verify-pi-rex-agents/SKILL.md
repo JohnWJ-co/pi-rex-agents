@@ -68,7 +68,7 @@ $L down
 `up` creates a short `pira-lab-*` root with `mkdtemp`, starts `rex server run --listen unix://<root>/s --state-dir <root>/state --restore=false`, creates a session, and runs `rex whoami --json` inside the lab block. The returned endpoint must equal the lab socket. `drive` records `evidence.json` with the endpoint, child session, report envelope, parent continuation, and block IDs before/during/after the delegation. It also requires a validated
 `resultFile` / `result` matching the delivery and `exitcode: 0` after child exit. `down` stops only the recorded helper/server and removes the lab root.
 
-Never synchronize with a fixed sleep. Wait for a file, session entry, Pi OSC/program status, or Rex block condition. Never call Herdr APIs or clean a user session.
+Never synchronize with a fixed sleep. Wait for a file, session entry, Pi OSC/program status, or Rex block condition. Never call legacy host APIs or clean a user session.
 
 For a refactor behavior pin:
 

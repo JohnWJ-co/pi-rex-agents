@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-04
-- **Scope:** `giuseppecrj/pi-herdr-agents`
+- **Scope:** `upstream-project`
 - **Supersedes:** Only ADR-0008's restriction on adding a runtime adapter seam without a second real execution path
 
 ## Decision
@@ -11,7 +11,7 @@ Adopt explicit `HarnessAdapter`, `SurfaceProvider`, and `RunSession` interfaces
 under `maestro/` in this repository. Keep one npm package and the existing
 `pi-extension/subagents/index.ts` Pi extension entry point.
 
-Pi remains the sole real harness and Herdr the sole real surface provider.
+Pi remains the sole real harness and LegacyHost the sole real surface provider.
 In-memory fakes provide conformance coverage, not supported execution paths.
 Runtime composition wires the real adapter and provider; the Pi host calls
 runtime operations and core modules without importing adapters or surfaces
@@ -25,7 +25,7 @@ harness or provider.
 ## Why
 
 Conformance fakes make run ownership and orchestration testable without real
-Pi or Herdr resources. Explicit boundaries also prepare `maestro/` for later
+Pi or LegacyHost resources. Explicit boundaries also prepare `maestro/` for later
 extraction without maintaining a second implementation. These needs justify
 the seam without a second real execution path.
 
@@ -33,8 +33,8 @@ the seam without a second real execution path.
 
 The Pi launch module still owns each launch transaction; the run session owns
 run coordination, retries, observation, and delivery-gated cleanup. Pi-specific
-protocol code lives in `maestro/adapters/pi/`, Herdr operations in
-`maestro/surfaces/herdr/`, and harness-neutral rules in `maestro/core/`.
+protocol code lives in `maestro/adapters/pi/`, LegacyHost operations in
+`maestro/surfaces/legacyhost/`, and harness-neutral rules in `maestro/core/`.
 
 The rest of [ADR-0008](0008-adopt-pi-only-subagent-execution.md) remains in
 force, including Pi-only execution and rejection of legacy external CLI roles.

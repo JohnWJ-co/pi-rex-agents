@@ -36,7 +36,7 @@ export function cleanupFixture() {
 			return "wip-sha";
 		},
 		removeWorkspace: (id) => {
-			calls.push(`herdr:${id}`);
+			calls.push(`surface:${id}`);
 			present = false;
 		},
 		reportOpenedPrimaryWorkspace: () => undefined,

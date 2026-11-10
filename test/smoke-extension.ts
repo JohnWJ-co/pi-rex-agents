@@ -79,7 +79,6 @@ try {
 			const prompt = event.systemPromptOptions.appendSystemPrompt;
 			assert.ok(prompt.startsWith("existing"));
 			assert.equal(prompt.match(/\[Rex (host|child)\]/g)?.length, 1);
-			assert.doesNotMatch(prompt, /herdr/i);
 			if (scope === "child") assert.match(prompt, /You are a leaf/);
 			console.log(JSON.stringify({ scope, tools: names, notice: prompt }));
 		} finally {

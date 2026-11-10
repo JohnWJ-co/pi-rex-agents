@@ -1,9 +1,9 @@
 # Research: pi-dynamic-workflows and sol-advisor
 
 **Date:** 2026-08-03
-**Question:** What are the architectures, execution/data flows, and extension points of first-party `pi-dynamic-workflows` and `DannyMac180/sol-advisor`, and which ideas transfer to a potential `pi-herdr-subagents` workflow feature?
+**Question:** What are the architectures, execution/data flows, and extension points of first-party `pi-dynamic-workflows` and `DannyMac180/sol-advisor`, and which ideas transfer to a potential `upstream-package` workflow feature?
 **Method:** Read-only review of GitHub source/docs clones. No code modified.
-**Local transfer context (not the research targets):** `giuseppecrj/pi-herdr-agents` ADR-0002 taxonomy and draft orchestrator-designed-workflows spec.
+**Local transfer context (not the research targets):** `upstream-project` ADR-0002 taxonomy and draft orchestrator-designed-workflows spec.
 
 > This is preliminary research. The later ADRs and [`../orchestrated-review-workflow-plan.md`](../orchestrated-review-workflow-plan.md) supersede its early recommendation for a declarative workflow document.
 
@@ -70,7 +70,7 @@ Important runtime details from source:
 - Concurrency default: `hardwareConcurrency - 2`, clamped 1–16 (`src/workflow.ts`).
 - Token budget is a rough estimate (`JSON.stringify(result).length / 4`), not provider usage.
 - `model`, `isolation: "worktree"`, and `agentType` on `agent()` options are currently **prompt guidance only** (`buildAgentInstructions`); they are not enforced runtime pins.
-- Subagents share the parent cwd and coding tools; they are not Herdr panes and not durable sessions.
+- Subagents share the parent cwd and coding tools; they are not LegacyHost panes and not durable sessions.
 - README status: prototype. No persisted/resumable runs and no `/workflows` manager yet.
 
 ### Extension points
@@ -184,37 +184,37 @@ user request
 
 ### Limits / non-goals (as shipped)
 
-- Codex-specific tools and models; not portable to Pi/Herdr without re-hosting.
+- Codex-specific tools and models; not portable to Pi/LegacyHost without re-hosting.
 - Policy is mostly prompt/skill text, not an executable graph runner.
 - No durable multi-node scheduler; concurrency is human-procedure based.
 - Sol-on-Sol review is context-clean, not cross-model-family independence (README states this).
 
-## 3. Transfer map for pi-herdr-subagents
+## 3. Transfer map for upstream-package
 
-Local package already owns **agent execution** in Herdr (async `subagent`, panes, worktrees, completion steer, role discovery). ADR-0002 says workflows compose roles and should not become a second skill system or general engine. Draft local spec `agent-adrs/specs/0001-orchestrator-designed-workflows.md` already aims at approved `workflow.md` graphs with evidence receipts — closer to sol-advisor’s control plane than to pure code-mode scripts.
+Local package already owns **agent execution** in LegacyHost (async `subagent`, panes, worktrees, completion steer, role discovery). ADR-0002 says workflows compose roles and should not become a second skill system or general engine. Draft local spec `agent-adrs/specs/0001-orchestrator-designed-workflows.md` already aims at approved `workflow.md` graphs with evidence receipts — closer to sol-advisor’s control plane than to pure code-mode scripts.
 
 ### High-value transfers
 
-| Idea | From | Why it fits herdr-subagents |
+| Idea | From | Why it fits legacyhost-subagents |
 | --- | --- | --- |
 | Workflow as composition layer above roles | both; ADR-0002 already | Keep `subagent` as execution; add workflow registry/runner only when two surfaces share mechanics. |
 | Explicit approval boundary before writers | sol-advisor packets; local draft `workflow.md` | Parent designs graph; user/parent approves before effectful nodes. |
 | Complete task packets / structured handoff envelopes | sol-advisor; pi-dynamic structured_output | Child must not depend on parent chat history; return status, evidence, artifacts, runtime, worktree metadata. |
 | Parent re-verification + fresh review verdict | sol-advisor | Map to existing `reviewer` / adversarial-review patterns; gate on `ship \| fix-first \| rethink`. |
 | Fail-closed model/role policy | sol-advisor | Align with local routing: exact authenticated provider/model refs; no silent substitute. |
-| Parallel writers only with distinct worktrees + non-overlapping ownership | sol-advisor Luna/native; herdr worktree docs | Already supported by `worktree: { branch, base }`; workflow runner should enforce it. |
-| Integration/PR/cleanup reserved for parent | sol-advisor; herdr worktree research | Worker commits/reports; parent integrates. |
+| Parallel writers only with distinct worktrees + non-overlapping ownership | sol-advisor Luna/native; legacyhost worktree docs | Already supported by `worktree: { branch, base }`; workflow runner should enforce it. |
+| Integration/PR/cleanup reserved for parent | sol-advisor; legacyhost worktree research | Worker commits/reports; parent integrates. |
 | Live progress snapshot | pi-dynamic-workflows display | Optional overlay on runner state; do not block on in-process tool completion. |
 | Concurrency + budget hard limits | pi-dynamic limiter/budget; sol-advisor limits language | Encode as workflow document limits, not soft prose. |
 
 ### Borrow carefully / adapt, do not copy wholesale
 
-| Idea | Risk if copied raw into herdr-subagents |
+| Idea | Risk if copied raw into legacyhost-subagents |
 | --- | --- |
 | Parent-written JS `vm` workflow scripts (pi-dynamic) | Powerful but fights current “approved workflow.md / no recursive child graphs” draft. Prefer declarative approved graph first; optional code-mode later. |
-| Blocking in-memory subagent sessions (pi-dynamic) | Contradicts herdr’s non-blocking pane model and completion-steer delivery. Reuse `subagent` launch/watch instead of `SessionManager.inMemory`. |
+| Blocking in-memory subagent sessions (pi-dynamic) | Contradicts legacyhost’s non-blocking pane model and completion-steer delivery. Reuse `subagent` launch/watch instead of `SessionManager.inMemory`. |
 | Soft-fail agents to `null` (pi-dynamic) | Hides failures; sol-advisor/local draft prefer explicit node failure and evidence gaps. |
-| Exact Codex TOML role pins + rollout inspector | Concept (attestation) transfers; implementation must use Pi/Herdr session metadata and agent frontmatter/config, not Codex scripts. |
+| Exact Codex TOML role pins + rollout inspector | Concept (attestation) transfers; implementation must use Pi/LegacyHost session metadata and agent frontmatter/config, not Codex scripts. |
 | Sol/Terra/Luna model family as product identity | Do not hardcode vendor lanes. Express as configurable role→runtime policy. |
 | Skill-only orchestration (sol-advisor) | Good for procedure docs (`/plan`-style), weak for multi-node state, cancellation, and one final receipt. |
 
@@ -228,20 +228,20 @@ Local package already owns **agent execution** in Herdr (async `subagent`, panes
 
 ### Non-transfers
 
-- Replacing Herdr panes with in-memory Pi sessions.
+- Replacing LegacyHost panes with in-memory Pi sessions.
 - Baking GPT-5.6 Sol/Terra/Luna names into package defaults as identity.
 - Growing `agents/` with more outcome-orchestration prompts (ADR-0002 explicitly rejects cloning `adversarial-reviewer` as the pattern).
 - Auto-activating a heavy lane merely because a skill/package is installed (sol-advisor Luna rule is the cautionary example).
 
 ## 4. Side-by-side summary
 
-> Historical research baseline table only. The `herdr-subagents` column records the pinned 2026-08-03 research baseline and is not current package status.
+> Historical research baseline table only. The `legacyhost-subagents` column records the pinned 2026-08-03 research baseline and is not current package status.
 
-| Dimension | pi-dynamic-workflows | sol-advisor | herdr-subagents at research baseline |
+| Dimension | pi-dynamic-workflows | sol-advisor | legacyhost-subagents at research baseline |
 | --- | --- | --- | --- |
-| Host | Pi tool/extension | Codex plugin + skill + custom agents | Pi extension inside Herdr |
+| Host | Pi tool/extension | Codex plugin + skill + custom agents | Pi extension inside LegacyHost |
 | Orchestration medium | Deterministic JS script in vm | Skill procedure + spawn/app tools | Parent prompts + `subagent` tool + a few commands (`/plan`, `/iterate`, `/btw`) |
-| Child runtime | In-memory Pi session | Codex native thread or app task | Herdr pane/session (Pi or CLI adapter) |
+| Child runtime | In-memory Pi session | Codex native thread or app task | LegacyHost pane/session (Pi or CLI adapter) |
 | Isolation | Shared cwd; worktree option not enforced | Worktree default on Luna Git projects; ownership rules | Optional managed worktrees |
 | Model policy | Guidance strings | Exact TOML pins + attestation | Invocation → agent → config → parent chain |
 | Acceptance | Parent tool result JSON | Parent re-verify + fresh Sol verdict | Completion steer; no first-class workflow receipt |
@@ -252,4 +252,4 @@ Local package already owns **agent execution** in Herdr (async `subagent`, panes
 
 - **pi-dynamic-workflows** is a compact **code-mode fan-out engine** for Pi: script → sandbox → many short in-memory agents → one tool result. Best borrowed pieces: progress snapshots, structured handoffs, and tight fan-out primitives — not its blocking in-memory runtime.
 - **sol-advisor** is a **control-plane recipe** for architect/implement/review with fail-closed routing and evidence-based acceptance. Best borrowed pieces: complete packets, primary-owned verification, fresh review verdicts, explicit lane opt-in, and integration authorization.
-- For **pi-herdr-subagents**, the high-leverage path is sol-advisor-style control + herdr execution + optional pi-dynamic presentation/helpers, matching the local draft “approved workflow document → runner → evidence receipt” direction rather than cloning either repo wholesale.
+- For **upstream-package**, the high-leverage path is sol-advisor-style control + legacyhost execution + optional pi-dynamic presentation/helpers, matching the local draft “approved workflow document → runner → evidence receipt” direction rather than cloning either repo wholesale.

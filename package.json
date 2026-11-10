@@ -5,6 +5,14 @@
   "type": "module",
   "description": "Rex-native Pi subagents with asynchronous delivery, persistent specialists and managed worktrees",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JohnWJ-co/pi-rex-agents.git"
+  },
+  "homepage": "https://github.com/JohnWJ-co/pi-rex-agents#readme",
+  "bugs": {
+    "url": "https://github.com/JohnWJ-co/pi-rex-agents/issues"
+  },
   "files": [
     "pi-extension/subagents/",
     "maestro/core/",
