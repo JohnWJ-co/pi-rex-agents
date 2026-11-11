@@ -49,7 +49,8 @@ export function createPiPlacementReservation(
 						(surface) =>
 							surface.id !== parentSurfaceId &&
 							owned.has(surface.id) &&
-							surface.workspaceId === parent?.workspaceId,
+							surface.workspaceId === parent?.workspaceId &&
+							!surface.minimized,
 					).length;
 					// If the parent window cannot be verified, a fresh tab keeps the cap.
 					if (!parent?.workspaceId || count >= config.maxPerTab)

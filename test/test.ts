@@ -5169,9 +5169,14 @@ describe("pane configuration", () => {
 		for (const mode of ["window", "grouped"]) {
 			assert.throws(
 				() => parsePaneConfig({ panes: { mode } }),
-				/panes\.mode must be "split" or "tab"/,
+				/panes\.mode must be "split", "tab", or "minimized"/,
 			);
 		}
+		assert.deepEqual(parsePaneConfig({ panes: { mode: "minimized" } }), {
+			mode: "minimized",
+			direction: "right",
+			maxPerTab: 2,
+		});
 		assert.throws(
 			() => parsePaneConfig({ panes: { direction: "left" } }),
 			/panes\.direction must be "right" or "down"/,
@@ -5196,6 +5201,19 @@ describe("pane configuration", () => {
 				direction: "down",
 			});
 		});
+	});
+
+	it("routes minimized panes.mode through launch operations", async () => {
+		const provider = new FakeSurfaceProvider();
+		const operations = launchOperationsFromSurface(provider, {
+			mode: "minimized",
+			direction: "right",
+			maxPerTab: 2,
+		});
+		await operations.createPane("Minimized", "/repo", undefined, undefined);
+		const surfaces = await provider.listSurfaces();
+		assert.equal(surfaces.length, 1);
+		assert.equal(surfaces[0].minimized, true);
 	});
 
 	it("writes only panes, preserves unrelated settings, and validates the merged result", () => {
@@ -5264,14 +5282,14 @@ describe("pane configuration", () => {
 					notify: (text: string) => notices.push(text),
 					select: async (title: string, options: string[]) => {
 						selections.push({ title, options });
-						return options.at(-1);
+						return options.includes("tab") ? "tab" : options.at(-1);
 					},
 				},
 			};
 
 			await mode.handler("", ctx);
 			await max.handler("", ctx);
-			assert.deepEqual(selections[0]?.options, ["split", "tab"]);
+			assert.deepEqual(selections[0]?.options, ["split", "tab", "minimized"]);
 			assert.deepEqual(selections[1]?.options, [
 				"1",
 				"2",
@@ -5293,6 +5311,12 @@ describe("pane configuration", () => {
 			assert.equal(saved.status.enabled, true);
 			assert.match(notices.at(-1) ?? "", /maxPerTab set to 10/);
 
+			await mode.handler("minimized", ctx);
+			assert.equal(paneConfig.mode, "minimized");
+			assert.equal(
+				JSON.parse(readFileSync(configPath, "utf8")).panes.mode,
+				"minimized",
+			);
 			await mode.handler("split", ctx);
 			await max.handler("4", ctx);
 			assert.equal(paneConfig.mode, "split");
@@ -5304,7 +5328,7 @@ describe("pane configuration", () => {
 			await max.handler("11", ctx);
 			assert.match(notices.at(-1) ?? "", /integer from 1 to 10/);
 			await mode.handler("window", ctx);
-			assert.match(notices.at(-1) ?? "", /Use split or tab/);
+			assert.match(notices.at(-1) ?? "", /Use split, tab, or minimized/);
 			const unchanged = JSON.parse(readFileSync(configPath, "utf8"));
 			assert.equal(unchanged.panes.maxPerTab, 4);
 			assert.equal(unchanged.panes.mode, "split");
@@ -5324,6 +5348,10 @@ describe("pane configuration", () => {
 			calls.push(`split:${name}:${direction}`);
 			return "split-pane";
 		};
+		const createMinimized = (name: string) => {
+			calls.push(`minimized:${name}`);
+			return "minimized-pane";
+		};
 
 		assert.equal(
 			createSubagentPaneFactory(
@@ -5341,7 +5369,20 @@ describe("pane configuration", () => {
 			)("Reviewer"),
 			"split-pane",
 		);
-		assert.deepEqual(calls, ["tab:Scout", "split:Reviewer:right"]);
+		assert.equal(
+			createSubagentPaneFactory(
+				{ mode: "minimized", direction: "right", maxPerTab: 4 },
+				createTab,
+				createSplit,
+				createMinimized,
+			)("Minimized"),
+			"minimized-pane",
+		);
+		assert.deepEqual(calls, [
+			"tab:Scout",
+			"split:Reviewer:right",
+			"minimized:Minimized",
+		]);
 	});
 });
 

@@ -24,10 +24,15 @@ function fixture() {
 	function create(mode: PaneMode) {
 		choices.push(mode);
 		const id = `child-${choices.length}`;
-		surfaces.set(id, {
+		const surface: SurfaceInfo = {
 			id,
-			workspaceId: mode === "split" ? "parent-window" : `window-${id}`,
-		});
+			workspaceId:
+				mode === "split" || mode === "minimized"
+					? "parent-window"
+					: `window-${id}`,
+		};
+		if (mode === "minimized") surface.minimized = true;
+		surfaces.set(id, surface);
 		return id;
 	}
 	function register(id: string) {
@@ -88,6 +93,16 @@ test("Pi placement counts only this parent's live registered blocks in its curre
 	f.surfaces.set("parent", { id: "parent", workspaceId: "moved-parent" });
 	await f.placement.acquire({ ...config, maxPerTab: 1 }, undefined, f.create);
 	assert.deepEqual(f.choices, ["split", "split"]);
+});
+
+test("Pi placement creates minimized children outside split capacity and ignores them in the count", async () => {
+	const f = fixture();
+	const limited = { ...config, maxPerTab: 1 };
+	const minimized = await f.placement.acquire(limited, "minimized", f.create);
+	f.register(minimized);
+	await f.placement.acquire(limited, "split", f.create);
+	await f.placement.acquire(limited, "split", f.create);
+	assert.deepEqual(f.choices, ["minimized", "split", "tab"]);
 });
 
 test("Pi placement honors explicit tab and split overrides independently of defaults", async () => {

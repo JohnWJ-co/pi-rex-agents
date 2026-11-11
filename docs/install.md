@@ -52,6 +52,6 @@ npm run test:integration:rex
 
 `doctor` 检查 Rex/Pi CLI、manifest 声明的扩展入口和 skill 入口，以及 `pi list` 中的本包状态。Rex 集成测试使用隔离 server 和 fake provider；跳过表示没有验证该环境。
 
-在交互式 Pi 中，`/subagent list` 和 `/worktree list` 应能运行。空角色目录是正常情况；本包不附带角色。默认 split 最多容纳本父进程管理的 2 个子 block，满后使用新 tab；`placement: "tab"` 和 worktree 子代理直接使用新 tab。`panes.maxPerTab` 只接受 1..10 的整数；`/panes-mode` 和 `/panes-maxPerTab` 可直接切换，详见 [配置说明](configuration.md#pane-placement)。
+在交互式 Pi 中，`/subagent list` 和 `/worktree list` 应能运行。空角色目录是正常情况；本包不附带角色。默认 split 最多容纳本父进程管理的 2 个子 block，满后使用新 tab；`placement: "tab"` 和 worktree 子代理直接使用新 tab；`placement: "minimized"` 在当前 tab 的浮动层中启动并最小化到右下角托盘，且不占 split 名额。`panes.maxPerTab` 只接受 1..10 的整数；`/panes-mode` 和 `/panes-maxPerTab` 可直接切换，详见 [配置说明](configuration.md#pane-placement)。
 
 真实模型探针为 `npm run p1`、`npm run p1:persistent` 和 `npm run p2`，默认模型是 `CBAPI/cn:deepseek-v4.1-flash`。只在任务明确需要真实模型证据时运行。

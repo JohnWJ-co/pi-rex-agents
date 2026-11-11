@@ -77,9 +77,10 @@ export interface PiLaunchOperations {
 }
 
 function placementFromPaneConfig(config: PaneConfig, requested?: PaneMode) {
-	if ((requested ?? config.mode) === "split") {
+	const placement = requested ?? config.mode;
+	if (placement === "split")
 		return { kind: "split" as const, direction: config.direction };
-	}
+	if (placement === "minimized") return { kind: "minimized" as const };
 	return { kind: "tab" as const };
 }
 

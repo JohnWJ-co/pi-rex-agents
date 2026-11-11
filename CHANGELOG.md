@@ -22,8 +22,12 @@ is required.
   provider.
 - `test/no-foreign-host.test.ts` guard over shipped TypeScript strings and
   Markdown.
-- `/panes-mode` to switch split/tab and `/panes-maxPerTab` to set the per-tab
-  split limit (1-10), with interactive selectors when called without arguments.
+- `/panes-mode` to switch split/tab/minimized and `/panes-maxPerTab` to set the
+  per-tab split limit (1-10), with interactive selectors when called without
+  arguments.
+- `placement: "minimized"`: create a floating layer in the parent window and
+  immediately minimize it to the Rex client tray. Minimized children keep
+  running and do not consume `panes.maxPerTab` split slots.
 
 ### Changed
 

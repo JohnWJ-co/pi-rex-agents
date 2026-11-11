@@ -62,7 +62,7 @@ type SubagentSessionMode = "standalone" | "lineage-only" | "fork";
 
 export interface FreshPiLaunchRequest {
 	kind: "fresh";
-	placement?: "split" | "tab";
+	placement?: "split" | "tab" | "minimized";
 	acquisitionSignal?: AbortSignal;
 	id?: string;
 	name: string;
@@ -111,7 +111,7 @@ export interface FreshPiLaunchRequest {
 
 export interface ResumePiLaunchRequest {
 	kind: "resume";
-	placement?: "split" | "tab";
+	placement?: "split" | "tab" | "minimized";
 	acquisitionSignal?: AbortSignal;
 	id?: string;
 	name: string;

@@ -8,7 +8,7 @@
 export type RexUncertainty =
 	| {
 			kind: "surface-create";
-			placement: "tab" | "split";
+			placement: "tab" | "split" | "minimized";
 			observedSurfaceId?: string;
 	  }
 	| { kind: "command-dispatch"; surfaceId: string };

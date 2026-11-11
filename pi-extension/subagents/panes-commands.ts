@@ -16,7 +16,7 @@ import {
 	getSubagentsConfigPath,
 } from "./config-path.ts";
 
-const PANE_MODES: readonly PaneMode[] = ["split", "tab"];
+const PANE_MODES: readonly PaneMode[] = ["split", "tab", "minimized"];
 const MAX_PER_TAB_OPTIONS = Array.from({ length: 10 }, (_, index) =>
 	String(index + 1),
 );
@@ -26,7 +26,7 @@ function errorText(message: string): string {
 }
 
 function isPaneMode(value: string): value is PaneMode {
-	return value === "split" || value === "tab";
+	return value === "split" || value === "tab" || value === "minimized";
 }
 
 function parseMaxPerTab(value: string): number | undefined {
@@ -46,7 +46,7 @@ async function chooseMode(
 	if (requested) {
 		if (!isPaneMode(requested)) {
 			ctx.ui.notify(
-				`Invalid pane mode "${errorText(args.trim())}". Use split or tab.`,
+				`Invalid pane mode "${errorText(args.trim())}". Use split, tab, or minimized.`,
 				"error",
 			);
 			return undefined;
@@ -55,7 +55,7 @@ async function chooseMode(
 	}
 	if (!ctx.hasUI) {
 		ctx.ui.notify(
-			"Pane mode requires interactive UI here; pass /panes-mode split or /panes-mode tab.",
+			"Pane mode requires interactive UI here; pass /panes-mode split, /panes-mode tab, or /panes-mode minimized.",
 			"warning",
 		);
 		return undefined;
@@ -106,7 +106,7 @@ export function registerPaneCommands(
 
 	pi.registerCommand("panes-mode", {
 		description:
-			"Switch pane placement between split and tab; no argument opens a selector",
+			"Switch pane placement between split, tab, and minimized; no argument opens a selector",
 		handler: async (args, ctx) => {
 			const mode = await chooseMode(args, ctx, paneConfig.mode);
 			if (mode === undefined) return;

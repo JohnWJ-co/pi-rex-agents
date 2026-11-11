@@ -27,7 +27,7 @@ interface ToolCallArguments {
 	agent?: string;
 	model?: string;
 	thinking?: "off";
-	placement?: "split" | "tab";
+	placement?: "split" | "tab" | "minimized";
 	cwd?: string;
 	systemPrompt?: string;
 	fork?: boolean;
@@ -621,13 +621,19 @@ async function placementScenarioResponse(
 		return { text: `PLACEMENT_CHILD_${child[1]}_${child[2]}` };
 	}
 	const stage = user.match(
-		/INTEGRATION_PLACEMENT:([a-z0-9]+):(start|reuse|tab)\s+GATE:(\S+)/,
+		/INTEGRATION_PLACEMENT:([a-z0-9]+):(start|reuse|tab|minimized)\s+GATE:(\S+)/,
 	);
-	if (!stage || !toolNames(request).has("subagent")) return null;
+	if (!stage) return null;
 	const [, id, mode, gate] = stage;
+	// The continuation may arrive with the parent's tool list omitted; the
+	// stage prompt itself is unique to the parent, so it is enough here.
 	if (request.messages?.at(-1)?.role === "tool")
 		return { text: `PLACEMENT_READY_${id}_${mode}` };
-	const numbers = mode === "start" ? [1, 2, 3] : [mode === "reuse" ? 4 : 5];
+	if (!toolNames(request).has("subagent")) return null;
+	const numbers =
+		mode === "start"
+			? [1, 2, 3]
+			: [mode === "reuse" ? 4 : mode === "tab" ? 5 : 6];
 	return {
 		toolCalls: numbers.map((number) => ({
 			name: "subagent",
@@ -637,7 +643,8 @@ async function placementScenarioResponse(
 				model: TEST_MODEL,
 				thinking: "off",
 				fork: false,
-				placement: mode === "tab" ? "tab" : "split",
+				placement:
+					mode === "tab" ? "tab" : mode === "minimized" ? "minimized" : "split",
 				task: `INTEGRATION_PLACEMENT_CHILD:${id}:${number} INTEGRATION_WAIT_FOR_FILE: ${gate}`,
 			},
 		})),

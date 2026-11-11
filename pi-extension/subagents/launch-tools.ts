@@ -124,7 +124,7 @@ export function registerSubagentTool(
 			name: "subagent",
 			label: "Subagent",
 			description:
-				'Spawn a sub-agent in a dedicated Rex block beside you in the current tab (default), in a new Rex tab when placement is "tab", or in an isolated Rex-managed Git worktree when worktree is provided. ' +
+				'Spawn a sub-agent in a dedicated Rex block beside you in the current tab (default), in a new Rex tab when placement is "tab", in a minimized floating layer docked to the client tray when placement is "minimized", or in an isolated Rex-managed Git worktree when worktree is provided. ' +
 				"Use ordinary blocks for read-only tasks; a single or sequential writer can work in the parent checkout without a worktree. " +
 				"Reserve unique worktree branches for parallel independent writers starting from committed state — the worktree base is committed HEAD, so uncommitted parent changes are not copied. " +
 				"Worktree runs retain their window after completion for parent review; they are not pushed, merged, or removed automatically. " +
@@ -135,7 +135,7 @@ export function registerSubagentTool(
 				"DO NOT fabricate, assume, or summarize results after calling this tool. " +
 				"After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
 			promptSnippet:
-				'Spawn a sub-agent in a dedicated Rex block beside you in the current tab (default), in a new Rex tab when placement is "tab", or in an isolated Rex-managed Git worktree when worktree is provided. ' +
+				'Spawn a sub-agent in a dedicated Rex block beside you in the current tab (default), in a new Rex tab when placement is "tab", in a minimized floating layer docked to the client tray when placement is "minimized", or in an isolated Rex-managed Git worktree when worktree is provided. ' +
 				"Use ordinary blocks for read-only tasks; a single or sequential writer can work in the parent checkout without a worktree. " +
 				"Reserve unique worktree branches for parallel independent writers starting from committed state — the worktree base is committed HEAD, so uncommitted parent changes are not copied. " +
 				"Worktree runs retain their window after completion for parent review; they are not pushed, merged, or removed automatically. " +
@@ -438,7 +438,7 @@ export function registerResumeTool(
 			name: "subagent_resume",
 			label: "Resume Subagent",
 			description:
-				'Resume a previous Pi-backed sub-agent session in a new Rex block (or a new Rex tab when placement is "tab"). ' +
+				'Resume a previous Pi-backed sub-agent session in a new Rex block, a new Rex tab when placement is "tab", or a minimized floating layer when placement is "minimized". ' +
 				"This does not reattach a retained managed worktree; continue worktree-bound follow-up in its existing window. " +
 				"This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. " +
 				"When the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
@@ -446,7 +446,7 @@ export function registerResumeTool(
 				"DO NOT fabricate or assume results. After resuming, either end your turn or work on other independent tasks; the harness will wake you when the result is ready. " +
 				"Use when a sub-agent was cancelled or needs follow-up work.",
 			promptSnippet:
-				'Resume a previous Pi-backed sub-agent session in a new Rex block (or a new Rex tab when placement is "tab"). ' +
+				'Resume a previous Pi-backed sub-agent session in a new Rex block, a new Rex tab when placement is "tab", or a minimized floating layer when placement is "minimized". ' +
 				"This does not reattach a retained managed worktree; continue worktree-bound follow-up in its existing window. " +
 				"This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. " +
 				"When the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +

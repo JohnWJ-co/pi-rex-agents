@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { isPlainObject, isString } from "./type-guards.ts";
 
-export type PaneMode = "split" | "tab";
+export type PaneMode = "split" | "tab" | "minimized";
 export type PaneDirection = "right" | "down";
 
 export interface PaneConfig {
@@ -57,9 +57,14 @@ export function parsePaneConfig(
 	if (Object.hasOwn(rawConfig.panes, "mode")) {
 		if (
 			!isString(rawConfig.panes.mode) ||
-			(rawConfig.panes.mode !== "split" && rawConfig.panes.mode !== "tab")
+			(rawConfig.panes.mode !== "split" &&
+				rawConfig.panes.mode !== "tab" &&
+				rawConfig.panes.mode !== "minimized")
 		) {
-			invalidPaneConfig(source, 'panes.mode must be "split" or "tab"');
+			invalidPaneConfig(
+				source,
+				'panes.mode must be "split", "tab", or "minimized"',
+			);
 		}
 		mode = rawConfig.panes.mode;
 	}
@@ -145,10 +150,16 @@ export function createSubagentPaneFactory(
 	config: PaneConfig,
 	createTab: PaneCreator,
 	createSplit: SplitPaneCreator,
+	createMinimized?: PaneCreator,
 ): PaneCreator {
-	return config.mode === "split"
-		? (name, cwd) => createSplit(name, config.direction, cwd)
-		: createTab;
+	if (config.mode === "split")
+		return (name, cwd) => createSplit(name, config.direction, cwd);
+	if (config.mode === "tab") return createTab;
+	if (!createMinimized)
+		throw new Error(
+			"Minimized pane placement requires a minimized pane creator",
+		);
+	return createMinimized;
 }
 
 export interface PaneConfigPatch {

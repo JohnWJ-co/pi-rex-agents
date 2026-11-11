@@ -51,9 +51,15 @@ describe("Rex kernel placement", () => {
 					({ block }) => block.label === childName(number),
 				);
 				assert.ok(found, `child ${number} is a real Rex block`);
-				return { block: found.block.block_id, window: found.window.window_id };
+				return {
+					block: found.block.block_id,
+					window: found.window.window_id,
+					layer: found.layer,
+				};
 			};
-			const launchStage = async (stage: "start" | "reuse" | "tab") => {
+			const launchStage = async (
+				stage: "start" | "reuse" | "tab" | "minimized",
+			) => {
 				await sendParentPrompt(
 					current,
 					`INTEGRATION_PLACEMENT:${id}:${stage} GATE:${gate}`,
@@ -108,6 +114,12 @@ describe("Rex kernel placement", () => {
 			const fifth = await child(5);
 			assert.notEqual(fifth.window, parent.window.window_id);
 
+			await launchStage("minimized");
+			const sixth = await child(6);
+			assert.equal(sixth.window, parent.window.window_id);
+			assert.equal(sixth.layer.kind, "floating");
+			assert.equal(sixth.layer.state, "minimized");
+
 			t.diagnostic(
 				JSON.stringify({
 					parentWindow: parent.window.window_id,
@@ -116,10 +128,11 @@ describe("Rex kernel placement", () => {
 					third,
 					fourth,
 					fifth,
+					sixth,
 				}),
 			);
 			writeFileSync(gate, "release\n");
-			for (const number of [3, 4, 5]) {
+			for (const number of [3, 4, 5, 6]) {
 				const delivered = await waitForReport(current, childName(number));
 				assert.ok(
 					delivered.childSession,

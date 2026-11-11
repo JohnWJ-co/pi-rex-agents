@@ -6,7 +6,7 @@
 
 ## 特性
 
-- **Rex 原生放置**：`placement: "split"` 在父 block 旁启动，`placement: "tab"` 在新 tab 启动。Rex 的 window 就是 tab，block 就是 pane。
+- **Rex 原生放置**：`placement: "split"` 在父 block 旁启动，`placement: "tab"` 在新 tab 启动，`placement: "minimized"` 在当前 tab 的浮动层中启动并立即最小化为右下角胶囊。Rex 的 window 就是 tab，block 就是 pane。
 - **自动回传**：完成、失败和求助消息通过 steer 消息唤醒父会话，结果由宿主原子发布。
 - **持久专家**：`persistent` 子代理跨任务复用同一会话，通过 `subagent_send` 接收后续任务，通过 `subagent_stop` 优雅停止。
 - **托管 worktree**：写入型任务在独立 Git 检出中运行；父代理负责审查、集成和清理。
@@ -71,6 +71,7 @@ pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 
 - `placement: "split"` 是默认值，在父 block 旁启动子 block。每个父进程默认最多 2 个托管子 block；名额满后使用新 tab。关闭子 block 后释放名额，`/reload` 会保留登记和预留状态。用户手动添加的 block 和其他父进程不占名额。
 - `placement: "tab"` 直接在新 tab 启动。Rex window 即 tab。
+- `placement: "minimized"` 在当前 tab 创建 floating layer 并立即最小化到客户端右下角托盘；子代理仍在同一个 window 中运行。它不占 `panes.maxPerTab` 的 split 名额。把 `panes.mode` 设为 `"minimized"` 可以让默认启动也使用该模式。
 - worktree 子代理始终使用新 tab，基于已提交的 Git 状态创建隔离检出。子代理会收到绝对工作区路径，必须在该工作区内读取、写入和执行命令，不得 `cd` 到或修改父/源检出。父代理负责审查、集成和清理。
 - 指向源检出的 `edit`/`write` 等显式路径写入会被拒绝，并提示对应的工作区路径。`Bash` 等 shell 命令无法可靠拦截，只能依靠提示约束。
 - 完成的 worktree 默认保留供父代理审查；删除必须通过 `worktree_remove` 或 `/worktree remove` 显式发起。
@@ -98,7 +99,7 @@ pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 }
 ```
 
-`panes.mode` 只接受 `"split"` 或 `"tab"`；`panes.maxPerTab` 只接受 1..10 的整数，默认 2。交互式 Pi 中可用 `/panes-mode` 切换 split/tab，用 `/panes-maxPerTab` 输入 1-10 的整数或打开选择器；两者立即生效并写回配置文件。完整键、模型路由、监督和 outcome ledger 见 [配置说明](docs/configuration.md) 和 [config.json.example](config.json.example)。
+`panes.mode` 接受 `"split"`、`"tab"` 或 `"minimized"`；`panes.maxPerTab` 只接受 1..10 的整数，默认 2，且只约束 split 子代理，不约束 minimized 子代理。交互式 Pi 中可用 `/panes-mode` 切换三种模式，用 `/panes-maxPerTab` 输入 1-10 的整数或打开选择器；两者立即生效并写回配置文件。完整键、模型路由、监督和 outcome ledger 见 [配置说明](docs/configuration.md) 和 [config.json.example](config.json.example)。
 
 子代理会自动启用已安装的上下文压缩工具，包括 billion-context 的 `compress`、`decompress`、`search_context`、`acp_status` 及可选的 `acp_rule`，即使传入 `tools: "read,bash"`。显式 `deny-tools` 仍优先；fresh、resume、persistent 和 worktree handoff 都适用。没有压缩插件时沿用 Pi 原生 auto-compaction。
 

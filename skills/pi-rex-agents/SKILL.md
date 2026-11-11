@@ -15,16 +15,20 @@ delegate; another multiplexer or its skills do not apply here, even if installed
   `thinking` for orchestrated work.
 - Placement: `placement: "split"` (default) opens a block beside you in the
   current Rex tab. `placement: "tab"` opens the child in a new Rex tab (a new
-  window). Use `"tab"` when the user asks for a new tab/window; never create
-  it by hand with the `rex` CLI. The default limit is 2 live children in the
-  parent window; further splits use a new tab. Closing a child frees its slot,
-  and `/reload` retains registered children and pending reservations. Configure
+  window). `placement: "minimized"` creates a floating layer in the current
+  window and immediately minimizes it to the client's bottom-right tray; it
+  does not consume a split slot. Use `"tab"` when the user asks for a new
+  tab/window; never create it by hand with the `rex` CLI. The default split
+  limit is 2 live children in the parent window; further splits use a new tab.
+  Closing a child frees its slot, and `/reload` retains registered children and
+  pending reservations. Configure
   `panes.maxPerTab` (integer 1..10) in
   `$PI_CODING_AGENT_DIR/rex-agents/config.json` (default
-  `~/.pi/agent/rex-agents/config.json`). In an interactive parent, `/panes-mode`
-  switches split/tab and `/panes-maxPerTab` sets 1-10 (or opens a selector); both
-  apply to new launches immediately. The previous host config path is neither
-  read nor migrated.
+  `~/.pi/agent/rex-agents/config.json`). `panes.mode` accepts `split`, `tab`, or
+  `minimized`. In an interactive parent, `/panes-mode` switches among those
+  modes and `/panes-maxPerTab` sets 1-10 (or opens a selector); both apply to
+  new launches immediately. The previous host config path is neither read nor
+  migrated.
 - Worktree children (`worktree: { branch }`) always open in a new tab under
   `~/.pi/rex-agents/worktrees`; the parent checkout's uncommitted changes are
   not copied (the base is committed HEAD).

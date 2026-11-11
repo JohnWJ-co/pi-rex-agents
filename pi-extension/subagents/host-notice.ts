@@ -43,7 +43,7 @@ export function registerRexHostNotice(
 				marker,
 				`You are running inside Rex (session ${host.sessionId}, block ${host.blockId}). A Rex window is a tab; a block is a pane.`,
 				...boundaryNotice,
-				'Subagents run natively in Rex: use the subagent tool. placement "split" (default) opens a block beside you in the current tab while it has capacity; placement "tab" opens the child in a new Rex tab.',
+				'Subagents run natively in Rex: use the subagent tool. placement "split" (default) opens a block beside you in the current tab while it has capacity; placement "tab" opens the child in a new Rex tab; placement "minimized" creates a floating layer in the current tab and minimizes it to the client tray without consuming a split slot.',
 				"The subagent tool is the only way to delegate here. Do not start, track, or control subagents through a multiplexer CLI.",
 				`Delegation is limited by spawning.maxDepth=${spawning.maxDepth}; children are leaves with the default maximum of 1.`,
 			];

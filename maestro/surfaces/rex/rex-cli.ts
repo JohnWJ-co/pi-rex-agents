@@ -21,15 +21,19 @@ export interface RexBlockInfo {
 	owner?: string;
 }
 
+export interface RexWindowLayerInfo {
+	layer_id?: string;
+	kind?: string;
+	state?: string;
+	bounds?: number[];
+	blocks: RexBlockInfo[];
+}
+
 export interface RexWindowInfo {
 	window_id: string;
 	label?: string;
 	focused_block_id?: string;
-	layers: Array<{
-		layer_id?: string;
-		kind?: string;
-		blocks: RexBlockInfo[];
-	}>;
+	layers: RexWindowLayerInfo[];
 }
 
 export interface RexSessionInfo {
@@ -53,6 +57,29 @@ export interface RexSplitResult {
 	anchor_id: string;
 	block_ids: string[];
 	split_ids?: string[];
+	revision: number;
+}
+
+export type RexLayerLayoutNode =
+	| {
+			block: {
+				flavor: string;
+				label?: string;
+				options?: { cwd?: string };
+			};
+	  }
+	| {
+			split: {
+				direction: "horizontal" | "vertical";
+				ratio?: number;
+				before: RexLayerLayoutNode;
+				after: RexLayerLayoutNode;
+			};
+	  };
+
+export interface RexNewLayerResult {
+	layer_id: string;
+	block_ids: string[];
 	revision: number;
 }
 
@@ -256,6 +283,58 @@ export class RexCli {
 		return parseJson<RexSplitResult>(result.stdout, "split");
 	}
 
+	async newLayer(
+		sessionId: string,
+		options: {
+			windowId: string;
+			bounds: readonly [number, number, number, number];
+			layout: RexLayerLayoutNode;
+			focus?: boolean;
+		},
+	): Promise<RexNewLayerResult> {
+		const result = await this.run([
+			"api",
+			"call",
+			"-s",
+			sessionId,
+			"session.new_layer",
+			JSON.stringify({
+				window_id: options.windowId,
+				bounds: options.bounds,
+				layout: options.layout,
+				focus: options.focus ?? false,
+			}),
+		]);
+		return parseJson<RexNewLayerResult>(result.stdout, "session.new_layer");
+	}
+
+	async setLayerState(
+		sessionId: string,
+		layerId: string,
+		state: "normal" | "minimized",
+		focus = false,
+	): Promise<void> {
+		await this.run([
+			"api",
+			"call",
+			"-s",
+			sessionId,
+			"session.set_layer_state",
+			JSON.stringify({ layer_id: layerId, state, focus }),
+		]);
+	}
+
+	async closeLayer(sessionId: string, layerId: string): Promise<void> {
+		await this.run([
+			"api",
+			"call",
+			"-s",
+			sessionId,
+			"session.close_layer",
+			JSON.stringify({ layer_id: layerId }),
+		]);
+	}
+
 	async newWindow(
 		sessionId: string,
 		label: string,
@@ -395,12 +474,14 @@ export class RexCli {
 	}
 }
 
-export function flattenBlocks(
-	session: RexSessionInfo,
-): Array<{ block: RexBlockInfo; window: RexWindowInfo }> {
+export function flattenBlocks(session: RexSessionInfo): Array<{
+	block: RexBlockInfo;
+	window: RexWindowInfo;
+	layer: RexWindowLayerInfo;
+}> {
 	return session.windows.flatMap((window) =>
 		window.layers.flatMap((layer) =>
-			layer.blocks.map((block) => ({ block, window })),
+			layer.blocks.map((block) => ({ block, window, layer })),
 		),
 	);
 }

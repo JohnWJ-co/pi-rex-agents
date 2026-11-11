@@ -13,10 +13,10 @@ This page is the detailed reference for the tools, commands, and run lifecycle o
 
 | Tool | Sessions | Description |
 | --- | --- | --- |
-| `subagent` | parent, child | Spawn a sub-agent in a dedicated Rex block beside you in the current tab (default), in a new Rex tab when placement is "tab", or in an isolated Rex-managed Git worktree when worktree is provided. |
+| `subagent` | parent, child | Spawn a sub-agent in a dedicated Rex block beside you in the current tab (default), in a new Rex tab when placement is "tab", in a minimized floating layer docked to the client tray when placement is "minimized", or in an isolated Rex-managed Git worktree when worktree is provided. |
 | `subagent_cancel` | parent, child | Cancel a running ordinary (non-persistent) Pi-backed subagent, including an interrupted one: records terminal intent first, terminates its owned process, and delivers exactly one cancelled result. |
 | `subagent_interrupt` | parent, child | Send Escape to the active turn of a currently running Pi-backed subagent. |
-| `subagent_resume` | parent, child | Resume a previous Pi-backed sub-agent session in a new Rex block (or a new Rex tab when placement is "tab"). |
+| `subagent_resume` | parent, child | Resume a previous Pi-backed sub-agent session in a new Rex block, a new Rex tab when placement is "tab", or a minimized floating layer when placement is "minimized". |
 | `subagent_send` | parent, child | Deliver one follow-up task to an idle persistent specialist. |
 | `subagent_stop` | parent, child | Gracefully stop a persistent specialist after its active task settles. |
 | `subagents_list` | parent, child | List all available package, global, and project subagent definitions. |
@@ -44,7 +44,7 @@ This page is the detailed reference for the tools, commands, and run lifecycle o
 | Command | Usage | Description |
 | --- | --- | --- |
 | `/panes-maxPerTab` | `/panes-maxPerTab [1-10]` | Set the maximum managed subagent blocks per tab; no argument opens a 1-10 selector |
-| `/panes-mode` | `/panes-mode split`<br>`/panes-mode tab` | Switch pane placement between split and tab; no argument opens a selector |
+| `/panes-mode` | `/panes-mode split`<br>`/panes-mode tab`<br>`/panes-mode minimized` | Switch pane placement between split, tab, and minimized; no argument opens a selector |
 | `/subagent` | `/subagent <agent> <task>`<br>`/subagent list` | Spawn a subagent: /subagent \<agent> \<task>; list agents: /subagent list |
 | `/subagents-init` | `/subagents-init [preferences]` | Draft task-category model preferences from the live registry; optional arguments set ranking preferences |
 | `/worktree` | `/worktree <name> [task]`<br>`/worktree list`<br>`/worktree remove <target>` | Fork into a worktree, list retained worktrees, or explicitly remove one |
@@ -165,7 +165,7 @@ subagent({
 | `worktree` | object \| null | no | Optional isolated Rex-managed Git worktree. Omit or pass null to use an ordinary block in cwd. |
 | `worktree.branch` | string | yes | New branch name for an isolated Rex-managed Git worktree |
 | `worktree.base` | string | no | Git revision to branch from. Defaults to the source checkout's committed HEAD. |
-| `placement` | `"split"` \| `"tab"` | no | Where the child runs. "split" (default) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. "tab" opens the child in a new Rex tab (a Rex window). Worktree children always open in a new tab. |
+| `placement` | `"split"` \| `"tab"` \| `"minimized"` | no | Where the child runs. "split" (default when panes.mode is split) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. "tab" opens the child in a new Rex tab (a Rex window). "minimized" creates a floating layer in the current Rex window and immediately minimizes it to the client tray; minimized children do not consume panes.maxPerTab split slots. Worktree children always open in a new tab. |
 | `fork` | boolean | no | Override the child session mode for this spawn. `true` forces full-context fork; `false` forces standalone. Omit to inherit the agent frontmatter session-mode. |
 | `persistent` | boolean | no | Keep this stable specialist session alive between turn-based tasks. Persistent agents accept follow-up work only through subagent_send. |
 | `accept` | object | no | Optional accept check. The delivery carries `Check: \<verdict>` from the closed set accepted, rejected, error, skipped, none. Only auto-exit, non-persistent children support it. |
@@ -514,7 +514,7 @@ Registered in: parent, child sessions.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `placement` | `"split"` \| `"tab"` | no | Where the child runs. "split" (default) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. "tab" opens the child in a new Rex tab (a Rex window). Worktree children always open in a new tab. |
+| `placement` | `"split"` \| `"tab"` \| `"minimized"` | no | Where the child runs. "split" (default when panes.mode is split) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. "tab" opens the child in a new Rex tab (a Rex window). "minimized" creates a floating layer in the current Rex window and immediately minimizes it to the client tray; minimized children do not consume panes.maxPerTab split slots. Worktree children always open in a new tab. |
 | `sessionPath` | string | yes | Path to the session .jsonl file to resume |
 | `name` | string | no | Display name for the Rex tab. Default: 'Resume' |
 | `message` | string | no | Optional message to send after resuming (e.g. follow-up instructions) |

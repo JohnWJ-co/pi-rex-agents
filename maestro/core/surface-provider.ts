@@ -15,7 +15,8 @@ import type { PaneInspection, SurfaceHandle } from "./types.ts";
 export type SurfacePlacement =
 	| { kind: "grouped" }
 	| { kind: "split"; direction: "right" | "down" }
-	| { kind: "tab" };
+	| { kind: "tab" }
+	| { kind: "minimized" };
 
 export interface SurfaceInfo {
 	id: string;
@@ -27,6 +28,9 @@ export interface SurfaceInfo {
 	/** Provider-native workspace/container id when the provider reports one. */
 	// pi-rex-agents extension
 	workspaceId?: string;
+	/** Present but minimized to the client's tray; it does not occupy split capacity. */
+	// pi-rex-agents extension
+	minimized?: boolean;
 }
 
 export interface AcquisitionControl {
@@ -37,7 +41,7 @@ export interface AcquisitionControl {
 export type UncertainAcquisition =
 	| {
 			kind: "surface-create";
-			placement: "tab" | "split";
+			placement: "tab" | "split" | "minimized";
 			workspaceId?: string;
 			anchorSurfaceId?: string;
 			observedSurfaceId?: string;
@@ -88,7 +92,9 @@ export function isAcquisitionUncertainError(
 	switch (value.kind) {
 		case "surface-create":
 			return (
-				(value.placement === "tab" || value.placement === "split") &&
+				(value.placement === "tab" ||
+					value.placement === "split" ||
+					value.placement === "minimized") &&
 				(value.workspaceId === undefined ||
 					typeof value.workspaceId === "string") &&
 				(value.anchorSurfaceId === undefined ||

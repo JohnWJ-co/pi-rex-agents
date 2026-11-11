@@ -28,6 +28,9 @@ done
 case "$*" in
   *"session inspect"*) printf '%s\\n' '{"session_id":"session-1","revision":1,"active_window_id":"window-1","windows":[{"window_id":"window-1","focused_block_id":"parent","layers":[{"blocks":[{"block_id":"parent","label":"parent"},{"block_id":"child","label":"child"}]}]}]}' ;;
   *"split"*) printf '%s\\n' '{"anchor_id":"parent","block_ids":["child"],"revision":2}' ;;
+  *"session.new_layer"*) printf '%s\\n' '{"layer_id":"layer-1","block_ids":["child"],"revision":3}' ;;
+  *"session.set_layer_state"*) printf '%s\\n' '{"revision":4}' ;;
+  *"session.close_layer"*) printf '%s\\n' '{"revision":5}' ;;
   *"program_status"*) printf '%s\\n' '{"records":[{"state":"working","app":"pi","msg":"running"}]}' ;;
   *"process"*) printf '%s\\n' '{"foreground":{"pid":42,"name":"zsh"},"child":null,"ancestors":[]}' ;;
   *"capture"*) printf '%s\\n' '$ echo rex-test-marker' ;;
@@ -97,6 +100,31 @@ describe("RexSurfaceProvider", () => {
 			assert.ok(args.includes("split"));
 			assert.ok(args.includes("send"));
 			assert.ok(args.includes("send-key"));
+		} finally {
+			await fixture.dispose();
+		}
+	});
+
+	it("creates a minimized floating surface through the documented layer API", async () => {
+		const fixture = await fakeRex();
+		try {
+			const env = { ...process.env, REX_TEST_ARGV_LOG: fixture.log };
+			const provider = new RexSurfaceProvider({
+				sessionId: "session-1",
+				anchorBlockId: "parent",
+				cli: new RexCli({ binary: fixture.binary, env }),
+			});
+			const child = await provider.createSurface({
+				name: "Minimized",
+				cwd: "/repo",
+				placement: { kind: "minimized" },
+			});
+			assert.equal(child, "child");
+			const args = await loggedArgs(fixture.log);
+			assert.ok(args.includes("api"));
+			assert.ok(args.includes("session.new_layer"));
+			assert.ok(args.includes("session.set_layer_state"));
+			assert.ok(args.some((arg) => arg.includes('"window_id":"window-1"')));
 		} finally {
 			await fixture.dispose();
 		}

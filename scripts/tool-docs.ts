@@ -134,7 +134,11 @@ const parentToolTable = (tools: CapturedTool[]) =>
 export const COMMAND_USAGE = {
 	subagent: ["/subagent <agent> <task>", "/subagent list"],
 	"subagents-init": ["/subagents-init [preferences]"],
-	"panes-mode": ["/panes-mode split", "/panes-mode tab"],
+	"panes-mode": [
+		"/panes-mode split",
+		"/panes-mode tab",
+		"/panes-mode minimized",
+	],
 	"panes-maxPerTab": ["/panes-maxPerTab [1-10]"],
 	worktree: [
 		"/worktree <name> [task]",

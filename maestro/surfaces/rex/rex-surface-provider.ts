@@ -30,7 +30,7 @@ export type RexAgentStatus =
 	| "unknown";
 
 export interface RexPlacement {
-	kind: "split" | "tab" | "grouped";
+	kind: "split" | "tab" | "grouped" | "minimized";
 	direction?: "right" | "down";
 }
 
@@ -50,6 +50,7 @@ export interface RexSurfaceInfo {
 	windowId?: string;
 	group?: string;
 	workspaceId?: string;
+	minimized?: boolean;
 }
 
 export interface RexWorktreeSurface {
@@ -126,6 +127,13 @@ export interface RexSurfaceProviderOptions {
 	pollIntervalMs?: number;
 	worktreeRoot?: string;
 }
+
+/**
+ * Restore bounds for a minimized floating child. The client docks minimized
+ * layers in its own bottom-right tray; these bounds apply when the user
+ * restores the layer.
+ */
+const MINIMIZED_LAYER_BOUNDS = [0.64, 0.64, 0.34, 0.34] as const;
 
 const SHELL_NAMES = new Set([
 	"zsh",
@@ -212,6 +220,9 @@ export class RexSurfaceProvider {
 			direction: "right",
 		};
 
+		if (placement.kind === "minimized")
+			return this.createMinimizedSurface(options, anchor);
+
 		if (placement.kind === "tab" || placement.kind === "grouped") {
 			const created = await this.cli.newWindow(
 				this.sessionId,
@@ -240,6 +251,56 @@ export class RexSurfaceProvider {
 		await this.waitForShellReady(blockId);
 		this.surfaceCwds.set(blockId, options.cwd);
 		return blockId;
+	}
+
+	private async createMinimizedSurface(
+		options: CreateRexSurfaceOptions,
+		anchor: string,
+	): Promise<string> {
+		if (options.signal?.aborted) throw new Error("surface creation aborted");
+		const session = await this.cli.inspectSession(this.sessionId);
+		const parent = flattenBlocks(session).find(
+			({ block }) => block.block_id === anchor,
+		);
+		if (!parent) throw new Error(`Rex block ${anchor} is not in a window`);
+
+		const created = await this.cli.newLayer(this.sessionId, {
+			windowId: parent.window.window_id,
+			bounds: MINIMIZED_LAYER_BOUNDS,
+			layout: {
+				block: {
+					flavor: "com.superlogical.terminal.shell",
+					label: options.name,
+					options: { cwd: options.cwd },
+				},
+			},
+			focus: false,
+		});
+		const blockId = created.block_ids[0];
+		if (!blockId || !created.layer_id) {
+			if (created.layer_id)
+				await this.cli
+					.closeLayer(this.sessionId, created.layer_id)
+					.catch(() => undefined);
+			throw new Error("session.new_layer returned no block or layer id");
+		}
+
+		try {
+			await this.cli.setLayerState(
+				this.sessionId,
+				created.layer_id,
+				"minimized",
+			);
+			await this.waitForShellReady(blockId);
+			this.surfaceCwds.set(blockId, options.cwd);
+			return blockId;
+		} catch (error) {
+			await this.cli.closeBlock(this.sessionId, blockId).catch(() => undefined);
+			await this.cli
+				.closeLayer(this.sessionId, created.layer_id)
+				.catch(() => undefined);
+			throw error;
+		}
 	}
 
 	async runCommand(surfaceId: string, command: string): Promise<void> {
@@ -286,7 +347,7 @@ export class RexSurfaceProvider {
 	}): Promise<RexSurfaceInfo[]> {
 		const session = await this.cli.inspectSession(this.sessionId);
 		return Promise.all(
-			flattenBlocks(session).map(async ({ block, window }) => {
+			flattenBlocks(session).map(async ({ block, window, layer }) => {
 				let cwd = this.surfaceCwds.get(block.block_id);
 				if (!cwd) {
 					try {
@@ -299,7 +360,7 @@ export class RexSurfaceProvider {
 						// A block can disappear between session inspection and process info.
 					}
 				}
-				return {
+				const info: RexSurfaceInfo = {
 					id: block.block_id,
 					name: block.label,
 					cwd,
@@ -307,6 +368,8 @@ export class RexSurfaceProvider {
 					group: window.label,
 					workspaceId: window.window_id,
 				};
+				if (layer.state === "minimized") info.minimized = true;
+				return info;
 			}),
 		);
 	}

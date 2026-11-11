@@ -61,10 +61,10 @@ const ThinkingLevelSchema = Type.Union(
 );
 
 export const PlacementSchema = Type.Union(
-	[Type.Literal("split"), Type.Literal("tab")],
+	[Type.Literal("split"), Type.Literal("tab"), Type.Literal("minimized")],
 	{
 		description:
-			'Where the child runs. "split" (default) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. "tab" opens the child in a new Rex tab (a Rex window). Worktree children always open in a new tab.',
+			'Where the child runs. "split" (default when panes.mode is split) opens a Rex block beside you in the current tab while that tab has fewer child blocks than the per-tab limit; once full, a new Rex tab is used. "tab" opens the child in a new Rex tab (a Rex window). "minimized" creates a floating layer in the current Rex window and immediately minimizes it to the client tray; minimized children do not consume panes.maxPerTab split slots. Worktree children always open in a new tab.',
 	},
 );
 

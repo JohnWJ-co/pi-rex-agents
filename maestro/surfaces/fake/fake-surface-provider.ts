@@ -52,11 +52,13 @@ export class FakeSurfaceProvider implements SurfaceProvider {
 		const id = `fake-surface-${this.#nextSurface}`;
 		this.#nextSurface += 1;
 		const group = this.#groupFor(opts.placement?.kind ?? "grouped");
+		const minimized = opts.placement?.kind === "minimized";
 		this.#surfaces.set(id, {
 			id,
 			name: opts.name,
 			cwd: opts.cwd,
 			group,
+			minimized,
 			screen: [],
 			commands: [],
 			keys: [],
@@ -89,9 +91,10 @@ export class FakeSurfaceProvider implements SurfaceProvider {
 	listSurfaces(_opts?: { timeoutMs?: number }): SurfaceInfo[] {
 		return Array.from(
 			this.#surfaces.values(),
-			({ id, name, cwd, group, workspaceId }) => {
+			({ id, name, cwd, group, workspaceId, minimized }) => {
 				const info: SurfaceInfo = { id, name, cwd, group };
 				if (workspaceId) info.workspaceId = workspaceId;
+				if (minimized) info.minimized = true;
 				return info;
 			},
 		);
@@ -285,13 +288,13 @@ export class FakeSurfaceProvider implements SurfaceProvider {
 		return surface;
 	}
 
-	#groupFor(kind: "grouped" | "split" | "tab"): string {
+	#groupFor(kind: "grouped" | "split" | "tab" | "minimized"): string {
 		if (kind === "tab") {
 			const group = `fake-tab-group-${this.#nextWorkspaceGroup}`;
 			this.#nextWorkspaceGroup += 1;
 			return group;
 		}
-		if (kind === "split") {
+		if (kind === "split" || kind === "minimized") {
 			return "fake-split-group";
 		}
 		const groupCounts = new Map<number, number>();
