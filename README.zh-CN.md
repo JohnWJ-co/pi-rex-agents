@@ -6,6 +6,12 @@
 
 本仓库包含从 MIT 许可的 3.7.2 Pi 子代理内核 hard fork 的执行引擎，不依赖上游 npm 包。上游基线、许可证和人工移植规则见 [UPSTREAM](docs/UPSTREAM.md)（英文）。
 
+## 演示
+
+一段 65 秒的演示视频，展示 split、tab 和 minimized 子代理放置。
+
+https://github.com/user-attachments/assets/cfe55810-4e73-4d65-b233-626516a92b7e
+
 ## 特性
 
 - **Rex 原生放置**：`placement: "split"` 在父 block 旁启动，`placement: "tab"` 在新 tab 启动，`placement: "minimized"` 在当前 tab 的浮动层中启动并立即最小化为右下角胶囊。Rex 的 window 就是 tab，block 就是 pane。

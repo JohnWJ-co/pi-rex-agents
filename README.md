@@ -6,6 +6,12 @@
 
 This repository contains the execution engine hard-forked from the MIT-licensed 3.7.2 Pi subagent kernel, and does not depend on the upstream npm package. For the upstream baseline, license, and manual porting rules, see [UPSTREAM](docs/UPSTREAM.md).
 
+## Demo
+
+A 65-second tour of split, tab, and minimized subagent placement.
+
+https://github.com/user-attachments/assets/cfe55810-4e73-4d65-b233-626516a92b7e
+
 ## Features
 
 - **Rex-native placement**: `placement: "split"` launches beside the parent block, `placement: "tab"` launches in a new tab, and `placement: "minimized"` launches in a floating layer in the current tab and immediately minimizes it to a capsule in the bottom-right corner. A Rex window is a tab and a block is a pane.
