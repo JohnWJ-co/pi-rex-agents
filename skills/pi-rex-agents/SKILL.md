@@ -25,7 +25,9 @@ delegate; another multiplexer or its skills do not apply here, even if installed
   `panes.maxPerTab` (integer 1..10) in
   `$PI_CODING_AGENT_DIR/rex-agents/config.json` (default
   `~/.pi/agent/rex-agents/config.json`). `panes.mode` accepts `split`, `tab`, or
-  `minimized`. In an interactive parent, `/panes-mode` switches among those
+  `minimized`; `panes.minimizedBounds` sets the restored floating-layer
+  `[x, y, width, height]` (default `[0.1, 0.1, 0.8, 0.8]`). In an interactive
+  parent, `/panes-mode` switches among those
   modes and `/panes-maxPerTab` sets 1-10 (or opens a selector); both apply to
   new launches immediately. The previous host config path is neither read nor
   migrated.

@@ -117,7 +117,10 @@ describe("RexSurfaceProvider", () => {
 			const child = await provider.createSurface({
 				name: "Minimized",
 				cwd: "/repo",
-				placement: { kind: "minimized" },
+				placement: {
+					kind: "minimized",
+					bounds: [0.2, 0.2, 0.5, 0.5],
+				},
 			});
 			assert.equal(child, "child");
 			const args = await loggedArgs(fixture.log);
@@ -125,6 +128,7 @@ describe("RexSurfaceProvider", () => {
 			assert.ok(args.includes("session.new_layer"));
 			assert.ok(args.includes("session.set_layer_state"));
 			assert.ok(args.some((arg) => arg.includes('"window_id":"window-1"')));
+			assert.ok(args.some((arg) => arg.includes('"bounds":[0.2,0.2,0.5,0.5]')));
 		} finally {
 			await fixture.dispose();
 		}

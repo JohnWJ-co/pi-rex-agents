@@ -19,6 +19,7 @@ import {
 } from "./rex-cli.ts";
 import { RexAcquisitionUncertainError } from "./uncertainty.ts";
 import type { ReportOpenedPrimaryWorkspaceInput } from "../../core/surface-provider.ts";
+import type { PaneBounds } from "../../core/config/pane-config.ts";
 import { rexWorktreeRoot } from "./worktree.ts";
 
 export type RexAgentStatus =
@@ -32,6 +33,7 @@ export type RexAgentStatus =
 export interface RexPlacement {
 	kind: "split" | "tab" | "grouped" | "minimized";
 	direction?: "right" | "down";
+	bounds?: PaneBounds;
 }
 
 export interface CreateRexSurfaceOptions {
@@ -129,11 +131,11 @@ export interface RexSurfaceProviderOptions {
 }
 
 /**
- * Restore bounds for a minimized floating child. The client docks minimized
- * layers in its own bottom-right tray; these bounds apply when the user
- * restores the layer.
+ * Default restore bounds for a minimized floating child: centered at 80% of
+ * the window. The client docks minimized layers in its own bottom-right tray;
+ * these bounds apply when the user restores the layer.
  */
-const MINIMIZED_LAYER_BOUNDS = [0.64, 0.64, 0.34, 0.34] as const;
+const MINIMIZED_LAYER_BOUNDS: PaneBounds = [0.1, 0.1, 0.8, 0.8];
 
 const SHELL_NAMES = new Set([
 	"zsh",
@@ -221,7 +223,7 @@ export class RexSurfaceProvider {
 		};
 
 		if (placement.kind === "minimized")
-			return this.createMinimizedSurface(options, anchor);
+			return this.createMinimizedSurface(options, anchor, placement.bounds);
 
 		if (placement.kind === "tab" || placement.kind === "grouped") {
 			const created = await this.cli.newWindow(
@@ -256,6 +258,7 @@ export class RexSurfaceProvider {
 	private async createMinimizedSurface(
 		options: CreateRexSurfaceOptions,
 		anchor: string,
+		bounds: PaneBounds = MINIMIZED_LAYER_BOUNDS,
 	): Promise<string> {
 		if (options.signal?.aborted) throw new Error("surface creation aborted");
 		const session = await this.cli.inspectSession(this.sessionId);
@@ -266,7 +269,7 @@ export class RexSurfaceProvider {
 
 		const created = await this.cli.newLayer(this.sessionId, {
 			windowId: parent.window.window_id,
-			bounds: MINIMIZED_LAYER_BOUNDS,
+			bounds,
 			layout: {
 				block: {
 					flavor: "com.superlogical.terminal.shell",

@@ -87,7 +87,8 @@ pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
   "panes": {
     "mode": "split",
     "direction": "right",
-    "maxPerTab": 2
+    "maxPerTab": 2,
+    "minimizedBounds": [0.1, 0.1, 0.8, 0.8]
   },
   "persistent": {
     "maxAgents": 3
@@ -99,7 +100,7 @@ pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 }
 ```
 
-`panes.mode` 接受 `"split"`、`"tab"` 或 `"minimized"`；`panes.maxPerTab` 只接受 1..10 的整数，默认 2，且只约束 split 子代理，不约束 minimized 子代理。交互式 Pi 中可用 `/panes-mode` 切换三种模式，用 `/panes-maxPerTab` 输入 1-10 的整数或打开选择器；两者立即生效并写回配置文件。完整键、模型路由、监督和 outcome ledger 见 [配置说明](docs/configuration.md) 和 [config.json.example](config.json.example)。
+`panes.mode` 接受 `"split"`、`"tab"` 或 `"minimized"`；`panes.maxPerTab` 只接受 1..10 的整数，默认 2，且只约束 split 子代理，不约束 minimized 子代理。`panes.minimizedBounds` 控制 minimized 子代理恢复时的位置和大小，格式为 `[x, y, width, height]`，默认 `[0.1, 0.1, 0.8, 0.8]`（窗口正中、80% 大小）。交互式 Pi 中可用 `/panes-mode` 切换三种模式，用 `/panes-maxPerTab` 输入 1-10 的整数或打开选择器；两者立即生效并写回配置文件。完整键、模型路由、监督和 outcome ledger 见 [配置说明](docs/configuration.md) 和 [config.json.example](config.json.example)。
 
 子代理会自动启用已安装的上下文压缩工具，包括 billion-context 的 `compress`、`decompress`、`search_context`、`acp_status` 及可选的 `acp_rule`，即使传入 `tools: "read,bash"`。显式 `deny-tools` 仍优先；fresh、resume、persistent 和 worktree handoff 都适用。没有压缩插件时沿用 Pi 原生 auto-compaction。
 

@@ -140,6 +140,17 @@ function toolNames(request: ChatRequest): Set<string> {
 	);
 }
 
+function hasToolResultAfterLastUser(request: ChatRequest): boolean {
+	const messages = request.messages ?? [];
+	let lastUser = -1;
+	for (let index = 0; index < messages.length; index += 1) {
+		if (messages[index].role === "user") lastUser = index;
+	}
+	return messages
+		.slice(lastUser + 1)
+		.some((message) => message.role === "tool");
+}
+
 function quotedValue(source: string, key: string): string | undefined {
 	const match = source.match(
 		new RegExp(`\\b${key}:\\s*"((?:\\\\.|[^"\\\\])*)"`),
@@ -627,7 +638,7 @@ async function placementScenarioResponse(
 	const [, id, mode, gate] = stage;
 	// The continuation may arrive with the parent's tool list omitted; the
 	// stage prompt itself is unique to the parent, so it is enough here.
-	if (request.messages?.at(-1)?.role === "tool")
+	if (hasToolResultAfterLastUser(request))
 		return { text: `PLACEMENT_READY_${id}_${mode}` };
 	if (!toolNames(request).has("subagent")) return null;
 	const numbers =

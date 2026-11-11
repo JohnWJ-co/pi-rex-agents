@@ -7,15 +7,18 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { isPlainObject, isString } from "./type-guards.ts";
+import { isFiniteNumber, isPlainObject, isString } from "./type-guards.ts";
 
 export type PaneMode = "split" | "tab" | "minimized";
 export type PaneDirection = "right" | "down";
+export type PaneBounds = [number, number, number, number];
 
 export interface PaneConfig {
 	mode: PaneMode;
 	direction: PaneDirection;
 	maxPerTab: number;
+	/** Restore bounds for minimized children: [x, y, width, height]. */
+	minimizedBounds?: PaneBounds;
 }
 
 type PaneCreator = (name: string, cwd?: string) => string;
@@ -44,7 +47,11 @@ export function parsePaneConfig(
 	}
 
 	const unsupportedKeys = Object.keys(rawConfig.panes).filter(
-		(key) => key !== "mode" && key !== "direction" && key !== "maxPerTab",
+		(key) =>
+			key !== "mode" &&
+			key !== "direction" &&
+			key !== "maxPerTab" &&
+			key !== "minimizedBounds",
 	);
 	if (unsupportedKeys.length > 0) {
 		invalidPaneConfig(
@@ -90,7 +97,42 @@ export function parsePaneConfig(
 			"panes.maxPerTab must be an integer between 1 and 10",
 		);
 	}
-	return { mode, direction, maxPerTab };
+	const minimizedBounds = Object.hasOwn(rawConfig.panes, "minimizedBounds")
+		? parseMinimizedBounds(rawConfig.panes.minimizedBounds, source)
+		: undefined;
+	const config: PaneConfig = { mode, direction, maxPerTab };
+	if (minimizedBounds) config.minimizedBounds = minimizedBounds;
+	return config;
+}
+
+function parseMinimizedBounds(value: any, source: string): PaneBounds {
+	if (!Array.isArray(value) || value.length !== 4) {
+		invalidPaneConfig(
+			source,
+			"panes.minimizedBounds must be [x, y, width, height]",
+		);
+	}
+	const [x, y, width, height] = value;
+	if (![x, y, width, height].every((entry) => isFiniteNumber(entry))) {
+		invalidPaneConfig(
+			source,
+			"panes.minimizedBounds values must be finite numbers",
+		);
+	}
+	if (
+		x < 0 ||
+		y < 0 ||
+		width <= 0 ||
+		height <= 0 ||
+		x + width > 1 ||
+		y + height > 1
+	) {
+		invalidPaneConfig(
+			source,
+			"panes.minimizedBounds must fit inside the window with positive width and height",
+		);
+	}
+	return [x, y, width, height];
 }
 
 interface PaneConfigSource {
@@ -165,6 +207,7 @@ export function createSubagentPaneFactory(
 export interface PaneConfigPatch {
 	mode?: PaneMode;
 	maxPerTab?: number;
+	minimizedBounds?: PaneBounds;
 }
 
 /**
@@ -205,6 +248,8 @@ export function writePaneConfig(
 	const panes = isPlainObject(parsed.panes) ? { ...parsed.panes } : {};
 	if (patch.mode !== undefined) panes.mode = patch.mode;
 	if (patch.maxPerTab !== undefined) panes.maxPerTab = patch.maxPerTab;
+	if (patch.minimizedBounds !== undefined)
+		panes.minimizedBounds = patch.minimizedBounds;
 	const next = { ...parsed, panes };
 	const validated = parsePaneConfig(next, configPath);
 	const output = JSON.stringify(next, null, 2) + "\n";

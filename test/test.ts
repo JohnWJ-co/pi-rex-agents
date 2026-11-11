@@ -4910,7 +4910,12 @@ describe("runtime reload configuration", () => {
 			assert.equal(getSubagentsConfigPath(), configPath);
 			assert.deepEqual(
 				loadPaneConfig(dirname(configPath), getSubagentsConfigExamplePath()),
-				{ mode: "split", direction: "right", maxPerTab: 2 },
+				{
+					mode: "split",
+					direction: "right",
+					maxPerTab: 2,
+					minimizedBounds: [0.1, 0.1, 0.8, 0.8],
+				},
 			);
 			const reloaded = await importReloadedSubagents();
 			reloaded.default(mock.api);
@@ -5157,6 +5162,33 @@ describe("pane configuration", () => {
 				);
 			}
 		});
+	});
+
+	it("parses and validates minimizedBounds", () => {
+		assert.deepEqual(
+			parsePaneConfig({
+				panes: { minimizedBounds: [0.1, 0.1, 0.8, 0.8] },
+			}),
+			{
+				mode: "split",
+				direction: "right",
+				maxPerTab: 2,
+				minimizedBounds: [0.1, 0.1, 0.8, 0.8],
+			},
+		);
+		for (const minimizedBounds of [
+			[0.1, 0.1, 0.8],
+			[0.1, 0.1, 0, 0.8],
+			[0.1, 0.1, 0.95, 0.8],
+			[0.1, 0.1, 0.8, 0.95],
+			["0.1", 0.1, 0.8, 0.8],
+			[0.1, 0.1, Number.NaN, 0.8],
+		]) {
+			assert.throws(
+				() => parsePaneConfig({ panes: { minimizedBounds } }),
+				/panes\.minimizedBounds/,
+			);
+		}
 	});
 
 	it("rejects invalid pane settings", () => {

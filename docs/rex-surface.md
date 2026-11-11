@@ -27,8 +27,9 @@ parent's limit. Nothing adopts blocks by label.
 
 The provider translates split into `rex split --focus=false` beside its stable
 parent block and tab into `rex window new --focus=false`. A minimized child is
-created with `session.new_layer` in the parent window at fixed bottom-right
-restore bounds and immediately changed to `state: "minimized"` with
+created with `session.new_layer` in the parent window at
+`panes.minimizedBounds` (default `[0.1, 0.1, 0.8, 0.8]`, centered at 80%)
+and immediately changed to `state: "minimized"` with
 `session.set_layer_state`; the block keeps running in the client's tray and is
 returned to normal by the client when the user restores it. Every CLI call uses
 explicit argv, `--autostart=false`, and the inherited `REX_SERVER` endpoint. See

@@ -11,7 +11,7 @@ and a leading `~` expands as it does in Pi. It is not read from the
 installed package root, so npm and git package upgrades do not overwrite it.
 Create it by copying the installed package's `config.json.example`, or run
 `/subagents-init` to seed and draft model task preferences. Without a Rex config,
-panes default to split, right, and `maxPerTab: 2`.
+panes default to split, right, `maxPerTab: 2`, and centered 80% minimized bounds.
 
 ```json
 {
@@ -34,7 +34,8 @@ panes default to split, right, and `maxPerTab: 2`.
   "panes": {
     "mode": "split",
     "direction": "right",
-    "maxPerTab": 2
+    "maxPerTab": 2,
+    "minimizedBounds": [0.1, 0.1, 0.8, 0.8]
   },
   "guidelines": {
     "launchRoster": true
@@ -460,11 +461,11 @@ isolated Rex tree, not parent-model latency; raw samples are written to
 
 ## Pane placement
 
-`panes.mode` accepts `"split"` (default), `"tab"`, or `"minimized"`. The default configuration is `{ "mode": "split", "direction": "right", "maxPerTab": 2 }`. `panes.maxPerTab` must be an integer from 1 through 10; zero, fractions, values above 10, and non-numbers raise `invalidPaneConfig`. The old `"grouped"` mode is invalid. `panes.direction` accepts `"right"` (default) or `"down"` for splits.
+`panes.mode` accepts `"split"` (default), `"tab"`, or `"minimized"`. The default configuration is `{ "mode": "split", "direction": "right", "maxPerTab": 2, "minimizedBounds": [0.1, 0.1, 0.8, 0.8] }`. `panes.maxPerTab` must be an integer from 1 through 10; zero, fractions, values above 10, and non-numbers raise `invalidPaneConfig`. `panes.minimizedBounds` is an optional `[x, y, width, height]` array of window fractions for the floating layer restored from a minimized child; all values must be finite, width and height must be positive, and the rectangle must fit inside the window. It defaults to `[0.1, 0.1, 0.8, 0.8]` (centered, 80% of the window). The old `"grouped"` mode is invalid. `panes.direction` accepts `"right"` (default) or `"down"` for splits.
 
 In an interactive parent session, `/panes-mode` switches between `split`, `tab`, and `minimized`; without an argument it opens a selector. `/panes-maxPerTab` accepts an integer from 1 through 10, or opens a 1-10 selector when called without an argument. Both commands atomically update `panes` in the durable config, preserve every other setting, and apply to new launches immediately.
 
-The native `placement` argument on `subagent` and `subagent_resume` overrides `panes.mode` for that call. `"split"` opens a block beside the parent in its current Rex window while capacity remains, then overflows into a new tab. `"tab"` always opens a new Rex window. `"minimized"` creates a floating layer in the parent window and immediately minimizes it to the client tray; its block keeps running and is restored by the client. Worktree children always open a new tab and do not consume split capacity. Resume uses the saved session cwd with the same placement policy.
+The native `placement` argument on `subagent` and `subagent_resume` overrides `panes.mode` for that call. `"split"` opens a block beside the parent in its current Rex window while capacity remains, then overflows into a new tab. `"tab"` always opens a new Rex window. `"minimized"` creates a floating layer in the parent window and immediately minimizes it to the client tray; its block keeps running and is restored by the client at `panes.minimizedBounds`. Worktree children always open a new tab and do not consume split capacity. Resume uses the saved session cwd with the same placement policy.
 
 The kernel counts only this parent's registered child blocks that `provider.listSurfaces()` confirms are still live in the parent block's current window and are not minimized. Other parents' children, user-created blocks, worktree blocks, minimized blocks, closed blocks and children in other windows do not occupy these slots. Closing a split child releases a slot on the next inventory read. The limit is independent of `persistent.maxAgents`.
 

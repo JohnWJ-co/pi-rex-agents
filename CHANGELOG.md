@@ -27,7 +27,8 @@ is required.
   arguments.
 - `placement: "minimized"`: create a floating layer in the parent window and
   immediately minimize it to the Rex client tray. Minimized children keep
-  running and do not consume `panes.maxPerTab` split slots.
+  running, do not consume `panes.maxPerTab` split slots, and restore at
+  `panes.minimizedBounds` (default `[0.1, 0.1, 0.8, 0.8]`).
 
 ### Changed
 

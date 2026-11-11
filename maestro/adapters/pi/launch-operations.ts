@@ -80,7 +80,8 @@ function placementFromPaneConfig(config: PaneConfig, requested?: PaneMode) {
 	const placement = requested ?? config.mode;
 	if (placement === "split")
 		return { kind: "split" as const, direction: config.direction };
-	if (placement === "minimized") return { kind: "minimized" as const };
+	if (placement === "minimized")
+		return { kind: "minimized" as const, bounds: config.minimizedBounds };
 	return { kind: "tab" as const };
 }
 

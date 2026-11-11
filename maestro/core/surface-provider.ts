@@ -10,13 +10,14 @@ import type {
 	PrimaryWorkspaceClaim,
 } from "./opened-primary-workspace.ts";
 import type { PaneInspection, SurfaceHandle } from "./types.ts";
+import type { PaneBounds } from "./config/pane-config.ts";
 
 // pi-rex-agents extension
 export type SurfacePlacement =
 	| { kind: "grouped" }
 	| { kind: "split"; direction: "right" | "down" }
 	| { kind: "tab" }
-	| { kind: "minimized" };
+	| { kind: "minimized"; bounds?: PaneBounds };
 
 export interface SurfaceInfo {
 	id: string;

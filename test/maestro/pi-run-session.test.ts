@@ -1710,6 +1710,7 @@ test("without injected launch operations Rex config defaults enforce a two-child
 			mode: "split",
 			direction: "right",
 			maxPerTab: 2,
+			minimizedBounds: [0.1, 0.1, 0.8, 0.8],
 		});
 		const parent = f.provider.createSurface({
 			name: "parent",

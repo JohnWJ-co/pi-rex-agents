@@ -119,6 +119,7 @@ describe("Rex kernel placement", () => {
 			assert.equal(sixth.window, parent.window.window_id);
 			assert.equal(sixth.layer.kind, "floating");
 			assert.equal(sixth.layer.state, "minimized");
+			assert.deepEqual(sixth.layer.bounds, [0.1, 0.1, 0.8, 0.8]);
 
 			t.diagnostic(
 				JSON.stringify({
