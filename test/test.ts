@@ -1395,7 +1395,7 @@ describe("host adapter migration", () => {
 			assert.ok(promptPath);
 			assert.equal(
 				readFileSync(promptPath, "utf8"),
-				"\n\nComplete your task autonomously.\n\nbounded\n\nYour FINAL assistant message should summarize what you accomplished.",
+				"\n\nComplete your task autonomously.\n\nbounded\n\nThis is an auto-exit child: subagent_done is not available. Finish normally with your final assistant message.\n\nYour FINAL assistant message should summarize what you accomplished.",
 			);
 			await f.finish(child);
 		}));

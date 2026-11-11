@@ -173,7 +173,7 @@ subagent({
 | `accept.maxRetries` | integer | no | Extra child turns after a failed check, each with the failing output. Default 1. |
 | `accept.timeoutSec` | integer | no | Per-run timeout in seconds. Default 600. A timeout is verdict `error`. |
 | `accept.paths` | string[] | no | Repo-relative check files (for example tests). The delivery reports any the child changed; the verdict is unchanged. |
-| `interactive` | boolean | no | Mark the subagent as interactive (long-running, user drives the conversation in its own block). When true, the main session is not woken by status transitions (stalled/recovered) for this subagent. If omitted, falls back to the agent's `interactive` frontmatter, otherwise the inverse of `auto-exit` (agents that auto-exit are autonomous and get stall pings; agents that don't are interactive and stay quiet). |
+| `interactive` | boolean | no | Mark the subagent as interactive (long-running, user drives the conversation in its own block). When true, the main session is not woken by status transitions (stalled/recovered) for this subagent. If omitted, falls back to the agent's `interactive` frontmatter, otherwise the inverse of `auto-exit` (agents that auto-exit are autonomous and get stall pings; agents that don't are interactive and stay quiet). Auto-exit children do not receive the subagent_done tool; only interactive or persistent children do. |
 <!-- generated:subagent-params:end -->
 
 Defaults and behavior the schema does not carry:

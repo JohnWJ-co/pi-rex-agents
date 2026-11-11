@@ -187,7 +187,7 @@ export const SubagentParams = Type.Object({
 	interactive: Type.Optional(
 		Type.Boolean({
 			description:
-				"Mark the subagent as interactive (long-running, user drives the conversation in its own block). When true, the main session is not woken by status transitions (stalled/recovered) for this subagent. If omitted, falls back to the agent's `interactive` frontmatter, otherwise the inverse of `auto-exit` (agents that auto-exit are autonomous and get stall pings; agents that don't are interactive and stay quiet).",
+				"Mark the subagent as interactive (long-running, user drives the conversation in its own block). When true, the main session is not woken by status transitions (stalled/recovered) for this subagent. If omitted, falls back to the agent's `interactive` frontmatter, otherwise the inverse of `auto-exit` (agents that auto-exit are autonomous and get stall pings; agents that don't are interactive and stay quiet). Auto-exit children do not receive the subagent_done tool; only interactive or persistent children do.",
 		}),
 	),
 });

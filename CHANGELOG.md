@@ -37,6 +37,9 @@ is required.
 - `caller_ping` ends the current persistent task while keeping the specialist
   available; `subagent_done` without a current task keeps the session alive.
 - A persistent child aborts a leftover run before `subagent_stop` shuts it down.
+- Auto-exit child prompts and parent tool guidance now state that
+  `subagent_done` is unavailable, so callers ask for a final summary instead
+  of a tool call.
 
 ### Removed
 

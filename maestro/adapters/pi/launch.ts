@@ -721,11 +721,14 @@ function prepareTaskArtifacts(
 	const summaryInstruction = request.behavior.autoExit
 		? "Your FINAL assistant message should summarize what you accomplished."
 		: "Your FINAL assistant message (before calling subagent_done or before the user exits) should summarize what you accomplished.";
+	const autoExitNote = request.behavior.autoExit
+		? "This is an auto-exit child: subagent_done is not available. Finish normally with your final assistant message."
+		: "";
 	const fullTask = request.handoff
 		? request.task
 		: resolved.sessionMode === "fork"
 			? request.task
-			: `${roleBlock}\n\n${modeHint}\n\n${request.task}\n\n${summaryInstruction}`;
+			: `${roleBlock}\n\n${modeHint}\n\n${request.task}\n\n${autoExitNote ? `${autoExitNote}\n\n` : ""}${summaryInstruction}`;
 	let taskArg = fullTask;
 	if (resolved.taskDelivery === "artifact" && !request.handoff) {
 		const artifactPath = join(
