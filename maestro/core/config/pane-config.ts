@@ -1,5 +1,12 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+	mkdirSync,
+	readFileSync,
+	renameSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
+import { randomUUID } from "node:crypto";
 import { isPlainObject, isString } from "./type-guards.ts";
 
 export type PaneMode = "split" | "tab";
@@ -72,10 +79,10 @@ export function parsePaneConfig(
 	const maxPerTab = Object.hasOwn(rawConfig.panes, "maxPerTab")
 		? rawConfig.panes.maxPerTab
 		: 2;
-	if (!Number.isSafeInteger(maxPerTab) || maxPerTab < 1 || maxPerTab > 8) {
+	if (!Number.isSafeInteger(maxPerTab) || maxPerTab < 1 || maxPerTab > 10) {
 		invalidPaneConfig(
 			source,
-			"panes.maxPerTab must be an integer between 1 and 8",
+			"panes.maxPerTab must be an integer between 1 and 10",
 		);
 	}
 	return { mode, direction, maxPerTab };
@@ -142,4 +149,67 @@ export function createSubagentPaneFactory(
 	return config.mode === "split"
 		? (name, cwd) => createSplit(name, config.direction, cwd)
 		: createTab;
+}
+
+export interface PaneConfigPatch {
+	mode?: PaneMode;
+	maxPerTab?: number;
+}
+
+/**
+ * Atomically merge `patch` into the durable `panes` object, preserving every
+ * other top-level setting. A missing config is seeded from the packaged
+ * example so unrelated defaults are not silently dropped.
+ */
+export function writePaneConfig(
+	configPath: string,
+	examplePath: string,
+	patch: PaneConfigPatch,
+): PaneConfig {
+	let source: string;
+	let sourcePath = configPath;
+	try {
+		source = readFileSync(configPath, "utf8");
+	} catch (error) {
+		// SAFETY: readFileSync only throws Node fs errors here, which carry code.
+		const errno = error as NodeJS.ErrnoException;
+		if (errno.code !== "ENOENT") throw error;
+		source = readFileSync(examplePath, "utf8");
+		sourcePath = examplePath;
+	}
+
+	let parsed: any;
+	try {
+		parsed = JSON.parse(source);
+	} catch (error) {
+		throw new Error(
+			`Invalid JSON in subagent config ${sourcePath}: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+	if (!isPlainObject(parsed))
+		throw new Error(
+			`Invalid JSON in subagent config ${sourcePath}: root must be an object`,
+		);
+
+	const panes = isPlainObject(parsed.panes) ? { ...parsed.panes } : {};
+	if (patch.mode !== undefined) panes.mode = patch.mode;
+	if (patch.maxPerTab !== undefined) panes.maxPerTab = patch.maxPerTab;
+	const next = { ...parsed, panes };
+	const validated = parsePaneConfig(next, configPath);
+	const output = JSON.stringify(next, null, 2) + "\n";
+
+	mkdirSync(dirname(configPath), { recursive: true });
+	const temporary = join(
+		dirname(configPath),
+		`.${Date.now()}-${process.pid}-${randomUUID()}-config.tmp`,
+	);
+	let published = false;
+	try {
+		writeFileSync(temporary, output, { flag: "wx" });
+		renameSync(temporary, configPath);
+		published = true;
+	} finally {
+		if (!published) rmSync(temporary, { force: true });
+	}
+	return validated;
 }

@@ -25,8 +25,8 @@ provider; fakes are for conformance tests only.
   `index.ts` creates each once per module load, because tests and `/reload`
   re-import it and its config and timers must not be shared.
 - `pi-extension/subagents/launch-tools.ts`, `control-tools.ts`,
-  `worktree-tools.ts`, `task-models.ts`, `renderers.ts` — `register*`
-  functions for the public tools, commands, and message renderers.
+  `worktree-tools.ts`, `task-models.ts`, `panes-commands.ts`, `renderers.ts` —
+  `register*` functions for the public tools, commands, and message renderers.
 - `pi-extension/subagents/model-registry.ts`, `config-path.ts` — permanent
   host-local SDK capability glue and configuration-path conventions.
 - `maestro/core/` — seam interfaces/types, activity and lifecycle projection,

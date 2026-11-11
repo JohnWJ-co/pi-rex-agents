@@ -56,7 +56,7 @@ or the environment of an already-running Rex server.
 
 Ordinary children and resumes accept native `placement: "split" | "tab"`. The
 default is split beside the parent, with at most 2 live children owned by this
-parent in its current window (`panes.maxPerTab`, an integer from 1 to 8). A full
+parent in its current window (`panes.maxPerTab`, an integer from 1 to 10). A full
 window sends the next split request to a new tab; closing a child releases its
 slot. The kernel preserves the registry and reservations across `/reload`.
 Worktree launches always use a new Rex tab, regardless of `placement`, and do

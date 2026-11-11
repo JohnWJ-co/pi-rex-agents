@@ -9,7 +9,7 @@ surface operations directly to the kernel.
 registry. For a split it reads `provider.listSurfaces()`, locates the parent
 block's current window, and counts live registered ordinary children in that
 window. It includes split creations awaiting registry admission. The default
-limit is 2; `panes.maxPerTab` accepts integers from 1 through 8. On reaching the
+limit is 2; `panes.maxPerTab` accepts integers from 1 through 10. On reaching the
 limit it requests a tab instead. Explicit tabs bypass split admission, and
 worktree creation always uses a separate tab.
 

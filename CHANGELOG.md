@@ -22,6 +22,8 @@ is required.
   provider.
 - `test/no-foreign-host.test.ts` guard over shipped TypeScript strings and
   Markdown.
+- `/panes-mode` to switch split/tab and `/panes-maxPerTab` to set the per-tab
+  split limit (1-10), with interactive selectors when called without arguments.
 
 ### Changed
 

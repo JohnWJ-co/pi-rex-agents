@@ -89,6 +89,7 @@ import {
 	registerWorktreeCommand,
 } from "./worktree-tools.ts";
 import { registerTaskModelTool, registerTaskModelInit } from "./task-models.ts";
+import { registerPaneCommands } from "./panes-commands.ts";
 import { registerControlTools } from "./control-tools.ts";
 import {
 	registerSubagentTool,
@@ -541,6 +542,8 @@ export default function subagentsExtension(
 	});
 
 	registerTaskModelInit(host);
+
+	registerPaneCommands(host, { paneConfig });
 
 	registerWorktreeCommand(host, {
 		runtime,

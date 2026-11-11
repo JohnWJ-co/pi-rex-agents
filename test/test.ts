@@ -10,6 +10,7 @@ import {
 	registerWorktreeCommand,
 	registerWorktreeTools,
 } from "../pi-extension/subagents/worktree-tools.ts";
+import { registerPaneCommands } from "../pi-extension/subagents/panes-commands.ts";
 import {
 	hostLine,
 	hostText,
@@ -123,6 +124,8 @@ import {
 	createSubagentPaneFactory,
 	loadPaneConfig,
 	parsePaneConfig,
+	writePaneConfig,
+	type PaneConfig,
 } from "../maestro/core/config/pane-config.ts";
 import {
 	loadPersistentConfig,
@@ -627,7 +630,13 @@ describe("Rex host registration", () => {
 				]);
 				assert.deepEqual(
 					mock.registeredCommands.map((command) => command.name).sort(),
-					["subagent", "subagents-init", "worktree"],
+					[
+						"panes-maxPerTab",
+						"panes-mode",
+						"subagent",
+						"subagents-init",
+						"worktree",
+					],
 				);
 				const event = { systemPromptOptions: { appendSystemPrompt: "" } };
 				for (const handler of mock.eventHandlers.get("before_agent_start") ??
@@ -5104,7 +5113,7 @@ describe("pane configuration", () => {
 		);
 	});
 
-	it("loads maxPerTab independently of persistent capacity and accepts 1 and 8", () => {
+	it("loads maxPerTab independently of persistent capacity and accepts 1 and 10", () => {
 		withTempDir((dir) => {
 			const config = join(dir, "config.json");
 			writeFileSync(
@@ -5122,7 +5131,7 @@ describe("pane configuration", () => {
 					maxPerTab: 2,
 				},
 			);
-			for (const maxPerTab of [1, 8]) {
+			for (const maxPerTab of [1, 10]) {
 				writeFileSync(config, JSON.stringify({ panes: { maxPerTab } }));
 				assert.equal(
 					loadPaneConfig(dirname(config), getSubagentsConfigExamplePath())
@@ -5137,14 +5146,14 @@ describe("pane configuration", () => {
 				"4",
 				null,
 				true,
-				9,
+				11,
 				Number.MAX_SAFE_INTEGER + 1,
 			]) {
 				writeFileSync(config, JSON.stringify({ panes: { maxPerTab } }));
 				assert.throws(
 					() =>
 						loadPaneConfig(dirname(config), getSubagentsConfigExamplePath()),
-					/panes\.maxPerTab must be an integer between 1 and 8/,
+					/panes\.maxPerTab must be an integer between 1 and 10/,
 				);
 			}
 		});
@@ -5187,6 +5196,122 @@ describe("pane configuration", () => {
 				direction: "down",
 			});
 		});
+	});
+
+	it("writes only panes, preserves unrelated settings, and validates the merged result", () => {
+		withTempDir((dir) => {
+			const configPath = join(dir, "rex-agents", "config.json");
+			mkdirSync(dirname(configPath), { recursive: true });
+			writeFileSync(
+				configPath,
+				JSON.stringify({
+					status: { enabled: false },
+					panes: { direction: "down" },
+				}),
+			);
+			assert.deepEqual(
+				writePaneConfig(configPath, getSubagentsConfigExamplePath(), {
+					mode: "tab",
+					maxPerTab: 10,
+				}),
+				{ mode: "tab", direction: "down", maxPerTab: 10 },
+			);
+			const saved = JSON.parse(readFileSync(configPath, "utf8"));
+			assert.deepEqual(saved.status, { enabled: false });
+			assert.deepEqual(saved.panes, {
+				direction: "down",
+				mode: "tab",
+				maxPerTab: 10,
+			});
+			assert.match(readFileSync(configPath, "utf8"), /\n$/);
+			const before = readFileSync(configPath, "utf8");
+			assert.throws(
+				() =>
+					writePaneConfig(configPath, getSubagentsConfigExamplePath(), {
+						maxPerTab: 11,
+					}),
+				/panes\.maxPerTab must be an integer between 1 and 10/,
+			);
+			assert.equal(readFileSync(configPath, "utf8"), before);
+		});
+	});
+
+	it("switches mode and maxPerTab from arguments or selectors", async () => {
+		const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+		const dir = createTestDir();
+		try {
+			process.env.PI_CODING_AGENT_DIR = dir;
+			const paneConfig: PaneConfig = {
+				mode: "split",
+				direction: "right",
+				maxPerTab: 2,
+			};
+			const { api, registeredCommands } = createMockExtensionApi();
+			registerPaneCommands(api, { paneConfig });
+			const mode = registeredCommands.find(
+				(command) => command.name === "panes-mode",
+			);
+			const max = registeredCommands.find(
+				(command) => command.name === "panes-maxPerTab",
+			);
+			assert.ok(mode);
+			assert.ok(max);
+			const notices: string[] = [];
+			const selections: Array<{ title: string; options: string[] }> = [];
+			const ctx = {
+				hasUI: true,
+				ui: {
+					notify: (text: string) => notices.push(text),
+					select: async (title: string, options: string[]) => {
+						selections.push({ title, options });
+						return options.at(-1);
+					},
+				},
+			};
+
+			await mode.handler("", ctx);
+			await max.handler("", ctx);
+			assert.deepEqual(selections[0]?.options, ["split", "tab"]);
+			assert.deepEqual(selections[1]?.options, [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+			]);
+			assert.equal(paneConfig.mode, "tab");
+			assert.equal(paneConfig.maxPerTab, 10);
+			const configPath = getSubagentsConfigPath();
+			const saved = JSON.parse(readFileSync(configPath, "utf8"));
+			assert.equal(saved.panes.mode, "tab");
+			assert.equal(saved.panes.maxPerTab, 10);
+			assert.equal(saved.status.enabled, true);
+			assert.match(notices.at(-1) ?? "", /maxPerTab set to 10/);
+
+			await mode.handler("split", ctx);
+			await max.handler("4", ctx);
+			assert.equal(paneConfig.mode, "split");
+			assert.equal(paneConfig.maxPerTab, 4);
+			const argsSaved = JSON.parse(readFileSync(configPath, "utf8"));
+			assert.equal(argsSaved.panes.mode, "split");
+			assert.equal(argsSaved.panes.maxPerTab, 4);
+
+			await max.handler("11", ctx);
+			assert.match(notices.at(-1) ?? "", /integer from 1 to 10/);
+			await mode.handler("window", ctx);
+			assert.match(notices.at(-1) ?? "", /Use split or tab/);
+			const unchanged = JSON.parse(readFileSync(configPath, "utf8"));
+			assert.equal(unchanged.panes.maxPerTab, 4);
+			assert.equal(unchanged.panes.mode, "split");
+		} finally {
+			restoreEnvVar("PI_CODING_AGENT_DIR", previousAgentDir);
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 
 	it("uses tabs unchanged and passes split direction to the split creator", () => {
@@ -11465,7 +11590,16 @@ describe("commands", () => {
 		const previousId = process.env.PI_SUBAGENT_ID;
 		try {
 			for (const [childId, expected] of [
-				[undefined, ["subagent", "subagents-init", "worktree"]],
+				[
+					undefined,
+					[
+						"panes-maxPerTab",
+						"panes-mode",
+						"subagent",
+						"subagents-init",
+						"worktree",
+					],
+				],
 				["command-inventory-child", ["subagent", "worktree"]],
 			] as const) {
 				restoreEnvVar("PI_SUBAGENT_ID", childId);

@@ -390,6 +390,16 @@
 	],
 	"commands": [
 		{
+			"name": "panes-maxPerTab",
+			"scopes": ["parent"],
+			"description": "Set the maximum managed subagent blocks per tab; no argument opens a 1-10 selector"
+		},
+		{
+			"name": "panes-mode",
+			"scopes": ["parent"],
+			"description": "Switch pane placement between split and tab; no argument opens a selector"
+		},
+		{
 			"name": "subagent",
 			"scopes": ["parent", "child"],
 			"description": "Spawn a subagent: /subagent <agent> <task>; list agents: /subagent list"

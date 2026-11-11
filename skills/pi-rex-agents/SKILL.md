@@ -19,9 +19,12 @@ delegate; another multiplexer or its skills do not apply here, even if installed
   it by hand with the `rex` CLI. The default limit is 2 live children in the
   parent window; further splits use a new tab. Closing a child frees its slot,
   and `/reload` retains registered children and pending reservations. Configure
-  `panes.maxPerTab` (integer 1..8) in
+  `panes.maxPerTab` (integer 1..10) in
   `$PI_CODING_AGENT_DIR/rex-agents/config.json` (default
-  `~/.pi/agent/rex-agents/config.json`). The previous host config path is neither read nor migrated.
+  `~/.pi/agent/rex-agents/config.json`). In an interactive parent, `/panes-mode`
+  switches split/tab and `/panes-maxPerTab` sets 1-10 (or opens a selector); both
+  apply to new launches immediately. The previous host config path is neither
+  read nor migrated.
 - Worktree children (`worktree: { branch }`) always open in a new tab under
   `~/.pi/rex-agents/worktrees`; the parent checkout's uncommitted changes are
   not copied (the base is committed HEAD).

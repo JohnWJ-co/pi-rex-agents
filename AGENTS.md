@@ -23,6 +23,7 @@ Keep changes scoped to the checkout assigned to you. Another agent may own a par
 ## Code map
 
 - `pi-extension/subagents/index.ts` — Rex-only Pi composition root; loads the local hard-forked kernel with Rex infrastructure and host notices
+- `pi-extension/subagents/panes-commands.ts` — `/panes-mode` and `/panes-maxPerTab` durable pane-config commands
 - `pi-extension/subagents/rex-composition.ts` — Rex provider, supervision, worktree and placement composition
 - `pi-extension/subagents/host-notice.ts` — Rex host and leaf system prompt notices, including the managed-worktree workspace contract
 - `pi-extension/subagents/worktree-boundary.ts` — child-side edit/write guard for source-checkout paths outside the managed worktree

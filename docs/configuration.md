@@ -460,7 +460,9 @@ isolated Rex tree, not parent-model latency; raw samples are written to
 
 ## Pane placement
 
-`panes.mode` accepts `"split"` (default) or `"tab"`. The default configuration is `{ "mode": "split", "direction": "right", "maxPerTab": 2 }`. `panes.maxPerTab` must be an integer from 1 through 8; zero, fractions, values above 8, and non-numbers raise `invalidPaneConfig`. The old `"grouped"` mode is invalid. `panes.direction` accepts `"right"` (default) or `"down"` for splits.
+`panes.mode` accepts `"split"` (default) or `"tab"`. The default configuration is `{ "mode": "split", "direction": "right", "maxPerTab": 2 }`. `panes.maxPerTab` must be an integer from 1 through 10; zero, fractions, values above 10, and non-numbers raise `invalidPaneConfig`. The old `"grouped"` mode is invalid. `panes.direction` accepts `"right"` (default) or `"down"` for splits.
+
+In an interactive parent session, `/panes-mode` switches between `split` and `tab`; without an argument it opens a selector. `/panes-maxPerTab` accepts an integer from 1 through 10, or opens a 1-10 selector when called without an argument. Both commands atomically update `panes` in the durable config, preserve every other setting, and apply to new launches immediately.
 
 The native `placement` argument on `subagent` and `subagent_resume` overrides `panes.mode` for that call. `"split"` opens a block beside the parent in its current Rex window while capacity remains, then overflows into a new tab. `"tab"` always opens a new Rex window. Worktree children always open a new tab and do not consume split capacity. Resume uses the saved session cwd with the same placement policy.
 
@@ -470,7 +472,7 @@ One parent-owned queue serializes inspection and surface creation. A successful 
 
 `/reload` adopts both the existing registry and the reservation queue; it does not reset capacity. A full process restart does not adopt another process's children. IDs establish ownership, never labels. Placement preserves focus and does not move existing blocks. See [Rex surface placement](rex-surface.md) for the kernel boundary.
 
-Run `/reload` after changing role, model, or pane settings.
+Run `/reload` after changing role or model settings. The pane commands apply to new launches immediately and do not require a reload.
 
 ## Model resolution and fallback
 
