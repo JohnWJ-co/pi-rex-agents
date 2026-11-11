@@ -1,28 +1,30 @@
-# 安装与自检
+**English** | [简体中文](install.zh-CN.md)
 
-## 前提
+# Installation and self-check
 
-- 在 Rex block 内运行 Pi，`REX_SESSION`、`REX_BLOCK` 都存在。
-- Node.js 22.6+，可用的 Pi 和 Rex CLI。
-- 从源码运行时先执行 `npm ci`。执行内核已 hard fork 在本仓库，不需要安装上游 npm 包。
+## Prerequisites
 
-## 临时加载
+- Run Pi inside a Rex block, with both `REX_SESSION` and `REX_BLOCK` present.
+- Node.js 22.6+, with a working Pi and Rex CLI.
+- When running from source, run `npm ci` first. The execution kernel is already hard-forked into this repository, so the upstream npm package does not need to be installed.
 
-在本仓库根目录运行：
+## Temporary loading
+
+Run from the root of this repository:
 
 ```bash
 pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 ```
 
-`--no-extensions` 关闭自动发现，只加载显式 `-e` 的扩展。普通终端缺少 Rex 宿主身份时，本扩展不注册工具。
+`--no-extensions` disables auto-discovery and loads only extensions passed explicitly with `-e`. In an ordinary terminal without the Rex host identity, this extension does not register any tools.
 
-## 安装为 Pi 包
+## Install as a Pi package
 
 ```bash
 pi install /absolute/path/to/pi-rex-agents
 ```
 
-包通过以下 manifest 声明入口和操作指南：
+The package declares its entry points and operating guide through the following manifest:
 
 ```json
 {
@@ -33,15 +35,15 @@ pi install /absolute/path/to/pi-rex-agents
 }
 ```
 
-打包内容仅包含运行时、README、LICENSE、示例配置和操作指南。开发测试、迁移文档和本机 `.pi` 配置留在源码检出中。
+The packaged contents include only the runtime, README, LICENSE, example configuration, and operating guide. Development tests, migration docs, and local `.pi` configuration remain in the source checkout.
 
-## 配置
+## Configuration
 
-新配置位于 `$PI_CODING_AGENT_DIR/rex-agents/config.json`，默认 `~/.pi/agent/rex-agents/config.json`，也可由 `PI_CODING_AGENT_DIR` 改变根目录。配置缺失时使用默认值。
+The new configuration lives at `$PI_CODING_AGENT_DIR/rex-agents/config.json`, defaulting to `~/.pi/agent/rex-agents/config.json`; the root directory can also be changed with `PI_CODING_AGENT_DIR`. Defaults are used when the configuration is missing.
 
-## 自检与验证
+## Self-check and verification
 
-源码检出中执行：
+Run from the source checkout:
 
 ```bash
 npm run doctor
@@ -50,8 +52,8 @@ bun test/smoke-extension.ts
 npm run test:integration:rex
 ```
 
-`doctor` 检查 Rex/Pi CLI、manifest 声明的扩展入口和 skill 入口，以及 `pi list` 中的本包状态。Rex 集成测试使用隔离 server 和 fake provider；跳过表示没有验证该环境。
+`doctor` checks the Rex/Pi CLIs, the extension and skill entry points declared in the manifest, and this package's status in `pi list`. The Rex integration tests use an isolated server and a fake provider; a skip means that environment was not verified.
 
-在交互式 Pi 中，`/subagent list` 和 `/worktree list` 应能运行。空角色目录是正常情况；本包不附带角色。默认 split 最多容纳本父进程管理的 2 个子 block，满后使用新 tab；`placement: "tab"` 和 worktree 子代理直接使用新 tab；`placement: "minimized"` 在当前 tab 的浮动层中启动并最小化到右下角托盘，且不占 split 名额。`panes.maxPerTab` 只接受 1..10 的整数；`/panes-mode` 和 `/panes-maxPerTab` 可直接切换，详见 [配置说明](configuration.md#pane-placement)。
+In interactive Pi, `/subagent list` and `/worktree list` should run. An empty roles directory is normal; this package ships no roles. By default, split placement holds at most 2 child blocks managed by this parent process and uses a new tab once full; `placement: "tab"` and worktree subagents use a new tab directly; `placement: "minimized"` starts in a floating layer in the current tab and minimizes to the bottom-right tray, without consuming a split slot. `panes.maxPerTab` accepts only integers from 1 through 10; `/panes-mode` and `/panes-maxPerTab` change these settings directly. See [Configuration](configuration.md#pane-placement) for details.
 
-真实模型探针为 `npm run p1`、`npm run p1:persistent` 和 `npm run p2`，默认模型是 `CBAPI/cn:deepseek-v4.1-flash`。只在任务明确需要真实模型证据时运行。
+The real-model probes are `npm run p1`, `npm run p1:persistent`, and `npm run p2`; the default model is `CBAPI/cn:deepseek-v4.1-flash`. Run them only when the task explicitly requires real-model evidence.

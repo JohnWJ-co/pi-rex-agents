@@ -45,6 +45,7 @@ describe("Rex package contract", () => {
 		for (const path of [
 			"package.json",
 			"README.md",
+			"README.zh-CN.md",
 			"LICENSE",
 			"config.json.example",
 			"skills/pi-rex-agents/SKILL.md",
@@ -58,6 +59,7 @@ describe("Rex package contract", () => {
 		const rootFiles = new Set([
 			"package.json",
 			"README.md",
+			"README.zh-CN.md",
 			"LICENSE",
 			"config.json.example",
 			"skills/pi-rex-agents/SKILL.md",

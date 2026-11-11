@@ -22,7 +22,8 @@
     "skills/pi-rex-agents/",
     "config.json.example",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "changelog": "auto-changelog",

@@ -1,3 +1,5 @@
+**English** | [简体中文](worktree-subagents.zh-CN.md)
+
 # Worktree subagents
 
 This guide is the operational reference for running writing agents in isolated Git worktrees with `Pi subagent extension`. For installation and everyday use, see the [README](../README.md). For the complete tool API and status model, see the [tools and lifecycle reference](tools.md). For the product and open-source research behind these choices, see the [research report](research/worktree-subagent-orchestration.md).

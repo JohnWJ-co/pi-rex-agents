@@ -1,37 +1,39 @@
+**English** | [简体中文](README.zh-CN.md)
+
 # pi-rex-agents
 
-`pi-rex-agents` 是 Rex 原生的 Pi 子代理扩展。父 Pi 在当前 Rex block 中继续工作；`subagent` 在同一 tab 的 block 或新 tab 中启动子 Pi，完成后自动把结果送回父会话。父进程不阻塞，也不需要轮询日志或状态。
+`pi-rex-agents` is a Rex-native Pi subagent extension. The parent Pi keeps working in the current Rex block; `subagent` launches a child Pi in a block in the same tab or in a new tab, and automatically returns the result to the parent session when the child finishes. The parent process does not block, and does not need to poll logs or status.
 
-本仓库包含从 MIT 许可的 3.7.2 Pi 子代理内核 hard fork 的执行引擎，不依赖上游 npm 包。上游基线、许可证和人工移植规则见 [UPSTREAM](docs/UPSTREAM.md)。
+This repository contains the execution engine hard-forked from the MIT-licensed 3.7.2 Pi subagent kernel, and does not depend on the upstream npm package. For the upstream baseline, license, and manual porting rules, see [UPSTREAM](docs/UPSTREAM.md).
 
-## 特性
+## Features
 
-- **Rex 原生放置**：`placement: "split"` 在父 block 旁启动，`placement: "tab"` 在新 tab 启动，`placement: "minimized"` 在当前 tab 的浮动层中启动并立即最小化为右下角胶囊。Rex 的 window 就是 tab，block 就是 pane。
-- **自动回传**：完成、失败和求助消息通过 steer 消息唤醒父会话，结果由宿主原子发布。
-- **持久专家**：`persistent` 子代理跨任务复用同一会话，通过 `subagent_send` 接收后续任务，通过 `subagent_stop` 优雅停止。
-- **托管 worktree**：写入型任务在独立 Git 检出中运行；父代理负责审查、集成和清理。
-- **压缩工具透传**：自动启用已安装的上下文压缩工具，fresh、resume、persistent 和 worktree handoff 都适用。
-- **叶子子代理**：子代理不再注册或调用其他委派路径，避免无限嵌套。
-- **可验证**：确定性 Rex 集成测试使用隔离 server 和 fake provider，不调用真实模型。
+- **Rex-native placement**: `placement: "split"` launches beside the parent block, `placement: "tab"` launches in a new tab, and `placement: "minimized"` launches in a floating layer in the current tab and immediately minimizes it to a capsule in the bottom-right corner. A Rex window is a tab and a block is a pane.
+- **Automatic return delivery**: completion, failure, and help-request messages wake the parent session through steer messages, and results are published atomically by the host.
+- **Persistent specialists**: a `persistent` subagent reuses the same session across tasks, receives follow-up tasks through `subagent_send`, and stops gracefully through `subagent_stop`.
+- **Managed worktree**: writing tasks run in an isolated Git checkout; the parent agent handles review, integration, and cleanup.
+- **Compression tool passthrough**: installed context-compression tools are enabled automatically for fresh, resume, persistent, and worktree handoff runs.
+- **Leaf subagents**: subagents do not register or invoke other delegation paths, avoiding infinite nesting.
+- **Verifiable**: deterministic Rex integration tests use an isolated server and a fake provider, and never call a real model.
 
-## 环境要求
+## Requirements
 
 - Node.js 22.6+
-- Pi（含扩展 API）和 Rex CLI
-- 在 Rex block 内运行 Pi：`REX_SESSION`、`REX_BLOCK` 必须存在
-- 当前支持 macOS 和 Linux；不做 Windows 适配
+- Pi (with the extension API) and the Rex CLI
+- Run Pi inside a Rex block: `REX_SESSION` and `REX_BLOCK` must be present
+- Currently supports macOS and Linux; Windows is not supported
 
-## 安装
+## Installation
 
-### 从 GitHub 安装
+### Install from GitHub
 
 ```bash
 pi install https://github.com/JohnWJ-co/pi-rex-agents
 ```
 
-安装后 `pi list` 应显示本包，扩展入口为 `./pi-extension/subagents/index.ts`。
+After installation, `pi list` should show this package; the extension entry point is `./pi-extension/subagents/index.ts`.
 
-### 从源码检出运行
+### Run from a source checkout
 
 ```bash
 git clone https://github.com/JohnWJ-co/pi-rex-agents.git
@@ -40,47 +42,47 @@ npm ci
 npm run doctor
 ```
 
-临时加载当前检出：
+To load the current checkout temporarily:
 
 ```bash
 pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 ```
 
-长期使用可运行 `pi install /absolute/path/to/pi-rex-agents`。安装与自检细节见 [安装说明](docs/install.md)。
+For long-term use, run `pi install /absolute/path/to/pi-rex-agents`. For installation and self-check details, see [Installation](docs/install.md).
 
-## 使用
+## Usage
 
-本包提供以下父会话工具和命令：
+The package provides the following parent-session tools and commands:
 
-| 工具 | 用途 |
+| Tool | Purpose |
 |---|---|
-| `subagent` | 启动子代理，可指定 role、model、placement、worktree、persistent 和 accept check |
-| `subagent_resume` | 在新 block 或 tab 中恢复已有子会话 |
-| `subagent_interrupt` | 向运行中的子代理发送 Escape，中断当前轮次 |
-| `subagent_cancel` | 取消普通子代理，确认进程退出并投递一条 cancelled 结果 |
-| `subagent_send` | 向空闲的持久专家发送下一轮任务 |
-| `subagent_stop` | 在当前任务 settle 后停止持久专家 |
-| `subagents_list` | 列出可用的角色和子代理定义 |
-| `subagents_write_task_models` | 校验并原子写入任务模型偏好 |
-| `worktree_list` | 查看托管 worktree，包括跨会话遗留项 |
-| `worktree_remove` | 按路径、分支或 window ID 显式删除 worktree |
+| `subagent` | Spawn a subagent, optionally specifying role, model, placement, worktree, persistent, and accept check |
+| `subagent_resume` | Resume an existing child session in a new block or tab |
+| `subagent_interrupt` | Send Escape to a running subagent to interrupt the current turn |
+| `subagent_cancel` | Cancel an ordinary subagent, confirm that its process has exited, and deliver one cancelled result |
+| `subagent_send` | Send the next task to an idle persistent specialist |
+| `subagent_stop` | Stop a persistent specialist after the current task settles |
+| `subagents_list` | List available roles and subagent definitions |
+| `subagents_write_task_models` | Validate and atomically write task-model preferences |
+| `worktree_list` | List managed worktrees, including leftovers from other sessions |
+| `worktree_remove` | Explicitly remove a worktree by path, branch, or window ID |
 
-命令：`/subagent`、`/subagents-init`、`/worktree`、`/panes-mode`、`/panes-maxPerTab`。完整参数、生命周期和事件见 [工具参考](docs/tools.md)，操作指南见 [pi-rex-agents skill](skills/pi-rex-agents/SKILL.md)。
+Commands: `/subagent`, `/subagents-init`, `/worktree`, `/panes-mode`, `/panes-maxPerTab`. For full parameters, lifecycle, and events, see the [tools reference](docs/tools.md); for the operating guide, see the [pi-rex-agents skill](skills/pi-rex-agents/SKILL.md).
 
-## 放置与 worktree
+## Placement and worktrees
 
-- `placement: "split"` 是默认值，在父 block 旁启动子 block。每个父进程默认最多 2 个托管子 block；名额满后使用新 tab。关闭子 block 后释放名额，`/reload` 会保留登记和预留状态。用户手动添加的 block 和其他父进程不占名额。
-- `placement: "tab"` 直接在新 tab 启动。Rex window 即 tab。
-- `placement: "minimized"` 在当前 tab 创建 floating layer 并立即最小化到客户端右下角托盘；子代理仍在同一个 window 中运行。它不占 `panes.maxPerTab` 的 split 名额。把 `panes.mode` 设为 `"minimized"` 可以让默认启动也使用该模式。
-- worktree 子代理始终使用新 tab，基于已提交的 Git 状态创建隔离检出。子代理会收到绝对工作区路径，必须在该工作区内读取、写入和执行命令，不得 `cd` 到或修改父/源检出。父代理负责审查、集成和清理。
-- 指向源检出的 `edit`/`write` 等显式路径写入会被拒绝，并提示对应的工作区路径。`Bash` 等 shell 命令无法可靠拦截，只能依靠提示约束。
-- 完成的 worktree 默认保留供父代理审查；删除必须通过 `worktree_remove` 或 `/worktree remove` 显式发起。
+- `placement: "split"` is the default: it starts the child block beside the parent block. Each parent process has a default cap of 2 managed child blocks; once the cap is reached, a new tab is used. Closing a child block frees its slot, and `/reload` preserves the registry and reservations. Blocks that users add manually and other parent processes do not count against the cap.
+- `placement: "tab"` starts directly in a new tab. A Rex window is a tab.
+- `placement: "minimized"` creates a floating layer in the current tab and immediately minimizes it to the tray in the bottom-right corner of the client; the subagent keeps running in the same window. It does not consume a split slot under `panes.maxPerTab`. Setting `panes.mode` to `"minimized"` makes this the default launch mode.
+- Worktree subagents always use a new tab and create an isolated checkout from the committed Git state. The subagent receives an absolute workspace path and must read, write, and run commands inside that workspace; it must not `cd` into or modify the parent/source checkout. The parent agent handles review, integration, and cleanup.
+- Explicit path writes such as `edit`/`write` that target the source checkout are rejected, and the corresponding workspace path is suggested. Shell commands such as `Bash` cannot be reliably intercepted and are constrained only by prompt instructions.
+- Completed worktrees are kept by default for parent review; removal must be explicitly initiated through `worktree_remove` or `/worktree remove`.
 
-详见 [worktree 指南](docs/worktree-subagents.md) 和 [Rex surface 说明](docs/rex-surface.md)。
+See the [worktree guide](docs/worktree-subagents.md) and the [Rex surface reference](docs/rex-surface.md) for details.
 
-## 配置
+## Configuration
 
-读取 `$PI_CODING_AGENT_DIR/rex-agents/config.json`，默认 `~/.pi/agent/rex-agents/config.json`；文件缺失时使用默认值。不会读取或迁移旧目录配置。
+Configuration is read from `$PI_CODING_AGENT_DIR/rex-agents/config.json`, defaulting to `~/.pi/agent/rex-agents/config.json`; defaults are used when the file is missing. Configuration from the old directory is neither read nor migrated.
 
 ```json
 {
@@ -100,30 +102,30 @@ pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 }
 ```
 
-`panes.mode` 接受 `"split"`、`"tab"` 或 `"minimized"`；`panes.maxPerTab` 只接受 1..10 的整数，默认 2，且只约束 split 子代理，不约束 minimized 子代理。`panes.minimizedBounds` 控制 minimized 子代理恢复时的位置和大小，格式为 `[x, y, width, height]`，默认 `[0.1, 0.1, 0.8, 0.8]`（窗口正中、80% 大小）。交互式 Pi 中可用 `/panes-mode` 切换三种模式，用 `/panes-maxPerTab` 输入 1-10 的整数或打开选择器；两者立即生效并写回配置文件。完整键、模型路由、监督和 outcome ledger 见 [配置说明](docs/configuration.md) 和 [config.json.example](config.json.example)。
+`panes.mode` accepts `"split"`, `"tab"`, or `"minimized"`; `panes.maxPerTab` accepts only integers from 1 to 10, defaults to 2, and constrains only split subagents, not minimized ones. `panes.minimizedBounds` controls the position and size of a minimized subagent when it is restored, in `[x, y, width, height]` format, defaulting to `[0.1, 0.1, 0.8, 0.8]` (centered in the window at 80% size). In interactive Pi, use `/panes-mode` to switch between the three modes and `/panes-maxPerTab` to enter an integer from 1 to 10 or open a picker; both take effect immediately and are written back to the configuration file. For the full set of keys, model routing, supervision, and the outcome ledger, see [Configuration](docs/configuration.md) and [config.json.example](config.json.example).
 
-子代理会自动启用已安装的上下文压缩工具，包括 billion-context 的 `compress`、`decompress`、`search_context`、`acp_status` 及可选的 `acp_rule`，即使传入 `tools: "read,bash"`。显式 `deny-tools` 仍优先；fresh、resume、persistent 和 worktree handoff 都适用。没有压缩插件时沿用 Pi 原生 auto-compaction。
+Subagents automatically enable installed context-compression tools, including billion-context's `compress`, `decompress`, `search_context`, and `acp_status`, as well as the optional `acp_rule`, even when `tools: "read,bash"` is passed. An explicit `deny-tools` still takes precedence; this applies to fresh, resume, persistent, and worktree handoff runs. Without a compression plugin, Pi's native auto-compaction is used.
 
-## 回传契约
+## Return contract
 
-| 证据 | 用途 |
+| Evidence | Purpose |
 |---|---|
-| 原子发布的 `.result.json`；persistent 的每任务结果文件 | 父进程校验 subagentId、taskId、generation 后读取正文 |
-| session JSONL | 结果文件不可用时的正文回退和审计证据 |
-| `.exit` | Pi 内核的语义退出记录 |
-| `.exitcode` | 包装脚本记录进程退出码；子 Pi 被强杀时仍可报告失败 |
-| Rex `program_status` 根记录 | Pi 原生 working / blocked / done / idle 状态 |
-| `id=pira` 子记录 | 扩展追加任务、generation 和结果元数据 |
+| Atomically published `.result.json`; the per-task result file for persistent agents | The parent reads the body after validating subagentId, taskId, and generation |
+| session JSONL | Body fallback and audit evidence when the result file is unavailable |
+| `.exit` | Semantic exit record from the Pi kernel |
+| `.exitcode` | Process exit code recorded by the wrapper script; still allows reporting failure when the child Pi is force-killed |
+| Rex `program_status` root record | Pi-native working / blocked / done / idle states |
+| `id=pira` child record | Task, generation, and result metadata appended by the extension |
 
-完成判定不读取终端屏幕。persistent inbox 使用目录事件唤醒，并以 5 秒轮询兜底；收到一轮结果即可立即发送下一轮。完整字段与验收要求见 [运行时证据契约](docs/delegation-outcome-contract.md#rex-runtime-evidence)。
+Completion is determined without reading the terminal screen. The persistent inbox wakes on directory events and falls back to a 5-second poll; as soon as one round's result arrives, the next round can be sent immediately. For the complete fields and acceptance requirements, see the [runtime evidence contract](docs/delegation-outcome-contract.md#rex-runtime-evidence).
 
-## 评审模型选择
+## Review model selection
 
 Cross-family independent review requires a reviewer from a different model family than the author. For ordinary review, prefer a different authenticated model family. When no other authenticated model family is available, ordinary review may use a same-family reviewer in a fresh standalone session. Disclose that this review is context-isolated, not cross-family independent. Cross-family verification must not use this fallback.
 
-角色配置和工具权限见 [roles](docs/roles.md)。`read,bash` 中的 Bash 可以修改文件；评审者的权限应与任务一致。
+For role configuration and tool permissions, see [Roles and custom agents](docs/roles.md). Bash in `read,bash` can modify files; a reviewer's permissions should match the task.
 
-## 开发与验证
+## Development and verification
 
 ```bash
 npm ci
@@ -137,26 +139,27 @@ bun test/smoke-extension.ts
 npm pack --dry-run
 ```
 
-基线门禁在清除 Rex 环境变量的子进程中判定全量 `npm test`，保留调用者的 Rex 环境用于集成验证。在 Rex block 内运行 `npm run test:integration:rex`；它使用隔离 Rex server 和 fake provider，不调用真实模型。真实模型探针为 `npm run p1`、`npm run p1:persistent`，默认 `CBAPI/cn:deepseek-v4.1-flash`。
+The baseline gate runs the full `npm test` in a child process with the Rex environment variables cleared, while preserving the caller's Rex environment for integration verification. Run `npm run test:integration:rex` inside a Rex block; it uses an isolated Rex server and a fake provider, and does not call a real model. The real-model probes are `npm run p1` and `npm run p1:persistent`, which default to `CBAPI/cn:deepseek-v4.1-flash`.
 
-代码地图和门禁要求见 [AGENTS.md](AGENTS.md)，测试与发布细节见 [development](docs/development.md)。历史记录：[P0](docs/p0-result.md)、[P1](docs/p1-result.md)、[P2](docs/p2-result.md)、[P4](docs/p4/STATUS.md)。
+For the code map and gate requirements, see [AGENTS.md](AGENTS.md); for testing and release details, see [development](docs/development.md). Historical records: [P0](docs/p0-result.md), [P1](docs/p1-result.md), [P2](docs/p2-result.md) (Chinese), [P4](docs/p4/STATUS.md) (English).
 
-## 文档
+## Documentation
 
-- [工具参考](docs/tools.md)
-- [配置说明](docs/configuration.md)
-- [Worktree 指南](docs/worktree-subagents.md)
-- [角色与自定义代理](docs/roles.md)
-- [故障排查](docs/troubleshooting.md)
-- [文档索引](docs/README.md)
+- [Tools reference](docs/tools.md)
+- [Configuration](docs/configuration.md)
+- [Worktree guide](docs/worktree-subagents.md)
+- [Roles and custom agents](docs/roles.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Documentation map](docs/README.md)
+- [中文文档](docs/README.zh-CN.md)
 
-## 已知限制
+## Known limitations
 
-- Rex 原生侧栏标记尚未实现；Pi 自身的状态 widget 可用。
-- 进程与 cwd 的可见性受系统权限限制。worktree 清理会披露无法确定的进程信息，并阻止存在已知占用或脏状态的删除。
-- worktree 子代理的写入保护只覆盖带显式文件路径的已知写入工具，不是安全沙箱；shell 命令的 workspace 约束是提示级的。
-- 当前不做 Windows 适配。
+- Rex-native sidebar indicators are not implemented yet; Pi's own status widget is available.
+- Process and cwd visibility is limited by system permissions. Worktree cleanup discloses process information that cannot be determined and blocks removal when known occupancy or a dirty state exists.
+- Write protection for worktree subagents covers only known write tools with explicit file paths and is not a security sandbox; the workspace constraint for shell commands is prompt-level.
+- Windows is not currently supported.
 
-## 许可证
+## License
 
-MIT。版权与许可全文见 [LICENSE](LICENSE)；上游归属和移植边界见 [UPSTREAM](docs/UPSTREAM.md)。
+MIT. For the full copyright and license text, see [LICENSE](LICENSE); for upstream attribution and porting boundaries, see [UPSTREAM](docs/UPSTREAM.md).

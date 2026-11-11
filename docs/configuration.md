@@ -1,6 +1,8 @@
+**English** | [简体中文](configuration.zh-CN.md)
+
 # Configuration
 
-This page is the reference for the durable `config.json` settings, task-model preferences, and the events other extensions use during `/subagents-init`. For a short introduction, see [Choose models](../README.md#choose-models) in the README.
+This page is the reference for the durable `config.json` settings, task-model preferences, and the events other extensions use during `/subagents-init`. For a short introduction, see [Configuration](../README.md#configuration) in the README.
 
 ## Configuration file
 

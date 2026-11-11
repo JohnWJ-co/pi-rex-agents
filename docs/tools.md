@@ -1,3 +1,5 @@
+**English** | [简体中文](tools.zh-CN.md)
+
 # Tools and lifecycle reference
 
 This page is the detailed reference for the tools, commands, and run lifecycle of `pi-rex-agents`. For installation and everyday use, see the [README](../README.md). Configuration keys are in [Configuration](configuration.md), and role authoring is in [Roles and custom agents](roles.md).

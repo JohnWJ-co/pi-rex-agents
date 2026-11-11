@@ -1,3 +1,5 @@
+**English** | [简体中文](troubleshooting.zh-CN.md)
+
 # Troubleshooting
 
 This page collects the checks for common problems. Each section links to the full reference.

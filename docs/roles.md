@@ -1,3 +1,5 @@
+**English** | [简体中文](roles.zh-CN.md)
+
 # Roles and custom agents
 
 This page covers how named roles are found, how to write your own, and how to publish a role pack. A bare `subagent` launch without `agent` needs none of this. For everyday use, see the [README](../README.md).
@@ -235,7 +237,7 @@ pi install npm:@acme/security-roles
 Registration is synchronous and accepts one absolute Markdown file or a
 directory whose direct `.md` children are roles. The bridge must unsubscribe on
 `session_shutdown` as shown so removed or updated packages do not survive a
-reload. A copyable package lives in [`examples/role-pack/`](../examples/role-pack/).
+reload. A copyable package follows the layout shown above: a Markdown role plus the bridge module.
 The host reads and validates
 the files, derives package name/version from the nearest `package.json`, and
 reports invalid paths, missing descriptions, filename/name mismatches, and

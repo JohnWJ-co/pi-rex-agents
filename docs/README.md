@@ -1,3 +1,5 @@
+**English** | [简体中文](README.zh-CN.md)
+
 # Documentation map
 
 Current runtime guides describe the Rex hard fork. Files under `adr/` and `research/` retain upstream decisions and research context; P0–P2 pages are marked historical. Historical pages call the pre-fork execution host `LegacyHost`, a neutral alias for the superseded runtime. Current behavior is defined by the [README](../README.md), [P4 status](p4/STATUS.md) and runtime contracts.

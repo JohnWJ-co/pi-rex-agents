@@ -40,6 +40,8 @@ is required.
 - Auto-exit child prompts and parent tool guidance now state that
   `subagent_done` is unavailable, so callers ask for a final summary instead
   of a tool call.
+- The README and core operating docs now ship paired English and Simplified
+  Chinese pages, with language links on every paired page.
 
 ### Removed
 
