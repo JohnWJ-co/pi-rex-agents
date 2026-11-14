@@ -187,6 +187,10 @@ import {
 	DONE_NUDGE_MESSAGE,
 } from "../maestro/adapters/pi/child/done-nudge.ts";
 import {
+	compareVersions,
+	installedVersion,
+} from "../pi-extension/subagents/version.ts";
+import {
 	CHILD_BUSY_CHANNEL,
 	isChildBusy,
 	type ChildBusyProbe,
@@ -591,6 +595,16 @@ function presentText(
 
 // --- Tests ---
 
+describe("version and update awareness", () => {
+	it("reports the installed version and compares semantic versions", () => {
+		assert.equal(installedVersion(), "0.5.0");
+		assert.equal(compareVersions("v0.5.0", "0.5.0"), 0);
+		assert.equal(compareVersions("0.5.0", "0.4.9"), 1);
+		assert.equal(compareVersions("0.4.9", "0.5.0"), -1);
+		assert.equal(compareVersions("not-a-version", "0.5.0"), 0);
+	});
+});
+
 describe("Rex host registration", () => {
 	it("registers no tools or commands without a complete Rex host or injected infrastructure", () => {
 		for (const env of [
@@ -635,6 +649,7 @@ describe("Rex host registration", () => {
 						"panes-mode",
 						"subagent",
 						"subagents-init",
+						"subagents-version",
 						"worktree",
 					],
 				);
@@ -11707,6 +11722,7 @@ describe("commands", () => {
 						"panes-mode",
 						"subagent",
 						"subagents-init",
+						"subagents-version",
 						"worktree",
 					],
 				],

@@ -73,7 +73,7 @@ pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 | `worktree_list` | 查看托管 worktree，包括跨会话遗留项 |
 | `worktree_remove` | 按路径、分支或 window ID 显式删除 worktree |
 
-命令：`/subagent`、`/subagents-init`、`/worktree`、`/panes-mode`、`/panes-maxPerTab`。完整参数、生命周期和事件见 [工具参考](docs/tools.zh-CN.md)，操作指南见 [pi-rex-agents skill](skills/pi-rex-agents/SKILL.md)。
+命令：`/subagent`、`/subagents-init`、`/worktree`、`/panes-mode`、`/panes-maxPerTab`、`/subagents-version`。完整参数、生命周期和事件见 [工具参考](docs/tools.zh-CN.md)，操作指南见 [pi-rex-agents skill](skills/pi-rex-agents/SKILL.md)。
 
 ## 放置与 worktree
 
@@ -150,6 +150,14 @@ npm pack --dry-run
 基线门禁在清除 Rex 环境变量的子进程中判定全量 `npm test`，保留调用者的 Rex 环境用于集成验证。在 Rex block 内运行 `npm run test:integration:rex`；它使用隔离 Rex server 和 fake provider，不调用真实模型。真实模型探针为 `npm run p1`、`npm run p1:persistent`，默认 `CBAPI/cn:deepseek-v4.1-flash`。
 
 代码地图和门禁要求见 [AGENTS.md](AGENTS.md)，测试与发布细节见 [development](docs/development.md)（英文）。历史记录：[P0](docs/p0-result.md)、[P1](docs/p1-result.md)、[P2](docs/p2-result.md)（中文）、[P4](docs/p4/STATUS.md)（英文）。
+
+## 版本与更新
+
+发布使用语义化版本，并在 GitHub 上以 `vX.Y.Z` 标签和 Release 发布。`/subagents-version` 会显示已安装版本和更新命令。父会话启动时，扩展会检查一次最新 GitHub Release；有新版本时显示提示。设置 `PI_REX_AGENTS_UPDATE_CHECK=0` 可关闭该后台检查。更新命令：
+
+```bash
+pi update https://github.com/JohnWJ-co/pi-rex-agents
+```
 
 ## 文档
 

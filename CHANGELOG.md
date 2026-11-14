@@ -2,6 +2,26 @@
 
 All notable changes to `pi-rex-agents` are recorded here.
 
+## 0.5.0 - 2026-11-14
+
+### Added
+
+- `/subagents-version` command and a parent-session GitHub release check that
+  reports when a newer version is available; set
+  `PI_REX_AGENTS_UPDATE_CHECK=0` to disable the check.
+- The README now embeds a 65-second demo video covering split, tab, and
+  minimized subagent placement.
+- The README and core operating docs now ship paired English and Simplified
+  Chinese pages, with language links on every paired page.
+
+### Changed
+
+- Auto-exit child prompts and parent tool guidance now state that
+  `subagent_done` is unavailable, so callers ask for a final summary instead
+  of a tool call.
+- Named agents with a model or thinking pin now ignore conflicting `subagent`
+  request values; the launch acknowledgement reports the lock.
+
 ## 0.4.0 - 2026-11-11
 
 First Rex-native release. The execution kernel is a hard fork of the MIT-licensed
@@ -37,15 +57,6 @@ is required.
 - `caller_ping` ends the current persistent task while keeping the specialist
   available; `subagent_done` without a current task keeps the session alive.
 - A persistent child aborts a leftover run before `subagent_stop` shuts it down.
-- Auto-exit child prompts and parent tool guidance now state that
-  `subagent_done` is unavailable, so callers ask for a final summary instead
-  of a tool call.
-- The README and core operating docs now ship paired English and Simplified
-  Chinese pages, with language links on every paired page.
-- Named agents with a model or thinking pin now ignore conflicting `subagent`
-  request values; the launch acknowledgement reports the lock.
-- The README now embeds a 65-second demo video covering split, tab, and
-  minimized subagent placement.
 
 ### Removed
 

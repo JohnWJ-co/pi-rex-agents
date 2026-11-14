@@ -90,6 +90,7 @@ import {
 } from "./worktree-tools.ts";
 import { registerTaskModelTool, registerTaskModelInit } from "./task-models.ts";
 import { registerPaneCommands } from "./panes-commands.ts";
+import { checkForUpdate, registerVersionCommand } from "./version.ts";
 import { registerControlTools } from "./control-tools.ts";
 import {
 	registerSubagentTool,
@@ -458,6 +459,7 @@ export default function subagentsExtension(
 			startStatusRefresh(pi);
 			updateWidget();
 		}
+		checkForUpdate(ctx);
 	});
 
 	// A child that is itself waiting on subagents is not asked whether it is done.
@@ -513,6 +515,7 @@ export default function subagentsExtension(
 	// thrown errors before they reach the parent.
 	const host = withEncodedToolErrors(pi);
 
+	if (!process.env.PI_SUBAGENT_ID) registerVersionCommand(host);
 	registerWorktreeTools(host, { parentSession, cleanupInput });
 
 	registerTaskModelTool(host, { shouldRegister });

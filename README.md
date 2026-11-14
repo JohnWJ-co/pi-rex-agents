@@ -73,7 +73,7 @@ The package provides the following parent-session tools and commands:
 | `worktree_list` | List managed worktrees, including leftovers from other sessions |
 | `worktree_remove` | Explicitly remove a worktree by path, branch, or window ID |
 
-Commands: `/subagent`, `/subagents-init`, `/worktree`, `/panes-mode`, `/panes-maxPerTab`. For full parameters, lifecycle, and events, see the [tools reference](docs/tools.md); for the operating guide, see the [pi-rex-agents skill](skills/pi-rex-agents/SKILL.md).
+Commands: `/subagent`, `/subagents-init`, `/worktree`, `/panes-mode`, `/panes-maxPerTab`, `/subagents-version`. For full parameters, lifecycle, and events, see the [tools reference](docs/tools.md); for the operating guide, see the [pi-rex-agents skill](skills/pi-rex-agents/SKILL.md).
 
 ## Placement and worktrees
 
@@ -150,6 +150,14 @@ npm pack --dry-run
 The baseline gate runs the full `npm test` in a child process with the Rex environment variables cleared, while preserving the caller's Rex environment for integration verification. Run `npm run test:integration:rex` inside a Rex block; it uses an isolated Rex server and a fake provider, and does not call a real model. The real-model probes are `npm run p1` and `npm run p1:persistent`, which default to `CBAPI/cn:deepseek-v4.1-flash`.
 
 For the code map and gate requirements, see [AGENTS.md](AGENTS.md); for testing and release details, see [development](docs/development.md). Historical records: [P0](docs/p0-result.md), [P1](docs/p1-result.md), [P2](docs/p2-result.md) (Chinese), [P4](docs/p4/STATUS.md) (English).
+
+## Versioning and updates
+
+Releases use semantic versions and GitHub tags/releases in the form `vX.Y.Z`. `/subagents-version` shows the installed version and the update command. On parent-session startup the extension checks the latest GitHub release once and shows a notice when a newer version is available; set `PI_REX_AGENTS_UPDATE_CHECK=0` to disable that background check. Update with:
+
+```bash
+pi update https://github.com/JohnWJ-co/pi-rex-agents
+```
 
 ## Documentation
 

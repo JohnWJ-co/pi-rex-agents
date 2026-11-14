@@ -49,6 +49,7 @@
 | `/panes-mode` | `/panes-mode split`<br>`/panes-mode tab`<br>`/panes-mode minimized` | 在 split、tab 和 minimized 之间切换窗格布局；无参数时打开选择器 |
 | `/subagent` | `/subagent <agent> <task>`<br>`/subagent list` | 启动子代理：/subagent \<agent> \<task>；列出代理：/subagent list |
 | `/subagents-init` | `/subagents-init [preferences]` | 从实时注册表起草任务类别模型偏好；可选参数设置排序偏好 |
+| `/subagents-version` | `/subagents-version` | 显示已安装的 pi-rex-agents 版本和更新命令 |
 | `/worktree` | `/worktree <name> [task]`<br>`/worktree list`<br>`/worktree remove <target>` | 分叉到 worktree、列出保留的 worktree，或显式移除其中一个 |
 <!-- generated:commands:end -->
 

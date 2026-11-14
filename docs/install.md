@@ -57,3 +57,13 @@ npm run test:integration:rex
 In interactive Pi, `/subagent list` and `/worktree list` should run. An empty roles directory is normal; this package ships no roles. By default, split placement holds at most 2 child blocks managed by this parent process and uses a new tab once full; `placement: "tab"` and worktree subagents use a new tab directly; `placement: "minimized"` starts in a floating layer in the current tab and minimizes to the bottom-right tray, without consuming a split slot. `panes.maxPerTab` accepts only integers from 1 through 10; `/panes-mode` and `/panes-maxPerTab` change these settings directly. See [Configuration](configuration.md#pane-placement) for details.
 
 The real-model probes are `npm run p1`, `npm run p1:persistent`, and `npm run p2`; the default model is `CBAPI/cn:deepseek-v4.1-flash`. Run them only when the task explicitly requires real-model evidence.
+
+## Updating
+
+Check the installed version with `/subagents-version`. Update the package and reload Pi:
+
+```bash
+pi update https://github.com/JohnWJ-co/pi-rex-agents
+```
+
+Then run `/reload` or restart Pi. Set `PI_REX_AGENTS_UPDATE_CHECK=0` to disable the parent-session update notice.

@@ -412,6 +412,11 @@
 			"description": "Draft task-category model preferences from the live registry; optional arguments set ranking preferences"
 		},
 		{
+			"name": "subagents-version",
+			"scopes": ["parent"],
+			"description": "Show the installed pi-rex-agents version and update command"
+		},
+		{
 			"name": "worktree",
 			"scopes": ["child"],
 			"description": "Fork this session into a worktree; use /worktree list to inspect them"
