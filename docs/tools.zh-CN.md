@@ -158,8 +158,8 @@ subagent({
 | `task` | string | 是 | 子代理的任务/提示词 |
 | `agent` | string | 否 | 要加载默认值的角色定义名称。发现优先级为项目 .pi/agents、全局 ~/.pi/agent/agents，然后是已安装的角色包；本扩展不附带角色。名称缺失会在启动前失败。省略则使用裸代理。 |
 | `systemPrompt` | string | 否 | 裸启动时使用的角色/系统提示词文本。命名代理保留其定义正文。 |
-| `model` | string | 否 | 显式选择一个精确的已认证 provider/model-id、一个有序的逗号分隔回退列表，或将 task:\<category> 作为整个值。task: 类别不区分大小写，并会展开已配置的已认证候选；worktree 只使用第一个。对于普通审查，优先选择不同的已认证模型家族。当没有其他可用的已认证模型家族时，普通审查可以在全新的独立会话中使用同家族审查者。应披露该审查是上下文隔离的，而非跨家族独立。跨家族验证不得使用此回退。省略时仍继承父模型；编排式子代理不要省略。回退列表不能与 worktree 一起使用。 |
-| `thinking` | `"off"` \| `"minimal"` \| `"low"` \| `"medium"` \| `"high"` \| `"xhigh"` \| `"max"` | 否 | Pi 思考级别。先选择模型层级，再在该模型支持范围内设置 thinking：有界机械工作用 minimal/low，普通实现或审查用 medium，架构、安全或困难诊断用 high+。省略时仍继承父级别；编排式子代理工作不要省略。 |
+| `model` | string | 否 | 显式选择一个精确的已认证 provider/model-id、一个有序的逗号分隔回退列表，或将 task:\<category> 作为整个值。task: 类别不区分大小写，并会展开已配置的已认证候选；worktree 只使用第一个。对于普通审查，优先选择不同的已认证模型家族。当没有其他可用的已认证模型家族时，普通审查可以在全新的独立会话中使用同家族审查者。应披露该审查是上下文隔离的，而非跨家族独立。跨家族验证不得使用此回退。省略时仍继承父模型；编排式子代理不要省略。回退列表不能与 worktree 一起使用。具名 agent 在 frontmatter 或 models.agents 中锁定的模型会忽略此值；锁定优先。 |
+| `thinking` | `"off"` \| `"minimal"` \| `"low"` \| `"medium"` \| `"high"` \| `"xhigh"` \| `"max"` | 否 | Pi 思考级别。先选择模型层级，再在该模型支持范围内设置 thinking：有界机械工作用 minimal/low，普通实现或审查用 medium，架构、安全或困难诊断用 high+。省略时仍继承父级别；编排式子代理工作不要省略。具名 agent 锁定的 thinking 会忽略此值；锁定优先。 |
 | `skills` | string | 否 | 逗号分隔的 skill（覆盖代理默认值） |
 | `tools` | string | 否 | 逗号分隔的工具（覆盖代理默认值）。已安装的上下文压缩工具（例如 billion-context）会自动追加；显式工具禁用仍然生效。 |
 | `cwd` | string | 否 | 子代理的工作目录。不使用 worktree 时，代理从该文件夹启动。使用 worktree 时，它选择源 Git 仓库，代理从创建出的 worktree 根目录启动。 |
@@ -181,8 +181,8 @@ schema 未包含的默认值与行为：
 
 - `persistent` 默认为 `false`。
 - `interactive` 默认为代理的 `interactive` frontmatter，否则取 `auto-exit` 的反值。
-- `model` 的解析顺序为工具参数 → 代理 frontmatter → 按代理配置 → 全局配置 → 父级。`task:<category>` 路由仅适用于工具，worktree 使用其第一个已认证候选。
-- `thinking` 在角色设置了思考级别时默认为该级别，否则默认为父级的级别。
+- `model` 在 agent frontmatter 或 `models.agents` 有锁定时使用锁定值；否则按工具参数 → 全局配置 → 父级解析。`task:<category>` 路由仅适用于工具，worktree 使用其第一个已认证候选。
+- `thinking` 在角色有 thinking 锁定时使用锁定值；否则依次使用工具参数、父级级别。
 - 设置 `worktree` 时，`cwd` 是源仓库（见[角色文件夹](roles.zh-CN.md#role-folders)）；`worktree.base` 默认为已提交的 `HEAD`。
 - `fork`：`true` 强制 fork，`false` 强制独立会话。省略则继承代理的 `session-mode` frontmatter。
 - `accept` 默认值：`maxRetries` 为 1（最多 5），`timeoutSec` 为 600（最多 3,600），`paths` 无。对于持久化或非 auto-exit 子代理，会在启动前被拒绝。见[验收检查](#accept-checks)。

@@ -36,6 +36,19 @@ interface LaunchPlannerDeps {
 	paneConfig: PaneConfig;
 }
 
+export interface AgentModelLock {
+	agent: string;
+	pinnedModel?: string;
+	pinnedThinking?: string;
+	requestedModel?: string;
+	requestedThinking?: string;
+}
+
+export interface PreparedLaunchParams {
+	params: typeof SubagentParams.static;
+	modelLock?: AgentModelLock;
+}
+
 export type LaunchPlanner = ReturnType<typeof createLaunchPlanner>;
 
 /** Launch snapshots and runtime plans bound to one extension instance. */
@@ -147,6 +160,51 @@ export function createLaunchPlanner({
 		};
 	}
 
+	/**
+	 * A named role's own model/thinking pin is authoritative. Drop the
+	 * caller-supplied values before routing so a request cannot silently
+	 * replace the role's provider/model; preserve the conflict for the tool
+	 * result notice. Bare launches and roles without a pin keep the existing
+	 * request precedence.
+	 */
+	function prepareLaunchParams(
+		params: typeof SubagentParams.static,
+	): PreparedLaunchParams {
+		const agentName = params.agent?.trim();
+		if (!agentName) return { params };
+		const agentDefs = loadAgentDefaults(agentName, runtime.pi);
+		if (!agentDefs) return { params };
+		const configuredModel = Object.hasOwn(modelConfig.agents, agentName)
+			? modelConfig.agents[agentName]
+			: undefined;
+		const pinnedModel = agentDefs.model?.trim() || configuredModel;
+		const pinnedThinking = agentDefs.thinking?.trim();
+		if (!pinnedModel && !pinnedThinking) return { params };
+
+		const next = { ...params };
+		const lock: AgentModelLock = { agent: agentName };
+		let stripped = false;
+		if (pinnedModel && next.model) {
+			lock.pinnedModel = pinnedModel;
+			if (next.model !== pinnedModel) lock.requestedModel = next.model;
+			delete next.model;
+			stripped = true;
+		}
+		if (pinnedThinking && next.thinking) {
+			lock.pinnedThinking = pinnedThinking;
+			if (next.thinking !== pinnedThinking)
+				lock.requestedThinking = next.thinking;
+			delete next.thinking;
+			stripped = true;
+		}
+		if (!stripped) return { params };
+		const hasRequestOverride =
+			lock.requestedModel !== undefined || lock.requestedThinking !== undefined;
+		return hasRequestOverride
+			? { params: next, modelLock: lock }
+			: { params: next };
+	}
+
 	function resolveSubagentRuntimePlans(
 		params: typeof SubagentParams.static,
 		ctx: Parameters<typeof normalizePiAttempt>[1],
@@ -214,5 +272,10 @@ export function createLaunchPlanner({
 		};
 	}
 
-	return { normalizePiAttempt, resolveSubagentRuntimePlans, launchSnapshot };
+	return {
+		normalizePiAttempt,
+		resolveSubagentRuntimePlans,
+		prepareLaunchParams,
+		launchSnapshot,
+	};
 }

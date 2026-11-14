@@ -481,9 +481,12 @@ Run `/reload` after changing role or model settings. The pane commands apply to 
 
 `models.default` sets the model for subagents that do not specify a model.
 `models.agents` sets per-agent defaults, keyed by the agent name passed to
-`subagent({ agent: ... })`. Explicit `model` tool arguments take precedence,
-followed by agent frontmatter, per-agent config, the global default, and finally
-the parent model. Model values must be exact authenticated `provider/model-id`
+`subagent({ agent: ... })`. A model or thinking level pinned in agent
+frontmatter, or a model pinned in `models.agents`, is authoritative: for that
+named agent the extension ignores a conflicting `model` or `thinking` request
+and reports the lock in the launch acknowledgement. Without a pin, explicit
+`model` and `thinking` tool arguments take precedence, followed by the global
+default and finally the parent model. Model values must be exact authenticated `provider/model-id`
 references. A value can contain an ordered comma-separated fallback list, for
 example `provider/preferred, provider/fallback`. The tool argument also accepts
 `task:<category>` as its complete value (not in a list), for configured

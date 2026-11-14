@@ -42,6 +42,8 @@ is required.
   of a tool call.
 - The README and core operating docs now ship paired English and Simplified
   Chinese pages, with language links on every paired page.
+- Named agents with a model or thinking pin now ignore conflicting `subagent`
+  request values; the launch acknowledgement reports the lock.
 - The README now embeds a 65-second demo video covering split, tab, and
   minimized subagent placement.
 

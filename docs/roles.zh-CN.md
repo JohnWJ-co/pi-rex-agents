@@ -28,7 +28,7 @@
 
 角色包负责其角色的前提条件（例如必需的技能），并且必须记录这些条件。本包不会安装角色包或前提条件。
 
-配置了模型默认值时，角色使用 `config.json` 中的默认值；否则继承父模型。thinking 默认值仍来自 agent frontmatter 或父级。这条解析链仍可作为回退方案使用，但编排器应显式设置每个子代理确切的已认证 `provider/model-id` 和受支持的 thinking 级别。先选择模型档位：fast 用于边界明确的机械性工作与侦察，mid 用于普通实现或审查，frontier 用于架构、安全、疑难诊断或对抗性审查。然后在该模型支持的范围内选择 thinking。跨家族独立审查要求审查者来自与作者不同的模型家族。对于普通审查，优先使用不同的已认证模型家族。当没有任何其他已认证模型家族可用时，普通审查可以在全新的独立会话中使用同家族审查者。应说明该审查是上下文隔离的，而不是跨家族独立审查。跨家族验证不得使用此回退方案。同家族中更强的模型属于质量升级，不是跨家族独立审查。家族是独立性边界；项目策略可以另行要求使用不同的 provider。
+配置了模型默认值时，角色使用 `config.json` 中的默认值；否则继承父模型。thinking 默认值仍来自 agent frontmatter 或父级。这条解析链仍可作为回退方案使用，但编排器应显式设置每个未锁定模型/thinking 的子代理确切的已认证 `provider/model-id` 和受支持的 thinking 级别；已锁定值优先。先选择模型档位：fast 用于边界明确的机械性工作与侦察，mid 用于普通实现或审查，frontier 用于架构、安全、疑难诊断或对抗性审查。然后在该模型支持的范围内选择 thinking。跨家族独立审查要求审查者来自与作者不同的模型家族。对于普通审查，优先使用不同的已认证模型家族。当没有任何其他已认证模型家族可用时，普通审查可以在全新的独立会话中使用同家族审查者。应说明该审查是上下文隔离的，而不是跨家族独立审查。跨家族验证不得使用此回退方案。同家族中更强的模型属于质量升级，不是跨家族独立审查。家族是独立性边界；项目策略可以另行要求使用不同的 provider。
 
 发现过程按 **package → global → project** 的顺序加载定义，因此实际优先级仍是 **project**（`.pi/agents/`）> **global**（`$PI_CODING_AGENT_DIR/agents/`，默认为 `~/.pi/agent/agents/`）> **package**。package 定义是已安装的 Pi 角色包贡献的角色；不存在内置层。`subagents_list` 和 `/subagent list` 都会显示每个可见定义的来源；由角色包贡献的角色会包含其 package 标识，例如 `(package:@acme/security-roles)`。被隐藏的较高优先级定义仍会抑制可见的较低优先级定义。
 
@@ -68,7 +68,7 @@ Report concrete findings with file and line references, exploit conditions,
 severity, and the smallest safe correction. Do not modify files.
 ```
 
-省略 `model` 时，依次使用 `models.agents.<name>`、`models.default`，然后是父模型。只有当角色本身需要某个确切的已认证 `provider/model-id` 时，才在 frontmatter 中放入 `model`。
+省略 `model` 时，依次使用 `models.agents.<name>`、`models.default`，然后是父模型。只有当角色本身需要某个确切的已认证 `provider/model-id` 时，才在 frontmatter 中放入 `model`；frontmatter 中的 `model`/`thinking` 锁定，或 `models.agents` 中的模型锁定，不能被 subagent 工具的 `model`/`thinking` 参数覆盖。
 
 `tools` 会传给 Pi 的 `--tools` 允许列表，可以列出任何已注册的内置工具、扩展工具或自定义工具。列出某个工具并不会安装其扩展。请使用一个非空的内联逗号分隔标量，例如 `tools: read, grep`；不要使用 YAML 列表、容器、引号或注释。省略 `tools` 会有意让角色不受限制。同样，`skills` 中的名称必须已能被 Pi 发现；本包不会安装角色的前提条件。
 

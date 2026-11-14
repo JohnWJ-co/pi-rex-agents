@@ -1226,6 +1226,43 @@ describe("host adapter migration", () => {
 					assert.equal(f.closed.length, accepted ? 1 : 0);
 					assert.equal(f.surface.listSurfaces().length, accepted ? 0 : 1);
 				}));
+	it("pins a named agent model and thinking over request values", async () =>
+		withAdapterHost(async (f) => {
+			writeAgentFile(
+				f.projectAgentsDir,
+				"pinned-role",
+				"auto-exit: true\nmodel: fake/strong\nthinking: high",
+				"Pinned role",
+			);
+			const tool = f.mock.registeredTools.find(
+				(candidate: any) => candidate.name === "subagent",
+			);
+			const result = await tool.execute(
+				"call",
+				{
+					name: "pinned",
+					agent: "pinned-role",
+					task: "bounded",
+					model: "fake/plain",
+					thinking: "low",
+				},
+				new AbortController().signal,
+				undefined,
+				f.ctx,
+			);
+			assert.match(
+				result.content[0].text,
+				/Model lock: agent pinned-role pins model fake\/strong and thinking high; ignored requested model fake\/plain and thinking low\./,
+			);
+			const child = f.runtime.runningSubagents.get(result.details.id);
+			assert.ok(child);
+			assert.equal(child.runtimePlan?.model, "fake/strong");
+			assert.equal(child.runtimePlan?.thinking, "high");
+			assert.equal(child.runtimePlan?.modelSource, "agent");
+			assert.equal(child.runtimePlan?.thinkingSource, "agent");
+			await f.finish(child);
+		}));
+
 	it("preserves clamped runtime provenance, bare identity and omitted cwd configuration", async () =>
 		withAdapterHost(async (f) => {
 			mkdirSync(join(f.projectDir, ".pi", "agent"), { recursive: true });

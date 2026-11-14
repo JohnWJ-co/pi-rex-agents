@@ -221,8 +221,12 @@ const {
 	notifyPersistentCrash,
 	deliverPiCompletion,
 } = createDelivery({ runtime, updateWidget, startPersistentStopTimeout });
-const { normalizePiAttempt, resolveSubagentRuntimePlans, launchSnapshot } =
-	createLaunchPlanner({ runtime, modelConfig, paneConfig });
+const {
+	normalizePiAttempt,
+	resolveSubagentRuntimePlans,
+	prepareLaunchParams,
+	launchSnapshot,
+} = createLaunchPlanner({ runtime, modelConfig, paneConfig });
 
 export function shouldPreserveSubagentsOnShutdown(
 	reason: SessionShutdownEvent["reason"] | undefined,
@@ -521,6 +525,7 @@ export default function subagentsExtension(
 		persistentCapacityError,
 		resolveSubagentRuntimePlans,
 		normalizePiAttempt,
+		prepareLaunchParams,
 		spawningConfig,
 	});
 

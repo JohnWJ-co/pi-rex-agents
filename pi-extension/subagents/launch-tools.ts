@@ -99,7 +99,30 @@ interface LaunchToolDeps {
 	persistentCapacityError: PersistentControls["persistentCapacityError"];
 	resolveSubagentRuntimePlans: LaunchPlanner["resolveSubagentRuntimePlans"];
 	normalizePiAttempt: LaunchPlanner["normalizePiAttempt"];
+	prepareLaunchParams: LaunchPlanner["prepareLaunchParams"];
 	spawningConfig: SpawningConfig;
+}
+
+function formatModelLock(lock: {
+	agent: string;
+	pinnedModel?: string;
+	pinnedThinking?: string;
+	requestedModel?: string;
+	requestedThinking?: string;
+}): string {
+	const pinned = [
+		lock.pinnedModel ? `model ${encodeHostValue(lock.pinnedModel)}` : "",
+		lock.pinnedThinking
+			? `thinking ${encodeHostValue(lock.pinnedThinking)}`
+			: "",
+	].filter(Boolean);
+	const ignored = [
+		lock.requestedModel ? `model ${encodeHostValue(lock.requestedModel)}` : "",
+		lock.requestedThinking
+			? `thinking ${encodeHostValue(lock.requestedThinking)}`
+			: "",
+	].filter(Boolean);
+	return `Model lock: agent ${encodeHostValue(lock.agent)} pins ${pinned.join(" and ")}; ignored requested ${ignored.join(" and ")}.`;
 }
 
 /** The subagent launch tool. */
@@ -113,6 +136,7 @@ export function registerSubagentTool(
 		persistentCapacityError,
 		resolveSubagentRuntimePlans,
 		normalizePiAttempt,
+		prepareLaunchParams,
 		spawningConfig,
 	}: LaunchToolDeps,
 ): void {
@@ -209,13 +233,18 @@ export function registerSubagentTool(
 				const agentDefs = params.agent
 					? loadAgentDefaults(params.agent, runtime.pi)
 					: null;
-				const persistent = resolveEffectivePersistent(params, agentDefs);
-				if (params.accept) {
+				const prepared = prepareLaunchParams(params);
+				const launchParams = prepared.params;
+				const modelLockText = prepared.modelLock
+					? ` ${formatModelLock(prepared.modelLock)}`
+					: "";
+				const persistent = resolveEffectivePersistent(launchParams, agentDefs);
+				if (launchParams.accept) {
 					// Before any host resource: v1 checks only auto-exit ordinary runs.
-					normalizeAcceptSpec(params.accept);
+					normalizeAcceptSpec(launchParams.accept);
 					const refusal = acceptLaunchRefusal({
 						persistent,
-						autoExit: resolveEffectiveAutoExit(params, agentDefs),
+						autoExit: resolveEffectiveAutoExit(launchParams, agentDefs),
 					});
 					if (refusal)
 						return {
@@ -264,7 +293,7 @@ export function registerSubagentTool(
 					);
 				}
 				const runtimePlans = resolveSubagentRuntimePlans(
-					params,
+					launchParams,
 					ctx,
 					parentThinking,
 				);
@@ -277,7 +306,12 @@ export function registerSubagentTool(
 					controlTaskId: id,
 					origin: { cwd: ctx.cwd, invocationCwd: process.cwd() },
 				};
-				const first = normalizePiAttempt(params, ctx, parentThinking, attempt);
+				const first = normalizePiAttempt(
+					launchParams,
+					ctx,
+					parentThinking,
+					attempt,
+				);
 				const [plan, ...fallbacks] = runtimePlans;
 				if (!plan) throw new Error("No resolved runtime plans");
 				const input: PiLaunchInput = {
@@ -293,7 +327,12 @@ export function registerSubagentTool(
 							throw new Error("Cancelled before the fallback launch");
 						if (!live)
 							throw new Error("No live parent context for the fallback launch");
-						return normalizePiAttempt(params, live, parentThinking, attempt);
+						return normalizePiAttempt(
+							launchParams,
+							live,
+							parentThinking,
+							attempt,
+						);
 					},
 				};
 				const session = runtime.session!;
@@ -319,7 +358,7 @@ export function registerSubagentTool(
 						{
 							type: "text",
 							text: startedDetails.launchFailure
-								? `Sub-agent "${encodeHostValue(params.name)}" launch is uncertain. Its acquired owner remains controlled and supervised until termination is confirmed; no fallback will launch. ${encodeHostValue(startedDetails.launchFailure)} Do not blindly relaunch. A result will be delivered automatically after confirmed termination.`
+								? `Sub-agent "${encodeHostValue(params.name)}" launch is uncertain. Its acquired owner remains controlled and supervised until termination is confirmed; no fallback will launch. ${encodeHostValue(startedDetails.launchFailure)}${modelLockText} Do not blindly relaunch. A result will be delivered automatically after confirmed termination.`
 								: `Sub-agent "${encodeHostValue(params.name)}" launched and is now running in the background` +
 									(running.worktree
 										? ` in worktree ${encodeHostValue(running.worktree.path, HOST_PATH_CHARS)} on branch ${encodeHostValue(running.worktree.branch)}. `
@@ -329,7 +368,7 @@ export function registerSubagentTool(
 										"",
 										" ",
 									) +
-									`Do NOT generate or assume any results — you have no idea what the sub-agent will do or produce. ` +
+									`${modelLockText}Do NOT generate or assume any results — you have no idea what the sub-agent will do or produce. ` +
 									`The results will be delivered to you automatically as a steer message when the sub-agent finishes. ` +
 									`Until then, move on to other work or tell the user you're waiting.`,
 						},

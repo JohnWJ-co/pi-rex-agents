@@ -140,15 +140,20 @@ function toolNames(request: ChatRequest): Set<string> {
 	);
 }
 
-function hasToolResultAfterLastUser(request: ChatRequest): boolean {
+function latestPlacementStage(
+	request: ChatRequest,
+): { match: RegExpMatchArray; index: number } | undefined {
 	const messages = request.messages ?? [];
-	let lastUser = -1;
+	let found: { match: RegExpMatchArray; index: number } | undefined;
 	for (let index = 0; index < messages.length; index += 1) {
-		if (messages[index].role === "user") lastUser = index;
+		const message = messages[index];
+		if (message.role !== "user") continue;
+		const match = messageText(message.content).match(
+			/INTEGRATION_PLACEMENT:([a-z0-9]+):(start|reuse|tab|minimized)\s+GATE:(\S+)/,
+		);
+		if (match) found = { match, index };
 	}
-	return messages
-		.slice(lastUser + 1)
-		.some((message) => message.role === "tool");
+	return found;
 }
 
 function quotedValue(source: string, key: string): string | undefined {
@@ -631,14 +636,16 @@ async function placementScenarioResponse(
 		await waitForIntegrationGate(user, 120_000);
 		return { text: `PLACEMENT_CHILD_${child[1]}_${child[2]}` };
 	}
-	const stage = user.match(
-		/INTEGRATION_PLACEMENT:([a-z0-9]+):(start|reuse|tab|minimized)\s+GATE:(\S+)/,
-	);
+	const stage = latestPlacementStage(request);
 	if (!stage) return null;
-	const [, id, mode, gate] = stage;
-	// The continuation may arrive with the parent's tool list omitted; the
-	// stage prompt itself is unique to the parent, so it is enough here.
-	if (hasToolResultAfterLastUser(request))
+	const [, id, mode, gate] = stage.match;
+	// The continuation may arrive with the parent's tool list omitted. Find
+	// the latest stage prompt in the full history and accept the stage once a
+	// tool result follows it; history from earlier stages must not short-circuit.
+	const messages = request.messages ?? [];
+	if (
+		messages.slice(stage.index + 1).some((message) => message.role === "tool")
+	)
 		return { text: `PLACEMENT_READY_${id}_${mode}` };
 	if (!toolNames(request).has("subagent")) return null;
 	const numbers =

@@ -115,7 +115,9 @@ severity, and the smallest safe correction. Do not modify files.
 
 Omit `model` to use `models.agents.<name>`, then `models.default`, then the
 parent model. Put `model` in frontmatter only when the role itself needs a
-specific exact authenticated `provider/model-id`.
+specific exact authenticated `provider/model-id`; a frontmatter model or
+thinking pin, or a `models.agents` model pin, cannot be overridden by the
+subagent tool's `model` or `thinking` arguments.
 
 `tools` is passed to Pi's `--tools` allowlist and may name any registered
 built-in, extension, or custom tool. Listing a tool does not install its
