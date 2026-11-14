@@ -110,7 +110,7 @@ pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 
 `panes.mode` 接受 `"split"`、`"tab"` 或 `"minimized"`；`panes.maxPerTab` 只接受 1..10 的整数，默认 2，且只约束 split 子代理，不约束 minimized 子代理。`panes.minimizedBounds` 控制 minimized 子代理恢复时的位置和大小，格式为 `[x, y, width, height]`，默认 `[0.1, 0.1, 0.8, 0.8]`（窗口正中、80% 大小）。交互式 Pi 中可用 `/panes-mode` 切换三种模式，用 `/panes-maxPerTab` 输入 1-10 的整数或打开选择器；两者立即生效并写回配置文件。完整键、模型路由、监督和 outcome ledger 见 [配置说明](docs/configuration.zh-CN.md) 和 [config.json.example](config.json.example)。
 
-具名 agent 可以在 frontmatter 中锁定 `model` 或 `thinking`，`models.agents` 也可以锁定模型。这些锁定具有权威性：`subagent` 工具不能覆盖它们；冲突的请求值会被忽略，并在启动确认中报告。
+具名 agent 可以在 frontmatter 中锁定 `model` 或 `thinking`，`models.agents` 也可以锁定模型。这些锁定具有权威性：`subagent` 工具不能覆盖它们；冲突的请求值会被忽略，并在启动确认中报告。项目如果在 `.pi/agents` 中定义了角色，则只允许启动这些具名项目角色；裸子代理以及全局/包级角色都会被阻止。
 
 子代理会自动启用已安装的上下文压缩工具，包括 billion-context 的 `compress`、`decompress`、`search_context`、`acp_status` 及可选的 `acp_rule`，即使传入 `tools: "read,bash"`。显式 `deny-tools` 仍优先；fresh、resume、persistent 和 worktree handoff 都适用。没有压缩插件时沿用 Pi 原生 auto-compaction。
 

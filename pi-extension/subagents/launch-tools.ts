@@ -234,6 +234,12 @@ export function registerSubagentTool(
 					? loadAgentDefaults(params.agent, runtime.pi)
 					: null;
 				const prepared = prepareLaunchParams(params);
+				if (prepared.refusal) {
+					return {
+						content: [{ type: "text", text: prepared.refusal }],
+						details: { error: "project-role-policy" },
+					};
+				}
 				const launchParams = prepared.params;
 				const modelLockText = prepared.modelLock
 					? ` ${formatModelLock(prepared.modelLock)}`

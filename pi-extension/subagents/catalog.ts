@@ -77,7 +77,7 @@ export const SubagentParams = Type.Object({
 	agent: Type.Optional(
 		Type.String({
 			description:
-				"Role definition name to load defaults from. Discovery precedence is project .pi/agents, global ~/.pi/agent/agents, then installed role packs; this extension ships no roles. A missing name fails before launch. Omit for a bare agent.",
+				"Role definition name to load defaults from. Discovery precedence is project .pi/agents, global ~/.pi/agent/agents, then installed role packs; this extension ships no roles. A missing name fails before launch. Omit for a bare agent only when the project defines no roles; when .pi/agents has project roles, only those named project roles are launchable and bare/global/package launches are blocked.",
 		}),
 	),
 	systemPrompt: Type.Optional(

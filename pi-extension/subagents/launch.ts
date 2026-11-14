@@ -47,6 +47,7 @@ export interface AgentModelLock {
 export interface PreparedLaunchParams {
 	params: typeof SubagentParams.static;
 	modelLock?: AgentModelLock;
+	refusal?: string;
 }
 
 export type LaunchPlanner = ReturnType<typeof createLaunchPlanner>;
@@ -170,7 +171,26 @@ export function createLaunchPlanner({
 	function prepareLaunchParams(
 		params: typeof SubagentParams.static,
 	): PreparedLaunchParams {
-		const agentName = params.agent?.trim();
+		const catalog = discoverAgentCatalog(runtime.pi);
+		const projectAgents = catalog.agents.filter(
+			(agent) => agent.source === "project",
+		);
+		const agentName = params.agent?.trim() ?? "";
+		if (projectAgents.length > 0) {
+			const projectNames = projectAgents.map((agent) => agent.name);
+			if (!agentName) {
+				return {
+					params,
+					refusal: `This project defines roles in .pi/agents, so bare subagents are disabled. Use one of the project roles: ${projectNames.join(", ")}. Global and package roles are also disabled.`,
+				};
+			}
+			if (!projectNames.includes(agentName)) {
+				return {
+					params,
+					refusal: `This project only permits roles defined in .pi/agents: ${projectNames.join(", ")}. Agent ${agentName} is outside that project scope. Bare subagents and global/package roles are disabled.`,
+				};
+			}
+		}
 		if (!agentName) return { params };
 		const agentDefs = loadAgentDefaults(agentName, runtime.pi);
 		if (!agentDefs) return { params };

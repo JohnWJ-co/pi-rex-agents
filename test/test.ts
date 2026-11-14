@@ -1278,6 +1278,36 @@ describe("host adapter migration", () => {
 			await f.finish(child);
 		}));
 
+	it("blocks bare subagents when the project defines roles", async () =>
+		withAdapterHost(async (f) => {
+			writeAgentFile(
+				f.projectAgentsDir,
+				"project-role",
+				"auto-exit: true\nmodel: fake/strong",
+				"Project role",
+			);
+			const tool = f.mock.registeredTools.find(
+				(candidate: any) => candidate.name === "subagent",
+			);
+			const result = await tool.execute(
+				"call",
+				{
+					name: "bare",
+					task: "bounded",
+					model: "fake/plain",
+				},
+				new AbortController().signal,
+				undefined,
+				f.ctx,
+			);
+			assert.match(
+				result.content[0].text,
+				/project defines roles in \.pi\/agents/,
+			);
+			assert.match(result.content[0].text, /bare subagents are disabled/);
+			assert.equal(f.runtime.runningSubagents.size, 0);
+		}));
+
 	it("preserves clamped runtime provenance, bare identity and omitted cwd configuration", async () =>
 		withAdapterHost(async (f) => {
 			mkdirSync(join(f.projectDir, ".pi", "agent"), { recursive: true });
@@ -1378,6 +1408,10 @@ describe("host adapter migration", () => {
 				f.ctx.sessionManager.getSessionFile(),
 			);
 			await f.finish(child);
+			// This second launch exercises bare cwd normalization, so remove the
+			// project role first; project-role policy intentionally blocks bare
+			// launches while .pi/agents defines roles.
+			rmSync(join(f.projectAgentsDir, "host-role.md"));
 			mkdirSync(join(f.projectDir, ".pi", "agent"), { recursive: true });
 			const explicit = await f.launch({
 				name: "explicit",

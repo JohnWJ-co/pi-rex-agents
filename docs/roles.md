@@ -30,9 +30,12 @@ This package is a pack-neutral execution host: it ships no agent roles, no
 `pi-rex-agents`, is a general operating guide for the host. A named launch resolves
 `agent` from project definitions, global definitions, and roles registered by
 installed role packs, in that precedence order (see below). An empty catalog is
-valid. A bare launch without `agent` always works. An explicitly named role that
-is missing or invalid fails before Rex creates a pane or worktree; it is never
-silently replaced by a bare agent.
+valid. A bare launch without `agent` always works when the project defines no
+roles. When `.pi/agents` contains project roles, the project policy restricts
+launches to those named roles: bare launches and roles from global or package
+scopes are refused before Rex creates a pane or worktree. An explicitly named
+role that is missing or invalid also fails; it is never silently replaced by a
+bare agent.
 
 All subagents execute through Pi. Claude models remain available through normal
 Pi provider/model routing. Legacy role definitions that contain `cli` fail before
