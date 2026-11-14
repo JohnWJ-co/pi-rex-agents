@@ -597,7 +597,7 @@ function presentText(
 
 describe("version and update awareness", () => {
 	it("reports the installed version and compares semantic versions", () => {
-		assert.equal(installedVersion(), "0.5.0");
+		assert.equal(installedVersion(), "0.5.1");
 		assert.equal(compareVersions("v0.5.0", "0.5.0"), 0);
 		assert.equal(compareVersions("0.5.0", "0.4.9"), 1);
 		assert.equal(compareVersions("0.4.9", "0.5.0"), -1);

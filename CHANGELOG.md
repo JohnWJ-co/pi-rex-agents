@@ -2,6 +2,13 @@
 
 All notable changes to `pi-rex-agents` are recorded here.
 
+## 0.5.1 - 2026-11-14
+
+### Changed
+
+- When `.pi/agents` defines project roles, bare, global, and package-level
+  subagent launches are blocked; only the named project roles are allowed.
+
 ## 0.5.0 - 2026-11-14
 
 ### Added
@@ -21,8 +28,6 @@ All notable changes to `pi-rex-agents` are recorded here.
   of a tool call.
 - Named agents with a model or thinking pin now ignore conflicting `subagent`
   request values; the launch acknowledgement reports the lock.
-- When `.pi/agents` defines project roles, bare, global, and package-level
-  subagent launches are blocked; only the named project roles are allowed.
 
 ## 0.4.0 - 2026-11-11
 
