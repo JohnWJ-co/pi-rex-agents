@@ -597,7 +597,7 @@ function presentText(
 
 describe("version and update awareness", () => {
 	it("reports the installed version and compares semantic versions", () => {
-		assert.equal(installedVersion(), "0.5.1");
+		assert.equal(installedVersion(), "0.5.2");
 		assert.equal(compareVersions("v0.5.0", "0.5.0"), 0);
 		assert.equal(compareVersions("0.5.0", "0.4.9"), 1);
 		assert.equal(compareVersions("0.4.9", "0.5.0"), -1);
@@ -1260,6 +1260,7 @@ describe("host adapter migration", () => {
 					task: "bounded",
 					model: "fake/plain",
 					thinking: "low",
+					placement: "tab",
 				},
 				new AbortController().signal,
 				undefined,
@@ -1267,7 +1268,7 @@ describe("host adapter migration", () => {
 			);
 			assert.match(
 				result.content[0].text,
-				/Model lock: agent pinned-role pins model fake\/strong and thinking high; ignored requested model fake\/plain and thinking low\./,
+				/Launch lock: agent pinned-role pins model fake\/strong and thinking high and placement split; ignored requested model fake\/plain and thinking low and placement tab\./,
 			);
 			const child = f.runtime.runningSubagents.get(result.details.id);
 			assert.ok(child);

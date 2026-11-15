@@ -40,8 +40,10 @@ export interface AgentModelLock {
 	agent: string;
 	pinnedModel?: string;
 	pinnedThinking?: string;
+	pinnedPlacement?: string;
 	requestedModel?: string;
 	requestedThinking?: string;
+	requestedPlacement?: string;
 }
 
 export interface PreparedLaunchParams {
@@ -162,11 +164,11 @@ export function createLaunchPlanner({
 	}
 
 	/**
-	 * A named role's own model/thinking pin is authoritative. Drop the
-	 * caller-supplied values before routing so a request cannot silently
-	 * replace the role's provider/model; preserve the conflict for the tool
-	 * result notice. Bare launches and roles without a pin keep the existing
-	 * request precedence.
+	 * A project-role launch takes its placement from panes.mode; a named role's
+	 * own model/thinking pin is authoritative. Drop conflicting caller values
+	 * before routing so a request cannot silently replace project policy;
+	 * preserve the conflicts for the tool result notice. Bare launches and
+	 * projects without roles keep the existing request precedence.
 	 */
 	function prepareLaunchParams(
 		params: typeof SubagentParams.static,
@@ -199,11 +201,17 @@ export function createLaunchPlanner({
 			: undefined;
 		const pinnedModel = agentDefs.model?.trim() || configuredModel;
 		const pinnedThinking = agentDefs.thinking?.trim();
-		if (!pinnedModel && !pinnedThinking) return { params };
 
 		const next = { ...params };
 		const lock: AgentModelLock = { agent: agentName };
 		let stripped = false;
+		if (projectAgents.length > 0 && next.placement) {
+			lock.pinnedPlacement = paneConfig.mode;
+			if (next.placement !== paneConfig.mode)
+				lock.requestedPlacement = next.placement;
+			delete next.placement;
+			stripped = true;
+		}
 		if (pinnedModel && next.model) {
 			lock.pinnedModel = pinnedModel;
 			if (next.model !== pinnedModel) lock.requestedModel = next.model;
@@ -219,7 +227,9 @@ export function createLaunchPlanner({
 		}
 		if (!stripped) return { params };
 		const hasRequestOverride =
-			lock.requestedModel !== undefined || lock.requestedThinking !== undefined;
+			lock.requestedModel !== undefined ||
+			lock.requestedThinking !== undefined ||
+			lock.requestedPlacement !== undefined;
 		return hasRequestOverride
 			? { params: next, modelLock: lock }
 			: { params: next };

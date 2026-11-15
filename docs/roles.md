@@ -33,9 +33,10 @@ installed role packs, in that precedence order (see below). An empty catalog is
 valid. A bare launch without `agent` always works when the project defines no
 roles. When `.pi/agents` contains project roles, the project policy restricts
 launches to those named roles: bare launches and roles from global or package
-scopes are refused before Rex creates a pane or worktree. An explicitly named
-role that is missing or invalid also fails; it is never silently replaced by a
-bare agent.
+scopes are refused before Rex creates a pane or worktree. Project-role
+placement follows `panes.mode`; a per-call `placement` override is ignored. An
+explicitly named role that is missing or invalid also fails; it is never
+silently replaced by a bare agent.
 
 All subagents execute through Pi. Claude models remain available through normal
 Pi provider/model routing. Legacy role definitions that contain `cli` fail before

@@ -167,7 +167,7 @@ subagent({
 | `worktree` | object \| null | 否 | 可选的隔离 Rex 托管 Git worktree。省略或传 null 以在 cwd 中使用普通 block。 |
 | `worktree.branch` | string | 是 | 隔离的 Rex 托管 Git worktree 的新分支名称 |
 | `worktree.base` | string | 否 | 作为分支起点的 Git 修订。默认为源检出已提交的 HEAD。 |
-| `placement` | `"split"` \| `"tab"` \| `"minimized"` | 否 | 子代理运行的位置。当 panes.mode 为 split 时，"split"（默认）会在当前标签页中你旁边打开一个 Rex block，前提是该标签页的子 block 数少于每标签页上限；一旦已满，则使用新的 Rex 标签页。"tab" 在新的 Rex 标签页（Rex 窗口）中打开子代理。"minimized" 在当前 Rex 窗口中创建浮动层并立即将其最小化到客户端托盘；最小化的子代理不占用 panes.maxPerTab 的 split 名额。Worktree 子代理始终在新标签页中打开。 |
+| `placement` | `"split"` \| `"tab"` \| `"minimized"` | 否 | 子代理运行的位置。当 panes.mode 为 split 时，"split"（默认）会在当前标签页中你旁边打开一个 Rex block，前提是该标签页的子 block 数少于每标签页上限；一旦已满，则使用新的 Rex 标签页。"tab" 在新的 Rex 标签页（Rex 窗口）中打开子代理。"minimized" 在当前 Rex 窗口中创建浮动层并立即将其最小化到客户端托盘；最小化的子代理不占用 panes.maxPerTab 的 split 名额。Worktree 子代理始终在新标签页中打开。项目在 `.pi/agents` 中定义角色时，`panes.mode` 具有权威性，此覆盖会被忽略。 |
 | `fork` | boolean | 否 | 为此启动覆盖子会话模式。`true` 强制全上下文 fork；`false` 强制独立会话。省略则继承代理 frontmatter 的 session-mode。 |
 | `persistent` | boolean | 否 | 在基于回合的任务之间保持此稳定专家会话存活。持久化代理仅通过 subagent_send 接受后续工作。 |
 | `accept` | object | 否 | 可选的验收检查。投递结果会携带 `Check: \<verdict>`，取值来自封闭集合 accepted、rejected、error、skipped、none。仅 auto-exit 的非持久化子代理支持它。 |
@@ -449,7 +449,7 @@ Rex worktree 预配使用 Git 创建检出，并为其根 block 创建新的 Rex
 
 | 参数 | 类型 | 必填 | 描述 |
 | --- | --- | --- | --- |
-| `placement` | `"split"` \| `"tab"` \| `"minimized"` | 否 | 子代理运行的位置。当 panes.mode 为 split 时，"split"（默认）会在当前标签页中你旁边打开一个 Rex block，前提是该标签页的子 block 数少于每标签页上限；一旦已满，则使用新的 Rex 标签页。"tab" 在新的 Rex 标签页（Rex 窗口）中打开子代理。"minimized" 在当前 Rex 窗口中创建浮动层并立即将其最小化到客户端托盘；最小化的子代理不占用 panes.maxPerTab 的 split 名额。Worktree 子代理始终在新标签页中打开。 |
+| `placement` | `"split"` \| `"tab"` \| `"minimized"` | 否 | 子代理运行的位置。当 panes.mode 为 split 时，"split"（默认）会在当前标签页中你旁边打开一个 Rex block，前提是该标签页的子 block 数少于每标签页上限；一旦已满，则使用新的 Rex 标签页。"tab" 在新的 Rex 标签页（Rex 窗口）中打开子代理。"minimized" 在当前 Rex 窗口中创建浮动层并立即将其最小化到客户端托盘；最小化的子代理不占用 panes.maxPerTab 的 split 名额。Worktree 子代理始终在新标签页中打开。项目在 `.pi/agents` 中定义角色时，`panes.mode` 具有权威性，此覆盖会被忽略。 |
 | `sessionPath` | string | 是 | 要恢复的会话 .jsonl 文件路径 |
 | `name` | string | 否 | Rex 标签页的显示名称。默认值：'Resume' |
 | `message` | string | 否 | 恢复后要发送的可选消息（例如后续指令） |

@@ -103,17 +103,22 @@ interface LaunchToolDeps {
 	spawningConfig: SpawningConfig;
 }
 
-function formatModelLock(lock: {
+function formatLaunchLock(lock: {
 	agent: string;
 	pinnedModel?: string;
 	pinnedThinking?: string;
+	pinnedPlacement?: string;
 	requestedModel?: string;
 	requestedThinking?: string;
+	requestedPlacement?: string;
 }): string {
 	const pinned = [
 		lock.pinnedModel ? `model ${encodeHostValue(lock.pinnedModel)}` : "",
 		lock.pinnedThinking
 			? `thinking ${encodeHostValue(lock.pinnedThinking)}`
+			: "",
+		lock.pinnedPlacement
+			? `placement ${encodeHostValue(lock.pinnedPlacement)}`
 			: "",
 	].filter(Boolean);
 	const ignored = [
@@ -121,8 +126,11 @@ function formatModelLock(lock: {
 		lock.requestedThinking
 			? `thinking ${encodeHostValue(lock.requestedThinking)}`
 			: "",
+		lock.requestedPlacement
+			? `placement ${encodeHostValue(lock.requestedPlacement)}`
+			: "",
 	].filter(Boolean);
-	return `Model lock: agent ${encodeHostValue(lock.agent)} pins ${pinned.join(" and ")}; ignored requested ${ignored.join(" and ")}.`;
+	return `Launch lock: agent ${encodeHostValue(lock.agent)} pins ${pinned.join(" and ")}; ignored requested ${ignored.join(" and ")}.`;
 }
 
 /** The subagent launch tool. */
@@ -242,7 +250,7 @@ export function registerSubagentTool(
 				}
 				const launchParams = prepared.params;
 				const modelLockText = prepared.modelLock
-					? ` ${formatModelLock(prepared.modelLock)}`
+					? ` ${formatLaunchLock(prepared.modelLock)}`
 					: "";
 				const persistent = resolveEffectivePersistent(launchParams, agentDefs);
 				if (launchParams.accept) {

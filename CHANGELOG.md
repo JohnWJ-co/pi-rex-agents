@@ -2,6 +2,14 @@
 
 All notable changes to `pi-rex-agents` are recorded here.
 
+## 0.5.2 - 2026-11-15
+
+### Changed
+
+- Project-role launches now follow the configured `panes.mode`; a per-call
+  `placement` override is ignored, so a minimized project role cannot be
+  silently dispatched as split.
+
 ## 0.5.1 - 2026-11-14
 
 ### Changed
