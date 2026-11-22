@@ -597,7 +597,7 @@ function presentText(
 
 describe("version and update awareness", () => {
 	it("reports the installed version and compares semantic versions", () => {
-		assert.equal(installedVersion(), "0.5.4");
+		assert.equal(installedVersion(), "0.5.5");
 		assert.equal(compareVersions("v0.5.0", "0.5.0"), 0);
 		assert.equal(compareVersions("0.5.0", "0.4.9"), 1);
 		assert.equal(compareVersions("0.4.9", "0.5.0"), -1);
@@ -15646,21 +15646,19 @@ describe("subagent status renderer", () => {
 		assert.doesNotMatch(rendered, /Parent action:/);
 	});
 
-	it("renders results with partial-width backgrounds and no width overflow", () => {
+	it("renders results with horizontal rules and no width overflow", () => {
 		const { api, registeredMessageRenderers } = createMockExtensionApi();
 		subagentsModule.default(api);
 		const rendererEntry = registeredMessageRenderers.find(
 			(entry) => entry.name === "subagent_result",
 		);
 		assert.ok(rendererEntry);
-		const backgroundCalls: string[] = [];
 		const theme = {
 			fg(_color: string, text: string) {
 				return text;
 			},
-			bg(_color: string, text: string) {
-				backgroundCalls.push(text);
-				return `\x1b[48;2;25;50;27m${text}\x1b[49m`;
+			bg() {
+				throw new Error("result renderer must not paint a background");
 			},
 			bold(text: string) {
 				return text;
@@ -15686,13 +15684,9 @@ describe("subagent status renderer", () => {
 				theme,
 			)
 			.render(40);
-		assert.ok(backgroundCalls.length > 0);
-		for (const text of backgroundCalls) {
-			assert.ok(
-				visibleWidth(text) < 40,
-				`expected partial-width background, got ${visibleWidth(text)} for ${JSON.stringify(text)}`,
-			);
-		}
+		assert.ok(
+			rendered.filter((line: string) => line === "─".repeat(40)).length >= 2,
+		);
 		for (const line of rendered)
 			assert.ok(
 				visibleWidth(line) <= 40,

@@ -83,22 +83,19 @@ function escapeRegExp(text: string): string {
 }
 
 /**
- * Fill only the content width of each result line. The Box supplies wrapping
- * and left padding, but its full-width trailing padding is stripped before
- * applying the background; this avoids a terminal-wide background that
- * Rex/libghostty currently bleeds through scrollback.
+ * Separate result content with a full-width horizontal rule above and below.
+ * Unlike a background panel or closed frame, the rules cannot fill blank cells
+ * and therefore do not trigger Rex/libghostty's scrollback background bleed.
  */
-function renderPartialBackground(
+function renderHorizontalRules(
 	lines: string[],
 	width: number,
-	background: (text: string) => string,
+	color: (text: string) => string,
 ): string[] {
 	const box = new Box(1, 0);
 	box.addChild(new Text(lines.join("\n"), 0, 0));
-	return box.render(width).map((line) => {
-		const content = line.replace(/ +$/g, "");
-		return background(content.length > 0 ? content : " ");
-	});
+	const rule = color("─".repeat(Math.max(1, width)));
+	return [rule, ...box.render(width), rule];
 }
 
 /** A host-owned detail shown in a header: always one display line. */
@@ -128,11 +125,11 @@ export function registerMessageRenderers(pi: ExtensionAPI): void {
 				const elapsed =
 					details.elapsed == null ? "?" : formatElapsed(details.elapsed);
 				const cancelled = details.error === "cancelled";
-				const backgroundColor = cancelled
-					? theme.bg.bind(theme, "customMessageBg")
+				const ruleColor = cancelled
+					? theme.fg.bind(theme, "warning")
 					: failed
-						? theme.bg.bind(theme, "toolErrorBg")
-						: theme.bg.bind(theme, "toolSuccessBg");
+						? theme.fg.bind(theme, "error")
+						: theme.fg.bind(theme, "success");
 				const icon = cancelled
 					? theme.fg("warning", "■")
 					: failed
@@ -202,12 +199,9 @@ export function registerMessageRenderers(pi: ExtensionAPI): void {
 					);
 				}
 
-				// A partial-width background keeps result identity without
-				// painting a terminal-wide background into Rex scrollback.
-				return [
-					"",
-					...renderPartialBackground(contentLines, width, backgroundColor),
-				];
+				// Horizontal rules keep result identity without painting a
+				// background or a closed frame into Rex scrollback.
+				return ["", ...renderHorizontalRules(contentLines, width, ruleColor)];
 			},
 		};
 	});

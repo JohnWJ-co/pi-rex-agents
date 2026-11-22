@@ -2,6 +2,14 @@
 
 All notable changes to `pi-rex-agents` are recorded here.
 
+## 0.5.5 - 2026-11-23
+
+### Changed
+
+- Subagent result messages now use full-width green or red horizontal rules
+  above and below the content. This is the agreed temporary visual workaround
+  for the Rex/libghostty scrollback background bleed.
+
 ## 0.5.4 - 2026-11-23
 
 ### Changed
