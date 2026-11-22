@@ -597,7 +597,7 @@ function presentText(
 
 describe("version and update awareness", () => {
 	it("reports the installed version and compares semantic versions", () => {
-		assert.equal(installedVersion(), "0.5.5");
+		assert.equal(installedVersion(), "0.5.6");
 		assert.equal(compareVersions("v0.5.0", "0.5.0"), 0);
 		assert.equal(compareVersions("0.5.0", "0.4.9"), 1);
 		assert.equal(compareVersions("0.4.9", "0.5.0"), -1);
@@ -15644,54 +15644,6 @@ describe("subagent status renderer", () => {
 
 		assert.match(rendered, /DECISIVE_RESULT/);
 		assert.doesNotMatch(rendered, /Parent action:/);
-	});
-
-	it("renders results with horizontal rules and no width overflow", () => {
-		const { api, registeredMessageRenderers } = createMockExtensionApi();
-		subagentsModule.default(api);
-		const rendererEntry = registeredMessageRenderers.find(
-			(entry) => entry.name === "subagent_result",
-		);
-		assert.ok(rendererEntry);
-		const theme = {
-			fg(_color: string, text: string) {
-				return text;
-			},
-			bg() {
-				throw new Error("result renderer must not paint a background");
-			},
-			bold(text: string) {
-				return text;
-			},
-		};
-		const rendered = rendererEntry
-			.renderer(
-				{
-					customType: "subagent_result",
-					content:
-						'Sub-agent "Worker" completed (5s).\n\nReport body\n\n' +
-						"Session: /tmp/worker.jsonl\nResume: pi --session /tmp/worker.jsonl",
-					details: {
-						name: "Worker",
-						elapsed: 5,
-						resultContent:
-							'Sub-agent "Worker" completed (5s).\n\nReport body\n\n' +
-							"Session: /tmp/worker.jsonl\nResume: pi --session /tmp/worker.jsonl",
-						sessionFile: "/tmp/worker.jsonl",
-					},
-				},
-				{ expanded: true },
-				theme,
-			)
-			.render(40);
-		assert.ok(
-			rendered.filter((line: string) => line === "─".repeat(40)).length >= 2,
-		);
-		for (const line of rendered)
-			assert.ok(
-				visibleWidth(line) <= 40,
-				`expected line width <= 40, got ${visibleWidth(line)}`,
-			);
 	});
 
 	it("renders only capped lines plus overflow", () => {

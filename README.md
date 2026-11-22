@@ -169,6 +169,20 @@ pi update https://github.com/JohnWJ-co/pi-rex-agents
 - [Documentation map](docs/README.md)
 - [中文文档](docs/README.zh-CN.md)
 
+## Known Rex rendering issue
+
+Rex can leak the background color of Pi tool/result panels into the rest of the
+pane. This is a Rex terminal rendering issue (reported in the Superlogic
+community), not message corruption. If a subagent result turns the whole pane
+green or red:
+
+1. Open **Settings → Interface → Panes** and disable **Match program backgrounds**.
+2. If that does not solve it, set **Terminal → Padding color** to **Background**.
+
+The first workaround is the one reported by the community; the second is a
+reported fallback, especially with the Glass interface. The extension keeps the
+normal colored-background result style.
+
 ## Known limitations
 
 - Rex-native sidebar indicators are not implemented yet; Pi's own status widget is available.

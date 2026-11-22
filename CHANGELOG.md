@@ -2,6 +2,17 @@
 
 All notable changes to `pi-rex-agents` are recorded here.
 
+## 0.5.6 - 2026-11-23
+
+### Changed
+
+- Restored the original full-width colored backgrounds for subagent result
+  messages. The intermediate border and partial-background experiments were
+  temporary workarounds.
+- Documented the Rex workaround for background bleed in the README and
+  troubleshooting guide: disable **Match program backgrounds**, or set
+  **Terminal → Padding color** to **Background**.
+
 ## 0.5.5 - 2026-11-23
 
 ### Changed

@@ -47,6 +47,10 @@ pi install git:github.com/giuseppecrj/Pi subagent extension@main
 
 `Check: error (timed out after 600s)` 表示父代理的复检从未给出答复：它超时、被信号杀死、其目录不存在，或 `sh` 无法启动。对于运行缓慢的测试套件，提高 `accept.timeoutSec`（最多 3,600），并在报告中给出的目录（`details.accept.cwd`）里手动运行该命令。检查运行时没有 `PI_SUBAGENT_*` 变量，因此依赖这些变量的检查在复检中会失败。`rejected (child reported a pass; …)` 表示子代理自身的 run 通过，而父代理的检查失败；对普通子代理，投递信息会写明 `shared checkout`，该检出中其他写入者的修改可能导致这种情况，因此并行写入者应使用 worktree。`skipped` 表示 run 未自然完成，`none` 表示未请求任何检查，包括所有恢复的 run。参见[验收检查](tools.zh-CN.md#accept-checks)。
 
+## 结果背景扩散到整个 pane
+
+Rex 有时会把 Pi 工具或子代理结果面板的背景色扩散到 pane 的其他区域。关闭 **Settings → Interface → Panes → Match program backgrounds**；如果仍不够，把 **Terminal → Padding color** 设为 **Background**。这是 Rex 终端渲染问题，不是消息内容损坏。
+
 ## Worktree removal is refused
 
 移除操作会报告每个阻塞项，例如有未提交的文件、存在活动进程，或检查结果未知。提交工作或传入 `--preserve`，停止检出中的任何进程，并在源仓库或其祖先目录启动父 Pi 会话。参见[显式 worktree 清理](tools.zh-CN.md#explicit-worktree-cleanup)和[清理与恢复](worktree-subagents.zh-CN.md#cleanup)。

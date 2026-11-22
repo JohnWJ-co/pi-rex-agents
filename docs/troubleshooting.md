@@ -57,6 +57,14 @@ A catalog-listed model and configured authentication do not prove that your prov
 
 `Check: error (timed out after 600s)` means the parent's re-check never answered: it timed out, was killed by a signal, its directory was missing, or `sh` could not start. Raise `accept.timeoutSec` (at most 3,600) for a slow suite, and run the command by hand in the reported directory (`details.accept.cwd`). The check runs without `PI_SUBAGENT_*` variables, so a check that depends on them fails in the re-check. `rejected (child reported a pass; …)` means the child's own run passed and the parent's failed; for an ordinary child the delivery says `shared checkout`, and another writer's edits in that checkout can cause it, so use a worktree for parallel writers. `skipped` means the run did not complete naturally, and `none` means no check was requested, including every resumed run. See [Accept checks](tools.md#accept-checks).
 
+## Result backgrounds tint the whole pane
+
+Rex can spread the background color of Pi tool or subagent result panels across
+the rest of the pane. Disable **Settings → Interface → Panes → Match program
+backgrounds**; if that is not enough, set **Terminal → Padding color** to
+**Background**. This is a Rex terminal rendering issue, not corrupted message
+content.
+
 ## Worktree removal is refused
 
 Removal reports each blocker, such as dirty files, a live process, or an unknown inspection. Commit the work or pass `--preserve`, stop any process in the checkout, and start the parent Pi session at the source repository or an ancestor of it. See [Explicit worktree cleanup](tools.md#explicit-worktree-cleanup) and [cleanup and recovery](worktree-subagents.md#cleanup).

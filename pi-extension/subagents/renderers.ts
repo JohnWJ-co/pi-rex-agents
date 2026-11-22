@@ -82,22 +82,6 @@ function escapeRegExp(text: string): string {
 	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/**
- * Separate result content with a full-width horizontal rule above and below.
- * Unlike a background panel or closed frame, the rules cannot fill blank cells
- * and therefore do not trigger Rex/libghostty's scrollback background bleed.
- */
-function renderHorizontalRules(
-	lines: string[],
-	width: number,
-	color: (text: string) => string,
-): string[] {
-	const box = new Box(1, 0);
-	box.addChild(new Text(lines.join("\n"), 0, 0));
-	const rule = color("─".repeat(Math.max(1, width)));
-	return [rule, ...box.render(width), rule];
-}
-
 /** A host-owned detail shown in a header: always one display line. */
 function displayValue(text: string): string {
 	return displayLines(text).join(" ");
@@ -124,12 +108,10 @@ export function registerMessageRenderers(pi: ExtensionAPI): void {
 				const failed = exitCode !== 0 || !!errorMessage;
 				const elapsed =
 					details.elapsed == null ? "?" : formatElapsed(details.elapsed);
+				const bgFn = failed
+					? (text: string) => theme.bg("toolErrorBg", text)
+					: (text: string) => theme.bg("toolSuccessBg", text);
 				const cancelled = details.error === "cancelled";
-				const ruleColor = cancelled
-					? theme.fg.bind(theme, "warning")
-					: failed
-						? theme.fg.bind(theme, "error")
-						: theme.fg.bind(theme, "success");
 				const icon = cancelled
 					? theme.fg("warning", "■")
 					: failed
@@ -199,9 +181,10 @@ export function registerMessageRenderers(pi: ExtensionAPI): void {
 					);
 				}
 
-				// Horizontal rules keep result identity without painting a
-				// background or a closed frame into Rex scrollback.
-				return ["", ...renderHorizontalRules(contentLines, width, ruleColor)];
+				// Render via Box for background + padding, with blank line above for separation
+				const box = new Box(1, 1, bgFn);
+				box.addChild(new Text(contentLines.join("\n"), 0, 0));
+				return ["", ...box.render(width)];
 			},
 		};
 	});

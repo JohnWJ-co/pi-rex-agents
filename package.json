@@ -1,6 +1,6 @@
 {
   "name": "pi-rex-agents",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "private": true,
   "type": "module",
   "description": "Rex-native Pi subagents with asynchronous delivery, persistent specialists and managed worktrees",
