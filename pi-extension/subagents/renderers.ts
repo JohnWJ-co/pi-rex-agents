@@ -83,27 +83,22 @@ function escapeRegExp(text: string): string {
 }
 
 /**
- * A rounded frame around result content. Unlike a full-width background box,
- * this keeps the terminal background untouched; Rex/libghostty currently
- * bleeds full-width backgrounds through scrollback.
+ * Fill only the content width of each result line. The Box supplies wrapping
+ * and left padding, but its full-width trailing padding is stripped before
+ * applying the background; this avoids a terminal-wide background that
+ * Rex/libghostty currently bleeds through scrollback.
  */
-function renderBorderedBox(
+function renderPartialBackground(
 	lines: string[],
 	width: number,
-	color: (text: string) => string,
+	background: (text: string) => string,
 ): string[] {
-	const innerWidth = Math.max(1, width - 2);
-	const content = lines.flatMap((line) => {
-		const rendered = new Text(line, 0, 0).render(innerWidth);
-		return rendered.length > 0 ? rendered : [" ".repeat(innerWidth)];
+	const box = new Box(1, 0);
+	box.addChild(new Text(lines.join("\n"), 0, 0));
+	return box.render(width).map((line) => {
+		const content = line.replace(/ +$/g, "");
+		return background(content.length > 0 ? content : " ");
 	});
-	const edge = (left: string, right: string) =>
-		color(`${left}${"─".repeat(innerWidth)}${right}`);
-	return [
-		edge("╭", "╮"),
-		...content.map((line) => `${color("│")}${line}${color("│")}`),
-		edge("╰", "╯"),
-	];
 }
 
 /** A host-owned detail shown in a header: always one display line. */
@@ -133,11 +128,11 @@ export function registerMessageRenderers(pi: ExtensionAPI): void {
 				const elapsed =
 					details.elapsed == null ? "?" : formatElapsed(details.elapsed);
 				const cancelled = details.error === "cancelled";
-				const borderColor = cancelled
-					? theme.fg.bind(theme, "warning")
+				const backgroundColor = cancelled
+					? theme.bg.bind(theme, "customMessageBg")
 					: failed
-						? theme.fg.bind(theme, "error")
-						: theme.fg.bind(theme, "success");
+						? theme.bg.bind(theme, "toolErrorBg")
+						: theme.bg.bind(theme, "toolSuccessBg");
 				const icon = cancelled
 					? theme.fg("warning", "■")
 					: failed
@@ -207,9 +202,12 @@ export function registerMessageRenderers(pi: ExtensionAPI): void {
 					);
 				}
 
-				// A rounded border keeps the result styled without painting a
-				// full-width background into Rex scrollback.
-				return ["", ...renderBorderedBox(contentLines, width, borderColor)];
+				// A partial-width background keeps result identity without
+				// painting a terminal-wide background into Rex scrollback.
+				return [
+					"",
+					...renderPartialBackground(contentLines, width, backgroundColor),
+				];
 			},
 		};
 	});

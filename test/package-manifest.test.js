@@ -28,7 +28,7 @@ const reviewClauses = [
 describe("Rex package contract", () => {
 	it("declares the Rex package identity and consistent install metadata", () => {
 		assert.equal(manifest.name, "pi-rex-agents");
-		assert.equal(manifest.version, "0.5.3");
+		assert.equal(manifest.version, "0.5.4");
 		assert.equal(manifest.private, true);
 		assert.equal(manifest.license, "MIT");
 		assert.equal(lock.name, manifest.name);

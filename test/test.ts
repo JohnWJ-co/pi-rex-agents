@@ -597,7 +597,7 @@ function presentText(
 
 describe("version and update awareness", () => {
 	it("reports the installed version and compares semantic versions", () => {
-		assert.equal(installedVersion(), "0.5.3");
+		assert.equal(installedVersion(), "0.5.4");
 		assert.equal(compareVersions("v0.5.0", "0.5.0"), 0);
 		assert.equal(compareVersions("0.5.0", "0.4.9"), 1);
 		assert.equal(compareVersions("0.4.9", "0.5.0"), -1);
@@ -15646,19 +15646,21 @@ describe("subagent status renderer", () => {
 		assert.doesNotMatch(rendered, /Parent action:/);
 	});
 
-	it("renders results with a rounded border and no width overflow", () => {
+	it("renders results with partial-width backgrounds and no width overflow", () => {
 		const { api, registeredMessageRenderers } = createMockExtensionApi();
 		subagentsModule.default(api);
 		const rendererEntry = registeredMessageRenderers.find(
 			(entry) => entry.name === "subagent_result",
 		);
 		assert.ok(rendererEntry);
+		const backgroundCalls: string[] = [];
 		const theme = {
 			fg(_color: string, text: string) {
 				return text;
 			},
-			bg() {
-				throw new Error("result renderer must not paint a background");
+			bg(_color: string, text: string) {
+				backgroundCalls.push(text);
+				return `\x1b[48;2;25;50;27m${text}\x1b[49m`;
 			},
 			bold(text: string) {
 				return text;
@@ -15684,9 +15686,13 @@ describe("subagent status renderer", () => {
 				theme,
 			)
 			.render(40);
-		const output = rendered.join("\n");
-		assert.match(output, /╭/);
-		assert.match(output, /╰/);
+		assert.ok(backgroundCalls.length > 0);
+		for (const text of backgroundCalls) {
+			assert.ok(
+				visibleWidth(text) < 40,
+				`expected partial-width background, got ${visibleWidth(text)} for ${JSON.stringify(text)}`,
+			);
+		}
 		for (const line of rendered)
 			assert.ok(
 				visibleWidth(line) <= 40,
@@ -16385,7 +16391,7 @@ describe("host lines resist child-controlled text", () => {
 			theme,
 		)
 			.render(120)
-			.map((line: string) => stripResultBorder(line));
+			.map((line: string) => line.trim());
 		const label = rendered.findIndex((line: string) =>
 			line.startsWith("┌ Child report from worker (result)"),
 		);
@@ -16435,13 +16441,6 @@ const plainTheme = {
 	bold: (t: string) => t,
 };
 
-function stripResultBorder(line: string): string {
-	const trimmed = line.trim();
-	return trimmed.startsWith("│") && trimmed.endsWith("│")
-		? trimmed.slice(1, -1).trim()
-		: trimmed;
-}
-
 function renderMessage(message: any, expanded = true) {
 	const { api, registeredMessageRenderers } = createMockExtensionApi();
 	subagentsModule.default(api);
@@ -16450,7 +16449,7 @@ function renderMessage(message: any, expanded = true) {
 	).renderer;
 	return renderer(message, { expanded }, plainTheme)
 		.render(160)
-		.map((line: string) => stripResultBorder(line));
+		.map((line: string) => line.trim());
 }
 
 const handoff: WorktreeHandoff = {
