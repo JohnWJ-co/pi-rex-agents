@@ -171,12 +171,7 @@ pi update https://github.com/JohnWJ-co/pi-rex-agents
 
 ## 已知 Rex 渲染问题
 
-Rex 有时会把 Pi 工具/结果面板的背景色扩散到整个 pane。这是 Rex 终端渲染问题（Superlogic 社区已有报告），不是消息内容损坏。如果子代理结果块导致整个终端变绿或变红：
-
-1. 打开 **Settings → Interface → Panes**，关闭 **Match program backgrounds**。
-2. 如果仍未解决，把 **Terminal → Padding color** 设为 **Background**。
-
-第一项是社区报告的主要规避方式；第二项是社区报告的补充方式，尤其在 Glass 界面下。扩展仍保留正常的彩色背景结果样式。
+Rex 有时会把 Pi 工具/结果面板的背景色扩散到整个 pane。这是 Rex 终端渲染问题（Superlogic 社区已有报告），不是消息内容损坏。如果子代理结果块导致整个终端变绿或变红，请打开 **Settings → Interface → Panes**，关闭 **Fill with program colors**。扩展仍保留正常的彩色背景结果样式。
 
 ## 已知限制
 

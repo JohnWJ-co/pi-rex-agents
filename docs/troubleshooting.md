@@ -60,10 +60,9 @@ A catalog-listed model and configured authentication do not prove that your prov
 ## Result backgrounds tint the whole pane
 
 Rex can spread the background color of Pi tool or subagent result panels across
-the rest of the pane. Disable **Settings → Interface → Panes → Match program
-backgrounds**; if that is not enough, set **Terminal → Padding color** to
-**Background**. This is a Rex terminal rendering issue, not corrupted message
-content.
+the rest of the pane. Open **Settings → Interface → Panes** and turn
+**Fill with program colors** off. This is a Rex terminal rendering issue, not
+corrupted message content.
 
 ## Worktree removal is refused
 

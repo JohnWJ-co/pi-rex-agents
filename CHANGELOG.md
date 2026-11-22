@@ -2,6 +2,14 @@
 
 All notable changes to `pi-rex-agents` are recorded here.
 
+## 0.5.7 - 2026-11-23
+
+### Changed
+
+- Updated the Rex pane-background workaround to the current setting:
+  turn **Settings → Interface → Panes → Fill with program colors** off.
+  Removed the obsolete `Terminal → Padding color` fallback.
+
 ## 0.5.6 - 2026-11-23
 
 ### Changed

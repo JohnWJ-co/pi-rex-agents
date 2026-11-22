@@ -49,7 +49,7 @@ pi install git:github.com/giuseppecrj/Pi subagent extension@main
 
 ## 结果背景扩散到整个 pane
 
-Rex 有时会把 Pi 工具或子代理结果面板的背景色扩散到 pane 的其他区域。关闭 **Settings → Interface → Panes → Match program backgrounds**；如果仍不够，把 **Terminal → Padding color** 设为 **Background**。这是 Rex 终端渲染问题，不是消息内容损坏。
+Rex 有时会把 Pi 工具或子代理结果面板的背景色扩散到 pane 的其他区域。打开 **Settings → Interface → Panes**，关闭 **Fill with program colors**。这是 Rex 终端渲染问题，不是消息内容损坏。
 
 ## Worktree removal is refused
 
