@@ -82,6 +82,30 @@ function escapeRegExp(text: string): string {
 	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * A rounded frame around result content. Unlike a full-width background box,
+ * this keeps the terminal background untouched; Rex/libghostty currently
+ * bleeds full-width backgrounds through scrollback.
+ */
+function renderBorderedBox(
+	lines: string[],
+	width: number,
+	color: (text: string) => string,
+): string[] {
+	const innerWidth = Math.max(1, width - 2);
+	const content = lines.flatMap((line) => {
+		const rendered = new Text(line, 0, 0).render(innerWidth);
+		return rendered.length > 0 ? rendered : [" ".repeat(innerWidth)];
+	});
+	const edge = (left: string, right: string) =>
+		color(`${left}${"─".repeat(innerWidth)}${right}`);
+	return [
+		edge("╭", "╮"),
+		...content.map((line) => `${color("│")}${line}${color("│")}`),
+		edge("╰", "╯"),
+	];
+}
+
 /** A host-owned detail shown in a header: always one display line. */
 function displayValue(text: string): string {
 	return displayLines(text).join(" ");
@@ -108,10 +132,12 @@ export function registerMessageRenderers(pi: ExtensionAPI): void {
 				const failed = exitCode !== 0 || !!errorMessage;
 				const elapsed =
 					details.elapsed == null ? "?" : formatElapsed(details.elapsed);
-				const bgFn = failed
-					? (text: string) => theme.bg("toolErrorBg", text)
-					: (text: string) => theme.bg("toolSuccessBg", text);
 				const cancelled = details.error === "cancelled";
+				const borderColor = cancelled
+					? theme.fg.bind(theme, "warning")
+					: failed
+						? theme.fg.bind(theme, "error")
+						: theme.fg.bind(theme, "success");
 				const icon = cancelled
 					? theme.fg("warning", "■")
 					: failed
@@ -181,10 +207,9 @@ export function registerMessageRenderers(pi: ExtensionAPI): void {
 					);
 				}
 
-				// Render via Box for background + padding, with blank line above for separation
-				const box = new Box(1, 1, bgFn);
-				box.addChild(new Text(contentLines.join("\n"), 0, 0));
-				return ["", ...box.render(width)];
+				// A rounded border keeps the result styled without painting a
+				// full-width background into Rex scrollback.
+				return ["", ...renderBorderedBox(contentLines, width, borderColor)];
 			},
 		};
 	});

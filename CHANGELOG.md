@@ -2,6 +2,15 @@
 
 All notable changes to `pi-rex-agents` are recorded here.
 
+## 0.5.3 - 2026-11-23
+
+### Changed
+
+- Subagent result messages now use rounded green or red borders instead of
+  full-width background panels. This avoids the Rex/libghostty scrollback
+  background bleed while keeping successful, failed and cancelled results
+  visually distinct.
+
 ## 0.5.2 - 2026-11-15
 
 ### Changed
