@@ -302,9 +302,14 @@ export default function subagentsExtension(
 		infrastructure?: PiRunSessionInfrastructure;
 		/** Host detection input; defaults to the current process environment. */
 		env?: NodeJS.ProcessEnv;
+		/** Test seam for resolving a session when only REX_BLOCK is set. */
+		resolveRexSession?: (
+			blockId: string,
+			env: NodeJS.ProcessEnv,
+		) => string | undefined;
 	} = {},
 ) {
-	const rexHost = rexHostContext(options.env);
+	const rexHost = rexHostContext(options.env, options.resolveRexSession);
 	// Outside Rex the public entry point has no usable host. Tests can inject
 	// their own deterministic infrastructure without acquiring a real surface.
 	const infrastructure =

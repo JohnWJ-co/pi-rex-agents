@@ -48,11 +48,11 @@ export function piBinary(): string {
 export function rexAvailable():
 	| { ok: true; version: string }
 	| { ok: false; reason: string } {
-	if (!process.env.REX_SESSION) {
+	if (!process.env.REX_BLOCK) {
 		return {
 			ok: false,
 			reason:
-				"REX_SESSION is unset; run the Rex integration suite inside a Rex block",
+				"REX_BLOCK is unset; run the Rex integration suite inside a Rex block",
 		};
 	}
 	try {
@@ -470,6 +470,10 @@ export async function createRexLab(
 	delete env.PI_DENY_TOOLS;
 	delete env.PI_SUBAGENT_SKILLS;
 	delete env.PI_SUBAGENT_MODEL_SCOPE;
+	// The lab's new session and block IDs must come from Rex, not the caller's
+	// stale pane environment.
+	delete env.REX_SESSION;
+	delete env.REX_BLOCK;
 	const server = spawn(
 		rexBinary(),
 		[

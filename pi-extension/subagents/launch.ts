@@ -205,7 +205,11 @@ export function createLaunchPlanner({
 		const next = { ...params };
 		const lock: AgentModelLock = { agent: agentName };
 		let stripped = false;
-		if (projectAgents.length > 0 && next.placement) {
+		if (
+			projectAgents.length > 0 &&
+			paneConfig.mode === "minimized" &&
+			next.placement
+		) {
 			lock.pinnedPlacement = paneConfig.mode;
 			if (next.placement !== paneConfig.mode)
 				lock.requestedPlacement = next.placement;

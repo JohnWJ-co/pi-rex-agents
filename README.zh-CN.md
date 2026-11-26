@@ -26,7 +26,7 @@ https://github.com/user-attachments/assets/cfe55810-4e73-4d65-b233-626516a92b7e
 
 - Node.js 22.6+
 - Pi（含扩展 API）和 Rex CLI
-- 在 Rex block 内运行 Pi：`REX_SESSION`、`REX_BLOCK` 必须存在
+- 在 Rex block 内运行 Pi：`REX_BLOCK` 必需；`REX_SESSION` 可选，缺失时会从 block 解析。
 - 当前支持 macOS 和 Linux；不做 Windows 适配
 
 ## 安装
@@ -110,7 +110,7 @@ pi --no-extensions -e "$PWD/pi-extension/subagents/index.ts"
 
 `panes.mode` 接受 `"split"`、`"tab"` 或 `"minimized"`；`panes.maxPerTab` 只接受 1..10 的整数，默认 2，且只约束 split 子代理，不约束 minimized 子代理。`panes.minimizedBounds` 控制 minimized 子代理恢复时的位置和大小，格式为 `[x, y, width, height]`，默认 `[0.1, 0.1, 0.8, 0.8]`（窗口正中、80% 大小）。交互式 Pi 中可用 `/panes-mode` 切换三种模式，用 `/panes-maxPerTab` 输入 1-10 的整数或打开选择器；两者立即生效并写回配置文件。完整键、模型路由、监督和 outcome ledger 见 [配置说明](docs/configuration.zh-CN.md) 和 [config.json.example](config.json.example)。
 
-具名 agent 可以在 frontmatter 中锁定 `model` 或 `thinking`，`models.agents` 也可以锁定模型。这些锁定具有权威性：`subagent` 工具不能覆盖它们；冲突的请求值会被忽略，并在启动确认中报告。项目如果在 `.pi/agents` 中定义了角色，则只允许启动这些具名项目角色；裸子代理以及全局/包级角色都会被阻止。它们的放置方式同样遵循 `panes.mode`，每次调用的 `placement` 覆盖会被忽略。
+具名 agent 可以在 frontmatter 中锁定 `model` 或 `thinking`，`models.agents` 也可以锁定模型。这些锁定具有权威性：`subagent` 工具不能覆盖它们；冲突的请求值会被忽略，并在启动确认中报告。项目如果在 `.pi/agents` 中定义了角色，则只允许启动这些具名项目角色；裸子代理以及全局/包级角色都会被阻止。当 `panes.mode` 为 `minimized` 时，它们的放置方式保持 minimized，每次调用的 `placement` 覆盖会被忽略。
 
 子代理会自动启用已安装的上下文压缩工具，包括 billion-context 的 `compress`、`decompress`、`search_context`、`acp_status` 及可选的 `acp_rule`，即使传入 `tools: "read,bash"`。显式 `deny-tools` 仍优先；fresh、resume、persistent 和 worktree handoff 都适用。没有压缩插件时沿用 Pi 原生 auto-compaction。
 

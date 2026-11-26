@@ -35,7 +35,7 @@ export interface TestEnv {
 }
 
 export function getAvailableBackends(): MuxBackend[] {
-	return process.env.REX_SESSION ? ["rex"] : [];
+	return process.env.REX_BLOCK ? ["rex"] : [];
 }
 
 export function setBackend(_backend: MuxBackend): undefined {

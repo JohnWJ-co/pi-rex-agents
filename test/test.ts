@@ -597,7 +597,7 @@ function presentText(
 
 describe("version and update awareness", () => {
 	it("reports the installed version and compares semantic versions", () => {
-		assert.equal(installedVersion(), "0.5.7");
+		assert.equal(installedVersion(), "0.5.8");
 		assert.equal(compareVersions("v0.5.0", "0.5.0"), 0);
 		assert.equal(compareVersions("0.5.0", "0.4.9"), 1);
 		assert.equal(compareVersions("0.4.9", "0.5.0"), -1);
@@ -613,11 +613,37 @@ describe("Rex host registration", () => {
 			{ REX_BLOCK: "block:registration" },
 		]) {
 			const mock = createMockExtensionApi();
-			hostModule.default(mock.api, { env });
+			hostModule.default(mock.api, {
+				env,
+				resolveRexSession: () => undefined,
+			});
 			assert.deepEqual(mock.registeredTools, []);
 			assert.deepEqual(mock.registeredCommands, []);
 			assert.equal(mock.eventHandlers.size, 0);
 		}
+	});
+
+	it("resolves a Rex session from REX_BLOCK when REX_SESSION is absent", async () => {
+		await withFreshSubagentRuntime(async () => {
+			const mock = createMockExtensionApi();
+			try {
+				hostModule.default(mock.api, {
+					env: { REX_BLOCK: "block:registration" },
+					resolveRexSession: () => "session:registration",
+				});
+				assert.ok(
+					mock.registeredTools.some((tool) => tool.name === "subagent"),
+				);
+				assert.ok(
+					mock.registeredCommands.some(
+						(command) => command.name === "subagent",
+					),
+				);
+			} finally {
+				for (const handler of mock.eventHandlers.get("session_shutdown") ?? [])
+					await handler({ reason: "quit" }, { ui: { setWidget() {} } });
+			}
+		});
 	});
 
 	it("registers tools, commands and the host notice from an injected Rex environment", async () => {
@@ -1260,7 +1286,6 @@ describe("host adapter migration", () => {
 					task: "bounded",
 					model: "fake/plain",
 					thinking: "low",
-					placement: "tab",
 				},
 				new AbortController().signal,
 				undefined,
@@ -1268,7 +1293,7 @@ describe("host adapter migration", () => {
 			);
 			assert.match(
 				result.content[0].text,
-				/Launch lock: agent pinned-role pins model fake\/strong and thinking high and placement split; ignored requested model fake\/plain and thinking low and placement tab\./,
+				/Launch lock: agent pinned-role pins model fake\/strong and thinking high; ignored requested model fake\/plain and thinking low\./,
 			);
 			const child = f.runtime.runningSubagents.get(result.details.id);
 			assert.ok(child);

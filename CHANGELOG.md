@@ -2,6 +2,21 @@
 
 All notable changes to `pi-rex-agents` are recorded here.
 
+## 0.5.8 - 2026-11-26
+
+### Fixed
+
+- Resolve the current Rex session from `REX_BLOCK` when newer Rex versions
+  omit `REX_SESSION`; the extension now registers its tools and commands in
+  those panes. `REX_SESSION` remains supported as an explicit override.
+- Adapt integration detection and test probes to resolve the session from the
+  block instead of requiring the retired environment variable.
+
+### Changed
+
+- The project-role placement lock applies when `panes.mode` is `minimized`;
+  other configured modes still allow an explicit per-call placement.
+
 ## 0.5.7 - 2026-11-23
 
 ### Changed

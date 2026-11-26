@@ -476,7 +476,7 @@ export class RexSurfaceProvider {
 	}
 
 	setupHint(): string {
-		return "pi-rex-agents runs inside a Rex block; REX_SESSION and REX_BLOCK must be set.";
+		return "pi-rex-agents runs inside a Rex block; REX_BLOCK is required. REX_SESSION is optional and resolved from the block.";
 	}
 
 	async inspectSurface(surfaceId: string): Promise<RexPaneInspection> {

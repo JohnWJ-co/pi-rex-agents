@@ -4,7 +4,7 @@
 
 ## 前提
 
-- 在 Rex block 内运行 Pi，`REX_SESSION`、`REX_BLOCK` 都存在。
+- 在 Rex block 内运行 Pi，且存在 `REX_BLOCK`。`REX_SESSION` 可选；新版 Rex 会从 block 解析。
 - Node.js 22.6+，可用的 Pi 和 Rex CLI。
 - 从源码运行时先执行 `npm ci`。执行内核已 hard fork 在本仓库，不需要安装上游 npm 包。
 

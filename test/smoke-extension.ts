@@ -41,7 +41,7 @@ try {
 		if (missing !== "REX_BLOCK") delete process.env.REX_SESSION;
 		if (missing !== "REX_SESSION") delete process.env.REX_BLOCK;
 		const mock = createMockExtensionApi();
-		extension(mock.api);
+		extension(mock.api, { resolveRexSession: () => undefined });
 		assert.deepEqual(mock.registeredTools, [], missing);
 		assert.deepEqual(mock.registeredCommands, [], missing);
 	}

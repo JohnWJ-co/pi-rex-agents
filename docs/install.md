@@ -4,7 +4,7 @@
 
 ## Prerequisites
 
-- Run Pi inside a Rex block, with both `REX_SESSION` and `REX_BLOCK` present.
+- Run Pi inside a Rex block with `REX_BLOCK` present. `REX_SESSION` is optional; newer Rex versions resolve it from the block.
 - Node.js 22.6+, with a working Pi and Rex CLI.
 - When running from source, run `npm ci` first. The execution kernel is already hard-forked into this repository, so the upstream npm package does not need to be installed.
 

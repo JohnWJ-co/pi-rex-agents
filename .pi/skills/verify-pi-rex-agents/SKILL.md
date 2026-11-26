@@ -19,7 +19,7 @@ L="node --experimental-strip-types .pi/skills/verify-pi-rex-agents/scripts/lab.t
 $L doctor
 ```
 
-It checks the Rex and Pi binaries, Node, `REX_SESSION`/`REX_BLOCK`, the working-tree extension, concurrent integration suites, and any current lab endpoint. Run only one Rex integration suite at a time.
+It checks the Rex and Pi binaries, Node, `REX_BLOCK` (with optional `REX_SESSION`), the working-tree extension, concurrent integration suites, and any current lab endpoint. Run only one Rex integration suite at a time.
 
 For lifecycle, delivery, placement or cleanup changes, run all of:
 

@@ -26,7 +26,7 @@ https://github.com/user-attachments/assets/cfe55810-4e73-4d65-b233-626516a92b7e
 
 - Node.js 22.6+
 - Pi (with the extension API) and the Rex CLI
-- Run Pi inside a Rex block: `REX_SESSION` and `REX_BLOCK` must be present
+- Run Pi inside a Rex block: `REX_BLOCK` is required; `REX_SESSION` is optional and is resolved from the block when absent.
 - Currently supports macOS and Linux; Windows is not supported
 
 ## Installation
@@ -110,7 +110,7 @@ Configuration is read from `$PI_CODING_AGENT_DIR/rex-agents/config.json`, defaul
 
 `panes.mode` accepts `"split"`, `"tab"`, or `"minimized"`; `panes.maxPerTab` accepts only integers from 1 to 10, defaults to 2, and constrains only split subagents, not minimized ones. `panes.minimizedBounds` controls the position and size of a minimized subagent when it is restored, in `[x, y, width, height]` format, defaulting to `[0.1, 0.1, 0.8, 0.8]` (centered in the window at 80% size). In interactive Pi, use `/panes-mode` to switch between the three modes and `/panes-maxPerTab` to enter an integer from 1 to 10 or open a picker; both take effect immediately and are written back to the configuration file. For the full set of keys, model routing, supervision, and the outcome ledger, see [Configuration](docs/configuration.md) and [config.json.example](config.json.example).
 
-Named agents can pin `model` or `thinking` in frontmatter, and `models.agents` can pin a model. Those pins are authoritative: the `subagent` tool cannot override them, and conflicting request values are ignored and reported in the launch acknowledgement. If a project defines roles in `.pi/agents`, only those named project roles can be launched; bare subagents and roles from global or package scopes are blocked. Their placement also follows `panes.mode`; a per-call `placement` override is ignored.
+Named agents can pin `model` or `thinking` in frontmatter, and `models.agents` can pin a model. Those pins are authoritative: the `subagent` tool cannot override them, and conflicting request values are ignored and reported in the launch acknowledgement. If a project defines roles in `.pi/agents`, only those named project roles can be launched; bare subagents and roles from global or package scopes are blocked. When `panes.mode` is `minimized`, their placement stays minimized; a per-call `placement` override is ignored.
 
 Subagents automatically enable installed context-compression tools, including billion-context's `compress`, `decompress`, `search_context`, and `acp_status`, as well as the optional `acp_rule`, even when `tools: "read,bash"` is passed. An explicit `deny-tools` still takes precedence; this applies to fresh, resume, persistent, and worktree handoff runs. Without a compression plugin, Pi's native auto-compaction is used.
 

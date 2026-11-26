@@ -66,10 +66,24 @@ if (skills.length > 0) {
   );
 }
 
-const session = process.env.REX_SESSION;
 const block = process.env.REX_BLOCK;
-add("Rex session", Boolean(session), session ?? "REX_SESSION is not set");
+let session = process.env.REX_SESSION;
+if (!session && block) {
+  try {
+    const whoami = JSON.parse(
+      commandOutput("rex", ["whoami", "--json"]) ?? "{}",
+    ) as { session_id?: unknown };
+    if (typeof whoami.session_id === "string") session = whoami.session_id;
+  } catch {
+    // The block check below reports the actionable host failure.
+  }
+}
 add("Rex block", Boolean(block), block ?? "REX_BLOCK is not set");
+add(
+  "Rex session",
+  Boolean(session),
+  session ?? "REX_SESSION is not set and could not be resolved from REX_BLOCK",
+);
 add(
   "Rex CLI",
   Boolean(commandOutput("rex", ["version"])),

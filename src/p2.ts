@@ -8,15 +8,17 @@ import { readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import piRexAgentsExtension from "../pi-extension/subagents/index.ts";
 import { flattenBlocks, RexCli } from "../maestro/surfaces/rex/rex-cli.ts";
+import { rexHostContext } from "../pi-extension/subagents/rex-composition.ts";
 import { RexSurfaceProvider } from "../maestro/surfaces/rex/rex-surface-provider.ts";
 
 type Handler = (...args: any[]) => unknown;
 
-const rexSession = process.env.REX_SESSION;
-const rexBlock = process.env.REX_BLOCK;
-if (!rexSession || !rexBlock) {
-  throw new Error("P2 must run inside a Rex block (REX_SESSION/REX_BLOCK)");
+const rexHost = rexHostContext();
+if (!rexHost) {
+  throw new Error("P2 must run inside a Rex block (REX_BLOCK)");
 }
+const rexSession = rexHost.sessionId;
+const rexBlock = rexHost.blockId;
 if (process.env.PI_SUBAGENT_ID) {
   throw new Error("P2 must run as the parent, not as a child subagent");
 }
